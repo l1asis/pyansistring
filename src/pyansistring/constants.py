@@ -5,6 +5,11 @@ Sources used:
 https://en.wikipedia.org/wiki/ANSI_escape_code
 """
 
+WHITESPACE = {" ", "\t", "\n", "\r", "\x0b", "\x0c"}
+UNIVERSAL_NEWLINES = {"\n", "\r", "\r\n", "\x0b", "\x0c", "\x1c", "\x1d", "\x1e", "\x85", "\u2028", "\u2029"}
+PUNCTUATION = {'~', '\\', '%', "'", '@', '_', '(', '.', ':', '$', '&', '"', '=', '<', '-', '*', ']', ')', '^', '/', '[', '{', ',', ';', '|', '+', '>', '?', '}', '`', '!', '#'}
+PUNCTUATION_AND_WHITESPACE = PUNCTUATION.union(WHITESPACE)
+
 class Foreground(IntEnum):
     """SGR foreground color parameters."""
     BLACK = 30

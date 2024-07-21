@@ -13,7 +13,7 @@
 - [ ] `__getnewargs__`
 - [ ] `__getstate__`
 - [ ] `__gt__`
-- [X] `__hash__`
+- [ ] `__hash__`
 - [X] `__init__`
 - [ ] `__init_subclass__`
 - [ ] `__iter__`

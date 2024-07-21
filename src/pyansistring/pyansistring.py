@@ -6,46 +6,39 @@ from functools import wraps
 from types import MethodType
 from typing import Annotated, Any, Callable, Dict, Literal, Self
 
-from pyansistring.constants import SGR, Background, Foreground, Underline
+from constants import *
 
-WHITESPACE = {" ", "\t", "\n", "\r", "\x0b", "\x0c"}
-UNIVERSAL_NEWLINES = {"\n", "\r", "\r\n", "\x0b", "\x0c", "\x1c", "\x1d", "\x1e", "\x85", "\u2028", "\u2029"}
-PUNCTUATION = {'~', '\\', '%', "'", '@', '_', '(', '.', ':', '$', '&', '"', '=', '<', '-', '*', ']', ')', '^', '/', '[', '{', ',', ';', '|', '+', '>', '?', '}', '`', '!', '#'}
-UNION_PUNCTUATION_WHITESPACE = PUNCTUATION.union(WHITESPACE)
-
-def search_words(string: str, sep: set = WHITESPACE) -> Generator[str]:
-    """Searches for words in a string, returning start & end indexes (if the flag is set)."""
-    word = ""
-    for char in string:
-        if char in sep:
-            if word: yield word
-            word = ""
-        else:
-            word += char
-    if word: yield word
-
-def search_word_spans(string: str, sep: set = WHITESPACE) -> Generator[tuple[int, int]]:
-    word, start = "", None
+def search_word_spans(string: str, word: str) -> Generator[tuple[int, int]]:
+    """Searches for a word spans in a string."""
+    temp, start = "", None
     for index, char in enumerate(string):
-        if char in sep:
-            if word: 
-                yield start, index
-                start, word = None, ""
+        if len(temp) < len(word):
+            if char in word[len(temp)]:
+                temp += char
+                if start is None:
+                    start = index
+            else:
+                start, temp = None, ""
         else:
-            word += char
-            if start is None: start = index
-    if word: yield (start, index+1)
+            yield start, index
+            start, temp = None, ""
+    if temp and len(temp) == len(word):
+        yield (start, index+1)
 
 def search_separators(string: str, allowed: set = WHITESPACE):
-    r"""Searches for separators such as `' ', '\t', '\n'` in a string."""
+    r"""Searches for allowed separators in a string."""
     separator = ""
     for char in string:
-        if char in allowed: separator += char
-        elif separator: yield separator; separator = ""
-    if separator: yield separator
+        if char in allowed:
+            separator += char
+        elif separator:
+            yield separator
+            separator = ""
+    if separator:
+        yield separator
 
 def rsearch_separators(string: str, allowed: set = WHITESPACE):
-    r"""Searches for separators such as `' ', '\t', '\n'` in a string (from the right side)."""
+    r"""Searches for allowed separators in a reversed string."""
     return search_separators(string[::-1], allowed)
 
 @dataclass
@@ -136,9 +129,14 @@ class ANSIString(str):
     
     def __new__(cls,
                 string: str = "",
-                styles: StyleDict | None = None):
+                styles: StyleDict | dict[int, str] | None = None):
         obj = super().__new__(cls, string)
-        obj._styles = StyleDict() if not styles else styles
+        if not styles:
+            obj._styles = StyleDict()
+        elif type(styles) == dict:
+            obj._styles = StyleDict(styles)
+        else:
+            obj._styles = styles
         obj._styled = cls._render(obj)
         return obj
     
@@ -248,8 +246,13 @@ class ANSIString(str):
     def unfm(self,
              *slices: Sequence[int, int, int] | slice) -> Self:
         """Unformats (removes styling) the string in a specified range."""
-        for slice_ in slices:
-            for index in range(*self._get_indices(slice_)):
+        if slices:
+            for slice_ in slices:
+                for index in range(*self._get_indices(slice_)):
+                    if index in self.styles:
+                        del self.styles[index]
+        else:
+            for index in range(0, len(self), 1):
                 if index in self.styles:
                     del self.styles[index]
         return self
@@ -410,166 +413,3 @@ class ANSIString(str):
         spans = (match.span(0) for match in re.finditer(words, self.plain, flags=flags))
         return tuple(spans)
 
-if __name__ == "__main__":
-    import sys
-    import unittest
-
-    output = []
-
-    class OtherFunctionsTest(unittest.TestCase):
-        def test_search_words(self):
-            actual = list(search_words("Hello, World! \n\tHello, Friends!", WHITESPACE.union(PUNCTUATION)))
-            expected = ["Hello", "World", "Hello", "Friends"]
-            self.assertListEqual(actual, expected)
-
-        def test_search_separators(self):
-            actual = list(search_separators("Hello, World!", WHITESPACE.union(PUNCTUATION)))
-            expected = [", ", "!"]
-            self.assertListEqual(actual, expected)
-
-        def test_rsearch_separators(self):
-            actual = list(rsearch_separators("Hello, World!", WHITESPACE.union(PUNCTUATION)))
-            expected = ["!", " ,"]
-            self.assertListEqual(actual, expected)
-
-    class ANSIStringTest(unittest.TestCase):
-        def get_function_name(self, depth: int = 0) -> str:
-            return sys._getframe(depth).f_code.co_name
-
-        def compare(self, actual: ANSIString, expected: str,
-                    verbose: bool = True, function_name: str | None = None,
-                    comment: str = ""):
-            if not function_name:
-                function_name = self.get_function_name(depth=2)
-            if verbose: output.append((function_name, comment, actual, expected))
-            self.assertEqual(actual, expected)
-            self.assertEqual(str(actual), expected)
-            self.assertEqual(eval(repr(actual)), eval(repr(expected)))
-
-        def test_plain(self):
-            actual = ANSIString("Hello, World!")
-            expected = "Hello, World!"
-            self.compare(actual, expected)
-
-        def test_fm(self):
-            bold, italic, res = f"\x1b[1m", f"\x1b[3m", f"\x1b[0m"
-            actual = (
-                ANSIString("Hello, World!").fm(SGR.BOLD),
-                ANSIString("Hello, World!").fm(SGR.BOLD, (0, 5)),
-                ANSIString("Hello, World!").fm(SGR.BOLD).fm(SGR.ITALIC),
-            )
-            expected = (
-                "".join(f"{bold}{char}{res}" for char in "Hello, World!"),
-                "".join(f"{bold}{char}{res}" for char in "Hello") + ", World!",
-                "".join(f"{bold}{italic}{char}{res}" for char in "Hello, World!"),
-            )
-            for a, e in zip(actual, expected):
-                self.compare(a, e)
-
-        @unittest.skip
-        def test_slice(self):
-            ...
-
-        @unittest.skip
-        def test_concatenation(self):
-            ...
-
-        @unittest.skip
-        def test_ljust(self):
-            ...
-
-        @unittest.skip
-        def test_rjust(self):
-            ...
-
-        @unittest.skip
-        def test_center(self):
-            ...
-
-        @unittest.skip
-        def test_split(self):
-            steps = 0
-            seps = (None, ".", "..", "...")
-            maxsplits = (-1, 0, 1, 2, 3)
-            spaces = ANSIString(" hello,   world    ")
-            dots = ANSIString(".hello,...world....")
-            actual = {
-                sep: {
-                    maxsplit: (spaces if not sep else dots).split(sep, maxsplit) for maxsplit in maxsplits
-                } for sep in seps
-            }
-            expected = {
-                None: {
-                    ...
-                },
-                ".": {
-                    ...
-                },
-                "..": {
-                    ...
-                },
-                "...": {
-                    ...
-                }
-            }
-            for sep in seps:
-                for maxsplit in maxsplits:
-                    a_list, e_list = actual[sep][maxsplit], expected[sep][maxsplit]
-                    self.assertEqual(len(a), len(e))
-                    a_list, e_list = tuple(filter(None, a_list), filter(None, e_list))
-                    for a, e in zip(a_list, e_list):
-                        self.compare(a, e,
-                                     verbose=False,
-                                     comment=f"({repr(sep)} {maxsplit})",
-                                     function_name=(None if not steps else ""))
-                        steps += 1
-
-        @unittest.skip
-        def test_rsplit(self):
-            steps = 0
-            seps = (None, ".", "..", "...")
-            maxsplits = (-1, 0, 1, 2, 3)
-            spaces = ANSIString(" hello,   world    ")
-            dots = ANSIString(".hello,...world....")
-            actual = {
-                sep: {
-                    maxsplit: (spaces if not sep else dots).split(sep, maxsplit) for maxsplit in maxsplits
-                } for sep in seps
-            }
-            expected = {
-                None: {
-                    ...
-                },
-                ".": {
-                    ...
-                },
-                "..": {
-                    ...
-                },
-                "...": {
-                    ...
-                }
-            }
-            for sep in seps:
-                for maxsplit in maxsplits:
-                    a_list, e_list = actual[sep][maxsplit], expected[sep][maxsplit]
-                    self.assertEqual(len(a), len(e))
-                    a_list, e_list = tuple(filter(None, a_list), filter(None, e_list))
-                    for a, e in zip(a_list, e_list):
-                        self.compare(a, e,
-                                     verbose=False,
-                                     comment=f"({repr(sep)} {maxsplit})",
-                                     function_name=(None if not steps else ""))
-                        steps += 1
-
-        @unittest.skip
-        def test_join(self):
-            ...
-
-    unittest.main(verbosity=2, exit=False)
-
-    wall = "\x1b[100m \x1b[0m"
-    if output: print(f"\n{'VERBOSE OUTPUT':-^70}")
-    for function_name, comment, actual, expected in output:
-        print(f"{function_name:<40}{'ACTUAL:':>10} "
-              f"{wall}{actual}{wall}\n{comment:^35}{'EXPECTED:':>15} {wall}{expected}{wall}")
