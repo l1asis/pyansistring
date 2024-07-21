@@ -1,8 +1,9 @@
 import sys
 import unittest
 
-from constants import *
+from pyansistring.constants import *
 from pyansistring import (ANSIString, StyleDict, rsearch_separators, search_separators, search_word_spans)
+
 
 output = []
 
@@ -411,10 +412,12 @@ class ANSIStringDefaultTest(BaseTestCase, unittest.TestCase):
     def test_join(self):
         ...
 
-unittest.main(verbosity=2, exit=False)
+if __name__ == "__main__":
 
-wall = "\x1b[100m \x1b[0m"
-if output: print(f"\n{'VERBOSE OUTPUT':-^70}")
-for function_name, comment, actual, expected in output:
-    print(f"{function_name:<40}{'ACTUAL:':>10} "
-            f"{wall}{actual}{wall}\n{comment:^35}{'EXPECTED:':>15} {wall}{expected}{wall}")
+    unittest.main(argv=['first-arg-is-ignored'], verbosity=2, exit=False)
+
+    wall = "\x1b[100m \x1b[0m"
+    if output: print(f"\n{'VERBOSE OUTPUT':-^70}")
+    for function_name, comment, actual, expected in output:
+        print(f"{function_name:<40}{'ACTUAL:':>10} "
+                f"{wall}{actual}{wall}\n{comment:^35}{'EXPECTED:':>15} {wall}{expected}{wall}")

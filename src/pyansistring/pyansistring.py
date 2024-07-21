@@ -6,7 +6,7 @@ from functools import wraps
 from types import MethodType
 from typing import Annotated, Any, Callable, Dict, Literal, Self
 
-from constants import *
+from pyansistring.constants import *
 
 def search_word_spans(string: str, word: str) -> Generator[tuple[int, int]]:
     """Searches for a word spans in a string."""
