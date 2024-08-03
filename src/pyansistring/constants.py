@@ -1,4 +1,9 @@
+__all_ = ["Foreground", "Background", "Underline", "SGR",
+          "Regex", "WHITESPACE", "UNIVERSAL_NEWLINES",
+          "PUNCTUATION"]
+
 from enum import IntEnum
+from re import compile
 
 """
 Sources used:
@@ -104,3 +109,15 @@ class SGR(IntEnum):
     SUPERSCRIPT = 73
     SUBSCRIPT = 74
     NEITHER_SUPERSCRIPT_NOR_SUBSCRIPT = 75
+
+class Regex:
+    """Compiled REs used in the library."""
+    INT8 = compile(r"(?:25[0-5]|2[0-4][0-9]|1?[0-9]{1,2})")
+    SET8 = compile(fr"(?:(?:38|48|58);5;{INT8.pattern})")
+    SET24 = compile(fr"(?:(?:38|48|58);2;{INT8.pattern}(?:;{INT8.pattern}){r'{0,2}'})")
+    SGR_PARAM = compile(
+        fr"(?:{SET24.pattern}|{SET8.pattern}|[0-9]|2[0-9]|3[0-79]|4[0-79]|5[0-79]|[6-9][0-9]|10[0-7])"
+    )
+    ANSI_SEQ = compile(
+        r"(?:\x1b[@-Z\\-_]|[\x80-\x9a\x9c-\x9f]|(?:\x1b\[|\x9b)[0-?]*[ -/]*[@-~])"
+    )

@@ -215,6 +215,25 @@ class ANSIString(str):
                 return self.center(minimum_width, fill)
         return super().__format__(format_spec)
 
+    def _render(self) -> str:
+        return "".join(
+            f"{self.styles[index]}{char}\x1b[0m" if index in self.styles else char
+            for index, char in enumerate(self.plain)
+        )
+
+    def _get_indices(self, slice_: Sequence[int, int, int] | slice) -> tuple[int, int, int]:
+        if isinstance(slice_, slice):
+            start, stop, step = slice_.indices(len(self))
+        else:
+            start, stop, step = slice(*slice_).indices(len(self))
+        return start, stop, step
+    
+    def _search_spans(self, *words: str, case_sensitive: bool = True) -> tuple[tuple[int, int], ...]:
+        flags = (0 if case_sensitive else re.IGNORECASE)
+        words = "|".join(re.escape(word) for word in words)
+        spans = (match.span(0) for match in re.finditer(words, self.plain, flags=flags))
+        return tuple(spans)
+
     def fm(self,
            parameter: int | str,
            *slices: Sequence[int, int, int] | slice) -> Self:
@@ -393,23 +412,31 @@ class ANSIString(str):
             if type(string) == ANSIString:
                 styles.update({increment+index-len(string): style for index, style in string.styles.items()})
         return type(self)(super().join(iterable), StyleDict(styles))
-    
-    def _render(self) -> str:
-        return "".join(
-            f"{self.styles[index]}{char}\x1b[0m" if index in self.styles else char
-            for index, char in enumerate(self.plain)
-        )
 
-    def _get_indices(self, slice_: Sequence[int, int, int] | slice) -> tuple[int, int, int]:
-        if isinstance(slice_, slice):
-            start, stop, step = slice_.indices(len(self))
-        else:
-            start, stop, step = slice(*slice_).indices(len(self))
-        return start, stop, step
-    
-    def _search_spans(self, *words: str, case_sensitive: bool = True) -> tuple[tuple[int, int], ...]:
-        flags = (0 if case_sensitive else re.IGNORECASE)
-        words = "|".join(re.escape(word) for word in words)
-        spans = (match.span(0) for match in re.finditer(words, self.plain, flags=flags))
-        return tuple(spans)
-
+    @staticmethod
+    def from_ansi(plain: str) -> "ANSIString":
+        start, style, styles = 0, "", {}
+        decrement, sequences = 0, {}
+        def smart_replacement(match_: re.Match[str]) -> str:
+            nonlocal decrement
+            sequence, span = match_.group(0), match_.span(0)
+            if sequence.endswith("m"):
+                if span[0]-decrement in sequences:
+                    sequences[span[0]-decrement] += sequence
+                else:
+                    sequences[span[0]-decrement] = sequence
+            decrement += len(sequence)
+            return ""
+        plain = re.sub(Regex.ANSI_SEQ, smart_replacement, plain)
+        for index, sequence in sequences.items():
+            for match_ in re.finditer(Regex.SGR_PARAM, sequence):
+                parameter = match_.group(0)
+                if parameter == "0":
+                    if style:
+                        for sub_index in range(start, index):
+                            styles[sub_index] = style
+                        style = ""
+                else:
+                    style += f"\x1b[{parameter}m"
+                    start = index
+        return ANSIString(plain, styles)

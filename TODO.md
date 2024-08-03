@@ -34,7 +34,7 @@
 - [X] `__str__`
 - [ ] `__subclasshook__`
 
-### `str` methods
+### `str` public methods
 - [X] `capitalize`
 - [ ] `casefold`
 - [X] `center`
@@ -89,10 +89,14 @@
 - [X] `upper`
 - [ ] `zfill`
 
-### `ANSIString` featured methods (magic and others)
+### `ANSIString` featured methods (magic, private and public)
 - [X] `__radd__`
 - [ ] `__copy__`
 - [ ] `__deepcopy__`
+
+- [X] `_render` (apply current styles to the plain string)
+- [X] `_get_indices` (...)
+- [X] `_search_spans` (...)
 
 - [X] `fm` (set SGR styling parameters)
 - [X] `fm_w` (`fm` per word)
@@ -124,7 +128,8 @@
 - [ ] `ul_24b` (set underline color using RGB color model, a.k.a. true color)
 - [ ] `ul_24b_w` (`ul_24b` per word)
 
+
+- [ ] `gradient` (apply gradient coloring by specifying a colormap (coloring instructions))
 - [ ] `rainbow` (apply rainbow coloring)
-- [ ] `cmap` (batch color by specifying a pattern/sequence of coloring instructions)
-- [ ] `from_ansi` (create `ANSIString` from plain `str` with ANSI escape sequences)
-- [X] `render` (apply current styles to the plain string)
+- [ ] `random_art` (return random colored art)
+- [X] `from_ansi` (create `ANSIString` from plain `str` with ANSI escape sequences)

@@ -98,19 +98,17 @@ WATER = ((59, 4), (61, 4), (63, 4), (64, 4), (65, 4), (67, 4), (68, 4), (70, 4),
 MOON_N_REFLECTION = ((56, 2), (57, 4), (58, 4), (58, 5), (59, 5), (59, 6), (60, 6), (59, 7), (60, 7),
                      (61, 7), (60, 8), (61, 8), (62, 8))
 
-BANNER = batch_coloring(BANNER, P, 0, 0, 255, "g+14|r+8")
-BANNER = batch_coloring(BANNER, Y, 255, 255, 0, "b+21")
-BANNER = batch_coloring(BANNER, CELL1, 255, 166, 166, "g-10|b-10")
-BANNER = batch_coloring(BANNER, CELL2, 255, 218, 110, "g+5|b+25")
-BANNER = batch_coloring(BANNER, A, 100, 100, 100, "r+8|g+7|b+6")
-BANNER = batch_coloring(BANNER, TREE, 40, 189, 38, "r+random(-40, 0)|g+random(-50, 50)")
-BANNER = batch_coloring(BANNER, APPLES_N_CHERRIES, 255, 46, 81)
-BANNER = batch_coloring(BANNER, TREE_BRANCHES, 150, 91, 35)
-BANNER = batch_coloring(BANNER, N, 229, 255, 185, "r-5")
-BANNER = batch_coloring(BANNER, SNAKE, 100, 100, 150, "r+5")
-BANNER = batch_coloring(BANNER, DOTS, 176, 226, 255)
-BANNER = batch_coloring(BANNER, WATER, 22, 113, 217)
-BANNER = batch_coloring(BANNER, MOON_N_REFLECTION, 84, 161, 255, "r+9|g+4")
+BANNER_COORDINATES = (P, Y, CELL1, CELL2, A, TREE, APPLES_N_CHERRIES,
+                      TREE_BRANCHES, N, SNAKE, DOTS, WATER, MOON_N_REFLECTION)
+
+BANNER_SEQUENCES = ((0, 0, 255, "g+14|r+8"), (255, 255, 0, "b+21"), (255, 166, 166, "g-10|b-10"),
+                    (255, 218, 110, "g+5|b+25"), (100, 100, 100, "r+8|g+7|b+6"),
+                    (40, 189, 38, "r+random(-40, 0)|g+random(-50, 50)"), (255, 46, 81, ""),
+                    (150, 91, 35, ""), (229, 255, 185, "r-5"), (100, 100, 150, "r+5"),
+                    (176, 226, 255, ""), (22, 113, 217, ""), (84, 161, 255, "r+9|g+4"))
+
+for coordinates, sequences in zip(BANNER_COORDINATES, BANNER_SEQUENCES):
+    batch_coloring(BANNER, coordinates, *sequences)
 
 if __name__ == "__main__":
     print(BANNER)
