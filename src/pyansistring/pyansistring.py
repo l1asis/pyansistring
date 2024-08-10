@@ -1,12 +1,17 @@
 
 import re
+from collections import namedtuple
 from collections.abc import Generator, Hashable, Sequence
 from dataclasses import dataclass
 from functools import wraps
-from types import MethodType
-from typing import Annotated, Any, Callable, Dict, Literal, Self
+from itertools import cycle
+from random import randint
+from types import MethodType, SimpleNamespace
+from typing import (Annotated, Any, Callable, Dict, Literal, NamedTuple, Self,
+                    Tuple)
 
 from pyansistring.constants import *
+
 
 def search_word_spans(string: str, word: str) -> Generator[tuple[int, int]]:
     """Searches for a word spans in a string."""
@@ -41,10 +46,21 @@ def rsearch_separators(string: str, allowed: set = WHITESPACE):
     r"""Searches for allowed separators in a reversed string."""
     return search_separators(string[::-1], allowed)
 
+def clamp(value: int|float, min = -float("inf"), max = float("inf")) -> int|float:
+    return min if value < min else max if value > max else value
+
 @dataclass
 class ValueRange:
     lo: int
     hi: int
+    def __hash__(self) -> int:
+        return hash((self.lo, self.hi))
+
+@dataclass
+class Length:
+    value: int
+    def __hash__(self) -> int:
+        return hash(self.value)
 
 def wrapper_has_been_modified(method: Callable, bound: bool = False):
     @wraps(method)
@@ -233,6 +249,64 @@ class ANSIString(str):
         words = "|".join(re.escape(word) for word in words)
         spans = (match.span(0) for match in re.finditer(words, self.plain, flags=flags))
         return tuple(spans)
+    
+    def _transform_multicolor_instruction(self,
+                                          modes: dict[str, dict[str, int]],
+                                          instruction: dict[str, str],
+        ) -> dict[str, str|int|float|tuple[int, int]]:
+        if "random" in instruction["value"]:
+            a, b = map(int, instruction.random[7:-1].split(","))
+            instruction["value"] = randint(a, b)
+        elif instruction["value"].endswith(("r", "g", "b")):
+            mode, color = instruction["value"].split("_")
+            instruction["value"] = float(modes[mode][color])
+        else:
+            instruction["value"] = float(instruction["value"])
+
+        if instruction["min_max"]:
+            instruction["min_max"] = tuple(map(int, instruction["min_max"].split(",")))
+        else:
+            instruction["min_max"] = (0, 255)
+
+        if not instruction["mode"]:
+            instruction["mode"] = "fg"
+
+        if instruction["operator"] == ">":
+            repeat = 1 if not instruction["repeat"] else int(instruction["repeat"])
+            value = modes[instruction["mode"]][instruction["color"]]
+            if value <= instruction["value"]:
+                instruction["operator"] = "+"
+                instruction["value"] = (instruction["value"] - value) / repeat
+            elif value > instruction["value"]:
+                instruction["operator"] = "-"
+                instruction["value"] = (value - instruction["value"]) / repeat
+        
+        return instruction
+
+    def _process_multicolor_instruction(self,
+                                        modes: dict[str, dict[str, int]],
+                                        instruction: NamedTuple) -> None:
+        value, (min_value, max_value) = instruction.value, instruction.min_max
+        if instruction.operator == "=":
+            modes[instruction.mode][instruction.color] = value
+        elif instruction.operator == "+":
+            modes[instruction.mode][instruction.color] += value
+        elif instruction.operator == "-":
+            modes[instruction.mode][instruction.color] -= value
+        modes[instruction.mode][instruction.color] = clamp(
+            int(modes[instruction.mode][instruction.color]), min_value, max_value
+        )
+    
+    def _apply_multicolor_combination(self,
+                                modes: dict[str, dict[str, int]],
+                                flags: dict[str, bool],
+                                *slices: Sequence[int, int, int] | slice) -> None:
+        if flags["fg"]:
+            self.fg_24b(*(clamp(modes["fg"][key], 0, 255) for key in "rgb"), *slices)
+        if flags["bg"]:
+            self.bg_24b(*(clamp(modes["bg"][key], 0, 255) for key in "rgb"), *slices)
+        if flags["ul"]:
+            NotImplemented
 
     def fm(self,
            parameter: int | str,
@@ -363,6 +437,161 @@ class ANSIString(str):
                  *words: str,
                  case_sensitive: bool = True) -> Self:
         return self.bg_24b(r, g, b, *self._search_spans(*words, case_sensitive=case_sensitive))
+    
+    def multicolor(self,
+                   sequence: str,
+                   *slices: Annotated[Sequence[int], Length(3)] | slice,
+                   fg: Annotated[Annotated[int, ValueRange(0, 255)], Length(3)] = (0, 0, 0),
+                   bg: Annotated[Annotated[int, ValueRange(0, 255)], Length(3)] = (0, 0, 0),
+                   ul: Annotated[Annotated[int, ValueRange(0, 255)], Length(3)] = (0, 0, 0),) -> Self:
+        if not slices:
+            slices = tuple((index, index+1) for index in range(0, len(self)))
+
+        Instruction = namedtuple("Instruction",
+                                 ("color", "operator", "value", "mode", "min_max", "repeat"))
+        flags = {
+            "mirror": (1 if "!" in sequence[-2:] else 0),
+            "reverse": (1 if "@" in sequence[-2:] else 0),
+            "cycle": (1 if "&" in sequence[-2:] else 0),
+        }
+        modes = {
+            "fg": {"r": fg[0], "g": fg[1], "b": fg[2]},
+            "bg": {"r": bg[0], "g": bg[1], "b": bg[2]},
+            "ul": {"r": ul[0], "g": ul[1], "b": ul[2]},
+        }
+
+        if flags["mirror"] or flags["reverse"] or flags["cycle"]:
+            sequence = sequence[:-(flags["cycle"] + (flags["mirror"] or flags["reverse"]))]
+
+        pre_instructions: list[Instruction] = []
+        if "$" in sequence:
+            pre_sequence, sequence = map(str.strip, sequence.split("$"))
+            for instruction in pre_sequence.split("|"):
+                dictionary = re.match(Regex.MULTICOLOR_PRE_INSTRUCTION, instruction).groupdict()
+                dictionary.update({"min_max": None, "repeat": None})
+                instruction = Instruction(
+                    **self._transform_multicolor_instruction(
+                        modes,
+                        dictionary
+                    )
+                )
+                pre_instructions.append(instruction)
+                self._process_multicolor_instruction(modes, instruction)
+        
+        auto_length = len(self)
+        auto_count = auto_prev = span_increment = span_decrement = 0
+        repeats = []
+        for combination in sequence.split("#"):
+            auto_flag = False
+            for repeat in re.finditer(r"\((?P<value>auto|\d+)\)", combination):
+                start, stop = repeat.span(0)
+                if repeat["value"] == "auto" and not auto_flag:
+                    auto_flag = True
+                    auto_count += 1
+                    repeats.append("auto")
+                elif repeat["value"] == "auto" and auto_flag:
+                    repeats.append("prev_auto")
+                else:
+                    value = int(repeat["value"])
+                    if value < auto_length:
+                        value = auto_length
+                    auto_length -= value
+                    repeats.append(value)
+                start = start+span_increment-span_decrement
+                stop = stop+span_increment-span_decrement
+                sequence = f"{sequence[:start]}{'{}'}{sequence[stop:]}"
+                span_decrement += len(repeat["value"])
+            span_increment += len(combination) + 1
+        for k, repeat in enumerate(repeats):
+            if repeat == "auto":
+                value = -(auto_length // -auto_count)
+                auto_length -= value
+                auto_count -= 1
+                repeats[k] = value
+                auto_prev = value
+            elif repeat == "auto_prev":
+                repeats[k] = auto_prev
+        repeats = (f"({repeat})" for repeat in repeats)
+        sequence = sequence.format(*repeats)
+
+        i = j = 0
+        instructions: list[list[Instruction]] = []
+        for combination in sequence.split("#"):
+            instructions.append([])
+            for instruction in combination.strip().split("|"):
+                dictionary = re.match(Regex.MULTICOLOR_INSTRUCTION, instruction).groupdict()
+                if dictionary["repeat"] == "0":
+                    continue
+                instruction = Instruction(
+                    **self._transform_multicolor_instruction(
+                        modes,
+                        dictionary
+                    )
+                )
+                if instruction.repeat:
+                    j = i
+                    for _ in range(int(instruction.repeat)):
+                        self._process_multicolor_instruction(modes, instruction)
+                        if j >= len(instructions):
+                            instructions.append([])
+                        instructions[j].append(instruction)
+                        j += 1
+                else:
+                    self._process_multicolor_instruction(modes, instruction)
+                    for j in range(i, len(instructions)):
+                        instructions[j].append(instruction)
+            i = len(instructions)
+
+        modes = {
+            "fg": {"r": fg[0], "g": fg[1], "b": fg[2]},
+            "bg": {"r": bg[0], "g": bg[1], "b": bg[2]},
+            "ul": {"r": ul[0], "g": ul[1], "b": ul[2]},
+        }
+
+        for instruction in pre_instructions:
+            self._process_multicolor_instruction(modes, instruction)
+
+        if flags["mirror"] and len(instructions) > 1:
+            for combination in instructions[::-1]:
+                instructions.append([])
+                for instruction in combination:
+                    if instruction.operator == "+":
+                        instructions[-1].append(instruction._replace(operator="-"))
+                    elif instruction.operator == "-":
+                        instructions[-1].append(instruction._replace(operator="+"))
+                    else:
+                        instructions[-1].append(instruction)
+        elif flags["reverse"]:
+            for obj, combination in zip(slices, cycle(instructions) if flags["cycle"] else instructions):
+                for instruction in combination:
+                    self._process_multicolor_instruction(modes, instruction)
+            for i, combination in enumerate(instructions):
+                for j, instruction in enumerate(combination):
+                    if instruction.operator == "+":
+                        instructions[i][j] = instruction._replace(operator="-")
+                    elif instruction.operator == "-":
+                        instructions[i][j] = instruction._replace(operator="+")
+                    else:
+                        instructions[i][j] = instruction
+            instructions.reverse()
+
+        if flags["cycle"]:
+            instructions = cycle(instructions)
+
+        modes_flags = {"fg": False, "bg": False, "ul": False}
+        for obj, combination in zip(slices, instructions):
+            for mode in ("fg", "bg", "ul"):
+                modes_flags[mode] = False
+            for instruction in combination:
+                if not modes_flags[instruction.mode]:
+                    modes_flags[instruction.mode] = True
+                self._process_multicolor_instruction(modes, instruction)
+            if obj and isinstance(obj, Sequence) and isinstance(obj[0], (Sequence, slice)):
+                self._apply_multicolor_combination(modes, modes_flags, *obj)
+            else:
+                self._apply_multicolor_combination(modes, modes_flags, obj)
+
+        return self
 
     def ljust(self, width: int, fillchar: str = " ") -> "ANSIString":
         return self + fillchar*(width - len(self))

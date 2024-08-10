@@ -121,3 +121,43 @@ class Regex:
     ANSI_SEQ = compile(
         r"(?:\x1b[@-Z\\-_]|[\x80-\x9a\x9c-\x9f]|(?:\x1b\[|\x9b)[0-?]*[ -/]*[@-~])"
     )
+    MULTICOLOR_PRE_INSTRUCTION = compile(
+        r"(?P<color>[rgb])(?P<operator>\=)(?P<value>(?:\d+(?:\.\d+)?)|(?:random\(\d+,\d+\)))\:(?P<mode>(?:fg|bg|ul))?"
+    )
+    MULTICOLOR_INSTRUCTION = compile(
+        r"(?P<color>[rgb])(?P<operator>[\+\-\=\>])(?P<value>(?:\d+(?:\.\d+)?)|(?:random\(\d+,\d+\))|(?:(?:fg|bg|ul)_[rgb]))\:"
+        r"(?P<mode>(?:fg|bg|ul))?,?(?P<min_max>\d+,\d+)?(?:\((?P<repeat>auto|\d+)\))?"
+    )
+
+class MulticolorSequences:
+    """
+    MulticolorSequence specification:
+    - amount of instructions can be either shorter or the same length as the string (longer doesn't make sense)
+    - instructions are separated using "#" and combined using "|" symbols
+    
+    SEQUENCE BEGIN [optional]:
+        - [important for optional] color: ("r", "g", "b")
+        - [important for optional] operator: "="
+        - [important for optional] value:
+            - float or int
+            - random integer "random(<int>,<int>)"
+        - [important for optional] separator ":"
+        - [optional for optional] mode: ("fg", "bg", "ul") [default: "fg"]
+    
+    INSTRUCTION BODY:
+        - [important] color: ("r", "g", "b")
+        - [important] operator: (">", "=", "+", "-")
+        - [important] value: 
+            - float or int
+            - random integer "random(<int>,<int>)"
+            - special var (("fg" or "bg" or "ul") + "_" + ("r" or "g" or "b"))
+        - [important] separator ":"
+        - [optional] mode: ("fg", "bg", "ul") [default: "fg"]
+        - [optional] min, max values: "<int>,<int>" [default: "0,255"]
+        - [optional] repeat: "(<int>)" or "(auto)"
+            - will calculate the 'steps' by itself in the case of ">" operator
+    
+    SEQUENCE END:
+        - [optional] (mirror ("!") or reverse ("@")) and cycle "&" the colormap
+    """
+    RAINBOW = "r=255:|g=0:|b=0: $ g>255:(auto) # r>0:(auto) # b>255:(auto) # g>0:(auto) # r>255:(auto) # b>0:(auto) # r=fg_r:|g=fg_g:|b=fg_b:&"
