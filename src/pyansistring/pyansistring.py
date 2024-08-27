@@ -294,7 +294,7 @@ class ANSIString(str):
         elif instruction.operator == "-":
             modes[instruction.mode][instruction.color] -= value
         modes[instruction.mode][instruction.color] = clamp(
-            int(modes[instruction.mode][instruction.color]), min_value, max_value
+            modes[instruction.mode][instruction.color], min_value, max_value
         )
     
     def _apply_multicolor_combination(self,
@@ -302,9 +302,9 @@ class ANSIString(str):
                                 flags: dict[str, bool],
                                 *slices: Sequence[int, int, int] | slice) -> None:
         if flags["fg"]:
-            self.fg_24b(*(clamp(modes["fg"][key], 0, 255) for key in "rgb"), *slices)
+            self.fg_24b(*(int(clamp(modes["fg"][key], 0, 255)) for key in "rgb"), *slices)
         if flags["bg"]:
-            self.bg_24b(*(clamp(modes["bg"][key], 0, 255) for key in "rgb"), *slices)
+            self.bg_24b(*(int(clamp(modes["bg"][key], 0, 255)) for key in "rgb"), *slices)
         if flags["ul"]:
             NotImplemented
 
@@ -449,19 +449,26 @@ class ANSIString(str):
 
         Instruction = namedtuple("Instruction",
                                  ("color", "operator", "value", "mode", "min_max", "repeat"))
-        flags = {
-            "mirror": (1 if "!" in sequence[-2:] else 0),
-            "reverse": (1 if "@" in sequence[-2:] else 0),
-            "cycle": (1 if "&" in sequence[-2:] else 0),
-        }
+        flags = {flag: 0 for flag in ("include beginning", "cycle", "reverse", "mirror")}
+        offset = 0
+        for char in reversed(sequence):
+            if char == "*":
+                flags["include beginning"] = 1; offset -= 1
+            elif char == "&":
+                flags["cycle"] = 1; offset -= 1
+            elif char == "@":
+                flags["reverse"] = 1; offset -= 1
+            elif char == "!":
+                flags["mirror"] = 1; offset -= 1
+            elif char != " ":
+                break
+        if offset:
+            sequence = sequence[:offset]
         modes = {
             "fg": {"r": fg[0], "g": fg[1], "b": fg[2]},
             "bg": {"r": bg[0], "g": bg[1], "b": bg[2]},
             "ul": {"r": ul[0], "g": ul[1], "b": ul[2]},
         }
-
-        if flags["mirror"] or flags["reverse"] or flags["cycle"]:
-            sequence = sequence[:-(flags["cycle"] + (flags["mirror"] or flags["reverse"]))]
 
         pre_instructions: list[Instruction] = []
         if "$" in sequence:
@@ -478,7 +485,7 @@ class ANSIString(str):
                 pre_instructions.append(instruction)
                 self._process_multicolor_instruction(modes, instruction)
         
-        auto_length = len(self)
+        auto_length = len(self) - (1 if flags["include beginning"] else 0)
         auto_count = auto_prev = span_increment = span_decrement = 0
         repeats = []
         for combination in sequence.split("#"):
@@ -552,7 +559,7 @@ class ANSIString(str):
             self._process_multicolor_instruction(modes, instruction)
 
         if flags["mirror"] and len(instructions) > 1:
-            for combination in instructions[::-1]:
+            for combination in reversed(instructions):
                 instructions.append([])
                 for instruction in combination:
                     if instruction.operator == "+":
@@ -562,9 +569,14 @@ class ANSIString(str):
                     else:
                         instructions[-1].append(instruction)
         elif flags["reverse"]:
-            for obj, combination in zip(slices, cycle(instructions) if flags["cycle"] else instructions):
-                for instruction in combination:
-                    self._process_multicolor_instruction(modes, instruction)
+            counter = 1 if flags["include beginning"] else 0
+            for combination in (cycle(instructions) if flags["cycle"] else instructions):
+                if counter != len(self):
+                    for instruction in combination:
+                        self._process_multicolor_instruction(modes, instruction)
+                    counter += 1
+                else:
+                    break
             for i, combination in enumerate(instructions):
                 for j, instruction in enumerate(combination):
                     if instruction.operator == "+":
@@ -574,23 +586,34 @@ class ANSIString(str):
                     else:
                         instructions[i][j] = instruction
             instructions.reverse()
-
         if flags["cycle"]:
             instructions = cycle(instructions)
 
-        modes_flags = {"fg": False, "bg": False, "ul": False}
+        modes_flags = {"fg": True, "bg": False, "ul": False}
+        if flags["include beginning"]:
+            if not flags["reverse"]:
+                for instruction in pre_instructions:
+                    if not modes_flags[instruction.mode]:
+                        modes_flags[instruction.mode] = True
+                    self._process_multicolor_instruction(modes, instruction)
+            if slices[0] and isinstance(slices[0], Sequence) and isinstance(slices[0][0], (Sequence, slice)):
+                self._apply_multicolor_combination(modes, modes_flags, *slices[0])
+            else:
+                self._apply_multicolor_combination(modes, modes_flags, slices[0])
+            slices = slices[1:]
+
         for obj, combination in zip(slices, instructions):
-            for mode in ("fg", "bg", "ul"):
+            for mode in ("bg", "ul"):
                 modes_flags[mode] = False
             for instruction in combination:
                 if not modes_flags[instruction.mode]:
                     modes_flags[instruction.mode] = True
                 self._process_multicolor_instruction(modes, instruction)
+
             if obj and isinstance(obj, Sequence) and isinstance(obj[0], (Sequence, slice)):
                 self._apply_multicolor_combination(modes, modes_flags, *obj)
             else:
                 self._apply_multicolor_combination(modes, modes_flags, obj)
-
         return self
 
     def ljust(self, width: int, fillchar: str = " ") -> "ANSIString":

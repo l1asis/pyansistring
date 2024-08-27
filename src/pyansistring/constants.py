@@ -158,6 +158,10 @@ class MulticolorSequences:
             - will calculate the 'steps' by itself in the case of ">" operator
     
     SEQUENCE END:
-        - [optional] (mirror ("!") or reverse ("@")) and cycle "&" the colormap
+        - [optional] flag:
+            - mirror "!" or reverse "@" 
+            - cycle "&"
+            - include beginning "*"
     """
-    RAINBOW = "r=255:|g=0:|b=0: $ g>255:(auto) # r>0:(auto) # b>255:(auto) # g>0:(auto) # r>255:(auto) # b>0:(auto) # r=fg_r:|g=fg_g:|b=fg_b:&"
+    RAINBOW = "r=255:|g=0:|b=0: $ g>255:(auto) # r>0:(auto) # b>255:(auto) # g>0:(auto) # r>255:(auto) # b>0:(auto) &*"
+    REVERSED_RAINBOW = f"{RAINBOW[:-2]} @&*"

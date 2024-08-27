@@ -129,9 +129,9 @@
 - [ ] `ul_24b_w` (`ul_24b` per word)
 
 
-- [X] `multicolor` (apply a specific hand-made coloring using provided coloring system)
-- [ ] `multicolor_c` (`multicolor` using coordinates, it's useful for multilined strings)
-- [ ] `colormap` (apply a specific pre-made coloring)
+- [X] `multicolor` (apply a specific custom coloring using the provided coloring system)
+- [ ] `multicolor_c` (`multicolor` using coordinates, it's useful for multiline strings)
+- [ ] `colormap` (apply a specific predefined coloring)
 - [ ] `rainbow` (apply rainbow coloring (using a separate algorithm))
-- [ ] `random_art` (return random colored art)
+- [ ] `random_art` (return random color art)
 - [X] `from_ansi` (create `ANSIString` from plain `str` with ANSI escape sequences)
