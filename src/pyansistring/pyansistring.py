@@ -237,6 +237,31 @@ class ANSIString(str):
             for index, char in enumerate(self.plain)
         )
 
+    def _coord_to_slice(self, coord: tuple[int, int]) -> slice:
+        index = 0
+        lengths = tuple(len(line) for line in self.plain.splitlines())
+        if not lengths:
+            raise IndexError(f"wrong y coordinate (empty string)")
+        elif not (0 <= coord[1] < len(lengths)):
+            raise IndexError(f"wrong y coordinate (0<=y<{len(lengths)})")
+        for y, length in enumerate(lengths):
+            if y == coord[1]:
+                if not length:
+                    raise IndexError(f"wrong x coordinate ({y=}: empty line)")
+                elif not (0 <= coord[0] < length):
+                    raise IndexError(f"wrong x coordinate ({y=}: 0<=x<{length})")
+                index += coord[0] + y
+                break
+            index += length
+        return slice(index, index+1)
+
+    def _get_all_coords(self) -> tuple[tuple[int, int]]:
+        def transform(lengths):
+            for y, length in enumerate(lengths):
+                for x in range(length):
+                    yield (x, y)
+        return tuple(transform(len(line) for line in self.plain.splitlines()))
+
     def _get_indices(self, slice_: Sequence[int, int, int] | slice) -> tuple[int, int, int]:
         if isinstance(slice_, slice):
             start, stop, step = slice_.indices(len(self))
@@ -460,7 +485,9 @@ class ANSIString(str):
                 flags["reverse"] = 1; offset -= 1
             elif char == "!":
                 flags["mirror"] = 1; offset -= 1
-            elif char != " ":
+            elif char == " ":
+                offset -= 1
+            else:
                 break
         if offset:
             sequence = sequence[:offset]
@@ -485,7 +512,7 @@ class ANSIString(str):
                 pre_instructions.append(instruction)
                 self._process_multicolor_instruction(modes, instruction)
         
-        auto_length = len(self) - (1 if flags["include beginning"] else 0)
+        auto_length = len(slices) - (1 if flags["include beginning"] else 0)
         auto_count = auto_prev = span_increment = span_decrement = 0
         repeats = []
         for combination in sequence.split("#"):
@@ -615,6 +642,22 @@ class ANSIString(str):
             else:
                 self._apply_multicolor_combination(modes, modes_flags, obj)
         return self
+    
+    def multicolor_c(self,
+                     sequence: str,
+                     *coordinates: tuple[int, int],
+                     fg: Annotated[Annotated[int, ValueRange(0, 255)], Length(3)] = (0, 0, 0),
+                     bg: Annotated[Annotated[int, ValueRange(0, 255)], Length(3)] = (0, 0, 0),
+                     ul: Annotated[Annotated[int, ValueRange(0, 255)], Length(3)] = (0, 0, 0),) -> Self:
+        def transform(coordinates):
+            for obj in coordinates:
+                if isinstance(obj, tuple) and isinstance(obj[0], tuple):
+                    yield tuple(self._coord_to_slice(coord) for coord in obj)
+                else:
+                    yield self._coord_to_slice(obj)
+        if not coordinates:
+            coordinates = self._get_all_coords()
+        return self.multicolor(sequence, *transform(coordinates), fg=fg, bg=bg, ul=ul)
 
     def ljust(self, width: int, fillchar: str = " ") -> "ANSIString":
         return self + fillchar*(width - len(self))

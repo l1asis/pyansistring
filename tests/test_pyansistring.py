@@ -355,6 +355,13 @@ class ANSIStringFeatureTest(BaseTestCase, unittest.TestCase):
             actual[2].styles,
             {key: value for key, value in enumerate(reversed(actual[3].styles.values()))}
         )
+    
+    def test_multicolor_c(self):
+        actual = ANSIString("Hello, \nWorld!\n It's pyansistring!").multicolor_c(MulticolorSequences.RAINBOW).styles.values()
+        expected = ANSIString("Hello, World! It's pyansistring!").multicolor(MulticolorSequences.RAINBOW).styles.values()
+        for a, e in zip(actual, expected):
+            self.assertEqual(a, e)
+        
 
 class ANSIStringDefaultTest(BaseTestCase, unittest.TestCase):
     def test___getitem__(self):
