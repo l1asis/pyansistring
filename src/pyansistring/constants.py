@@ -121,47 +121,79 @@ class Regex:
     ANSI_SEQ = compile(
         r"(?:\x1b[@-Z\\-_]|[\x80-\x9a\x9c-\x9f]|(?:\x1b\[|\x9b)[0-?]*[ -/]*[@-~])"
     )
-    MULTICOLOR_PRE_INSTRUCTION = compile(
-        r"(?P<color>[rgb])(?P<operator>\=)(?P<value>(?:\d+(?:\.\d+)?)|(?:random\(\d+,\d+\)))\:(?P<mode>(?:fg|bg|ul))?"
-    )
+    ARGUMENTS = r"\((?:\s*{}\s*(?:,\s*{}\s*){quantifier}\s*)\)"
+    INT_OR_FLOAT = r"\-?\d+(?:\.\d+)?"
+    INT_OR_FLOAT_OR_INF = fr"(?:{INT_OR_FLOAT}|\-?inf)"
     MULTICOLOR_INSTRUCTION = compile(
-        r"(?P<color>[rgb])(?P<operator>[\+\-\=\>])(?P<value>(?:\d+(?:\.\d+)?)|(?:random\(\d+,\d+\))|(?:(?:fg|bg|ul)_[rgb]))\:"
-        r"(?P<mode>(?:fg|bg|ul))?,?(?P<min_max>\d+,\d+)?(?:\((?P<repeat>auto|\d+)\))?"
+        r"(?P<color>[rgb])"
+        r"(?P<operator>[\+\-\=\>])"
+        r"(?P<value>"
+            r"(?:\d+(?:\.\d+)?)|"
+            rf"(?:random{ARGUMENTS.format(INT_OR_FLOAT, INT_OR_FLOAT, quantifier=r'{1}')})|"
+            r"(?:(?:fg|bg|ul)_[rgb])"
+        r")\:"
+        r"(?P<mode>fg|bg|ul)?"
+        fr"(?P<minmax>minmax{ARGUMENTS.format(INT_OR_FLOAT_OR_INF, INT_OR_FLOAT_OR_INF, quantifier=r'{1}')})?"
+    )
+    MULTICOLOR_COMMAND = compile(
+        r"(?P<reset>\?|\?\?)?(?P<repeat>repeat\(\d+\))?$"
     )
 
 class MulticolorSequences:
     """
     MulticolorSequence specification:
-    - amount of instructions can be either shorter or the same length as the string (longer doesn't make sense)
-    - instructions are separated using "#" and combined using "|" symbols
+    - start command is separated by "$"
+    - commands are separated by "#"
+    - instructions are concatenated with "|"
     
-    SEQUENCE BEGIN [optional]:
-        - [important for optional] color: ("r", "g", "b")
-        - [important for optional] operator: "="
-        - [important for optional] value:
-            - float or int
-            - random integer "random(<int>,<int>)"
-        - [important for optional] separator ":"
-        - [optional for optional] mode: ("fg", "bg", "ul") [default: "fg"]
-    
+    SEQUENCE START: 
+        identical to INSTRUCTION BODY
+
     INSTRUCTION BODY:
-        - [important] color: ("r", "g", "b")
-        - [important] operator: (">", "=", "+", "-")
-        - [important] value: 
-            - float or int
-            - random integer "random(<int>,<int>)"
-            - special var (("fg" or "bg" or "ul") + "_" + ("r" or "g" or "b"))
-        - [important] separator ":"
-        - [optional] mode: ("fg", "bg", "ul") [default: "fg"]
-        - [optional] min, max values: "<int>,<int>" [default: "0,255"]
-        - [optional] repeat: "(<int>)" or "(auto)"
-            - will calculate the 'steps' by itself in the case of ">" operator
+        - [important] color: 
+            - "r": red 
+            - "g": green
+            - "b": blue
+        - [important] operator: 
+            - ">": goto, automatically expands to the given value
+            - "=": equal, assigns a value
+            - "+": add, adds a value
+            - "-": sub, subtracts a value
+        - [important] value:
+            - int
+            - float
+            - random [format: "random(x,y)"] 
+            - special var ("fg" or "bg" or "ul") + "_" + ("r" or "g" or "b")
+        - [important] options ":"
+            - [optional] mode: [default: "fg"]
+                - "fg": foreground
+                - "bg": background
+                - "ul": underline
+            - [optional] min, max values: [format: "minmax(x,y)"] [default: "minmax(0,255)"]
+                - int
+                - float
+                - inf
+
+    COMMAND END:
+        - [optional] reset:
+            - "?": to the previous RGB values
+            - "??": to the start RGB values
+        - [optional] repeat:
+            - int
+            - "auto": calculates the repeat by itself
     
     SEQUENCE END:
         - [optional] flag:
-            - mirror "!" or reverse "@" 
-            - cycle "&"
-            - include beginning "*"
+            - "@": reverse 
+            - "!": mirror
+            - "&": cycle
+            - "*": skipfirst, start with the given r, g, b
     """
-    RAINBOW = "r=255:|g=0:|b=0: $ g>255:(auto) # r>0:(auto) # b>255:(auto) # g>0:(auto) # r>255:(auto) # b>0:(auto) &*"
+    RAINBOW = ("r=255:|g=0:|b=0:  $"
+               "g>255:repeat(auto)#"
+               "r>0:repeat(auto)  #"
+               "b>255:repeat(auto)#"
+               "g>0:repeat(auto)  #"
+               "r>255:repeat(auto)#"
+               "b>0:repeat(auto)  &*")
     REVERSED_RAINBOW = f"{RAINBOW[:-2]} @&*"

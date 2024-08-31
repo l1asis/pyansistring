@@ -269,9 +269,9 @@ class ANSIStringFeatureTest(BaseTestCase, unittest.TestCase):
         actual = (
             ANSIString(string).multicolor(MulticolorSequences.RAINBOW),
             ANSIString(string).multicolor(MulticolorSequences.REVERSED_RAINBOW),
-            ANSIString(string).multicolor("r=84:|g=161:|b=255: $ r+9:0,999|g+4:0,999 &*"),
-            ANSIString(string).multicolor("r=84:|g=161:|b=255: $ r+9:0,999|g+4:0,999 @&*"),
-            ANSIString(string).multicolor("r=84:|g=161:|b=255: $ r+50:0,999|g+25:0,999 # b-70:0,999 !&*"),
+            ANSIString(string).multicolor("r=84:|g=161:|b=255: $ r+9:minmax(0,inf)|g+4:minmax(0,inf) &*"),
+            ANSIString(string).multicolor("r=84:|g=161:|b=255: $ r+9:minmax(0,inf)|g+4:minmax(0,inf) @&*"),
+            ANSIString(string).multicolor("r=84:|g=161:|b=255: $ r+50:minmax(0,inf)|g+25:minmax(0,inf) # b-70:minmax(0,inf) !&*"),
         )
         expected = (
             ANSIString('abcdefghijklmnopqrstuvwxyz',
