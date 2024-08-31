@@ -590,6 +590,8 @@ class ANSIString(str):
         for command in map(str.strip, sequence.split("#")):
             match_command = re.search(Regex.MULTICOLOR_COMMAND, command)
             object_command = MulticolorCommand(None, **match_command.groupdict())
+            if object_command.repeat == 0:
+                continue
             for instruction in map(str.strip, command.split("|")):
                 match_instruction = re.match(Regex.MULTICOLOR_INSTRUCTION, instruction)
                 if match_instruction:
