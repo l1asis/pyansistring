@@ -1,3 +1,5 @@
+__all__ = ["BANNER"]
+
 from pyansistring import ANSIString
 
 PLAIN_BANNER = """                 ^___^           ░░░                                            

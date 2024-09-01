@@ -7,7 +7,7 @@ from functools import wraps
 from itertools import cycle
 from random import randint
 from types import MethodType
-from typing import Annotated, Any, Callable, Dict, Literal, Self, Tuple
+from typing import Annotated, Any, Callable, Literal, Self
 
 from pyansistring.constants import *
 
@@ -27,7 +27,8 @@ def search_word_spans(string: str, word: str) -> Generator[tuple[int, int]]:
             yield start, index
             start, temp = None, ""
     if temp and len(temp) == len(word):
-        yield (start, index+1)
+        yield (start, index + 1)
+
 
 def search_separators(string: str, allowed: set = WHITESPACE):
     r"""Searches for allowed separators in a string."""
@@ -41,12 +42,15 @@ def search_separators(string: str, allowed: set = WHITESPACE):
     if separator:
         yield separator
 
+
 def rsearch_separators(string: str, allowed: set = WHITESPACE):
     r"""Searches for allowed separators in a reversed string."""
     return search_separators(string[::-1], allowed)
 
-def clamp(value: int|float, min = -float("inf"), max = float("inf")) -> int|float:
+
+def clamp(value: int | float, min=-float("inf"), max=float("inf")) -> int | float:
     return min if value < min else max if value > max else value
+
 
 def wrapper_has_been_modified(method: Callable, bound: bool = False):
     @wraps(method)
@@ -59,30 +63,36 @@ def wrapper_has_been_modified(method: Callable, bound: bool = False):
         if not self._has_been_modified and previous_length != len(self):
             self._has_been_modified = True
         return result
+
     return wrapped
+
 
 @dataclass
 class ValueRange:
     lo: int
     hi: int
+
     def __hash__(self) -> int:
         return hash((self.lo, self.hi))
+
 
 @dataclass
 class Length:
     value: int
+
     def __hash__(self) -> int:
         return hash(self.value)
+
 
 class StyleDict(dict):
     """
     A dictionary subclass for storing and tracking changes to styles.
 
-    Attributes:
-        _has_been_modified: A boolean indicating whether the styles have 
+    Instance Attributes:
+        _has_been_modified: A boolean indicating whether the styles have
         been modified since the last check.
 
-    Parameters:
+    Properties:
         has_been_modified: A getter for `_has_been_modified`
 
     Usage:
@@ -96,8 +106,10 @@ class StyleDict(dict):
         super().__init__(*args, **kwargs)
         self._has_been_modified = False
         for name in {"clear", "pop", "popitem", "setdefault", "update"}:
-            setattr(self, name, 
-                    MethodType(wrapper_has_been_modified(getattr(self, name), bound=True), self))
+            setattr(
+                self, name,
+                MethodType(wrapper_has_been_modified(getattr(self, name), bound=True), self),
+            )
 
     @property
     def has_been_modified(self) -> bool:
@@ -113,15 +125,16 @@ class StyleDict(dict):
         if isinstance(key, Hashable):
             self._has_been_modified = True
         return super().__setitem__(key, value)
-        
+
     @wrapper_has_been_modified
     def __delitem__(self, key: Any) -> None:
         return super().__delitem__(key)
-    
+
     def copy(self) -> "StyleDict":
         copied = StyleDict(dict.copy(self))
         copied._has_been_modified = self._has_been_modified
         return copied
+
 
 class MulticolorInstruction:
     color: str
@@ -131,13 +144,16 @@ class MulticolorInstruction:
     mode: str
     minmax: tuple[float, float]
     repeat: int
+
     def __init__(self, rgb: dict[str, dict[str, int]], **kwargs) -> None:
         allowed_keys = {"color", "operator", "value", "mode", "minmax", "repeat"}
         missing_keys = tuple(k for k in allowed_keys if k not in kwargs)
         if not kwargs or len(missing_keys):
-            raise TypeError(f"{self.__class__}.__init__() missing {len(missing_keys)}"
-                            f" required keyword argument{'s' if len(missing_keys)>1 else ''}:"
-                            ", ".join(missing_keys))
+            raise TypeError(
+                f"{self.__class__}.__init__() missing {len(missing_keys)}"
+                f" required keyword argument{'s' if len(missing_keys)>1 else ''}:"
+                ", ".join(missing_keys)
+            )
 
         self.rgb = rgb
         for k, v in kwargs.items():
@@ -174,11 +190,14 @@ class MulticolorInstruction:
             self.processed_value = value
         return value
 
+
 class MulticolorCommand:
-    def __init__(self,
-                 instructions: list[MulticolorInstruction] | None = None,
-                 reset: str | None = None,
-                 repeat: int | str | None = None) -> None:
+    def __init__(
+        self,
+        instructions: list[MulticolorInstruction] | None = None,
+        reset: str | None = None,
+        repeat: int | str | None = None,
+    ) -> None:
         self.instructions = instructions if instructions else []
         self.reset = reset
         if isinstance(repeat, str):
@@ -186,28 +205,27 @@ class MulticolorCommand:
         else:
             self.repeat = 1 if repeat is None else repeat
 
+
 class ANSIString(str):
     r"""
     String class that allows you to extend your vanilla str with ANSI escape sequences for coloring/styling.
-    
-    Attributes:
+
+    Instance Attributes:
         _styles: dictionary containing pairs of char indices with ANSI escape sequences.
         _styled: plain string to which ANSI e.s. from `_styles` has been applied.
-    
-    Parameters:
+
+    Properties:
         styles: a getter for `_styles`.
         styled: a getter for `_styled` (checks if `styles` has been modified and renders it if so).
         plain: unformatted, normal string.
         actual_length: returns the length of `styled`.
-    
+
     Note:
-        *The `ANSIString` class is unhashable for consistency, because `styles` is an unhashable dict 
+        *The `ANSIString` class is unhashable for consistency, because `styles` is an unhashable dict
         that we can change.
     """
-    
-    def __new__(cls,
-                string: str = "",
-                styles: StyleDict | dict[int, str] | None = None):
+
+    def __new__(cls, string: str = "", styles: StyleDict | dict[int, str] | None = None) -> Self:
         obj = super().__new__(cls, string)
         if not styles:
             obj._styles = StyleDict()
@@ -217,56 +235,59 @@ class ANSIString(str):
             obj._styles = styles
         obj._styled = cls._render(obj)
         return obj
-    
+
     @property
     def styles(self) -> StyleDict:
         return self._styles
-    
+
     @property
     def styled(self) -> str:
         if self._styles.has_been_modified:
             self._styled = self._render()
         return self._styled
-    
+
     @property
     def plain(self) -> str:
         return str.__str__(self)
-    
+
     @property
     def actual_length(self) -> int:
         return len(self.styled)
 
     def __str__(self) -> str:
         return self.styled
-    
+
     def __repr__(self) -> str:
         return f"ANSIString({str.__repr__(self.plain)}, {self.styles if self.styles else None})"
-    
+
     def __eq__(self, value: object) -> bool:
         return self.styled == value
 
     def __add__(self, string) -> "ANSIString":
         styles = self.styles.copy()
         if type(string) == ANSIString:
-            styles.update({len(self)+index: value for index, value in string.styles.items()})
+            styles.update({len(self) + index: value for index, value in string.styles.items()})
             string = string.plain
         return type(self)(self.plain + string, styles)
-    
+
     def __radd__(self, string) -> "ANSIString":
-        styles = {index+len(string): value for index, value in self.styles.items()}
+        styles = {index + len(string): value for index, value in self.styles.items()}
         if type(string) == ANSIString:
             styles.update(string.styles)
             string = string.plain
         return type(self)(string + self.plain, styles)
 
     def __getitem__(self, key: slice) -> "ANSIString":
-        styles = {new_index: self.styles[old_index] 
-                  for new_index, old_index in enumerate(range(len(self))[key])
-                  if old_index in self.styles}
+        styles = {
+            new_index: self.styles[old_index]
+            for new_index, old_index in enumerate(range(len(self))[key])
+            if old_index in self.styles
+        }
         return type(self)(super().__getitem__(key), styles)
 
     def __getattribute__(self, name: str):
         if name in dir(str) and name not in {"ljust", "rjust", "center", "split", "rsplit", "join"}:
+
             def method(self, *args, **kwargs):
                 value = getattr(super(), name)(*args, **kwargs)
                 if isinstance(value, str):
@@ -277,6 +298,7 @@ class ANSIString(str):
                     return tuple(type(self)(i, self.styles) for i in value)
                 else:
                     return value
+
             return method.__get__(self)
         else:
             return super().__getattribute__(name)
@@ -315,32 +337,39 @@ class ANSIString(str):
                 index += coord[0] + y
                 break
             index += length
-        return slice(index, index+1)
+        return slice(index, index + 1)
 
     def _get_all_coords(self) -> tuple[tuple[int, int]]:
         def transform(lengths):
             for y, length in enumerate(lengths):
                 for x in range(length):
                     yield (x, y)
+
         return tuple(transform(len(line) for line in self.plain.splitlines()))
 
-    def _get_indices(self, slice_: Sequence[int, int, int] | slice) -> tuple[int, int, int]:
+    def _get_indices(
+        self, slice_: Annotated[Sequence[int], Length(3)] | slice
+    ) -> tuple[int, int, int]:
         if isinstance(slice_, slice):
             start, stop, step = slice_.indices(len(self))
         else:
             start, stop, step = slice(*slice_).indices(len(self))
         return start, stop, step
-    
-    def _search_spans(self, *words: str, case_sensitive: bool = True) -> tuple[tuple[int, int], ...]:
-        flags = (0 if case_sensitive else re.IGNORECASE)
+
+    def _search_spans(
+        self, *words: str, case_sensitive: bool = True
+    ) -> tuple[tuple[int, int], ...]:
+        flags = 0 if case_sensitive else re.IGNORECASE
         words = "|".join(re.escape(word) for word in words)
         spans = (match.span(0) for match in re.finditer(words, self.plain, flags=flags))
         return tuple(spans)
-    
-    def _process_multicolor_command(self,
-                                    command: MulticolorCommand,
-                                    rgb: dict[str, dict[str, dict[str, int]]],
-                                    *slices: Annotated[Sequence[int], Length(3)] | slice):
+
+    def _process_multicolor_command(
+        self,
+        command: MulticolorCommand,
+        rgb: dict[str, dict[str, dict[str, int]]],
+        *slices: Annotated[Sequence[int], Length(3)] | slice,
+    ):
         if command.reset:
             if command.reset == "?":
                 reset_rgb = deepcopy(rgb["actual"])
@@ -363,19 +392,21 @@ class ANSIString(str):
             rgb["actual"][instruction.mode][instruction.color] = clamp(
                 rgb["actual"][instruction.mode][instruction.color], *instruction.minmax
             )
-        
+
         if slices:
             self._apply_multicolor_command(rgb["actual"], modes, *slices)
-        
+
         if reset_rgb:
             rgb["actual"] = reset_rgb
 
         return modes
-    
-    def _apply_multicolor_command(self,
-                                rgb: dict[str, dict[str, int]],
-                                modes: dict[str, bool],
-                                *slices: Sequence[int, int, int] | slice) -> None:
+
+    def _apply_multicolor_command(
+        self,
+        rgb: dict[str, dict[str, int]],
+        modes: dict[str, bool],
+        *slices: Annotated[Sequence[int], Length(3)] | slice,
+    ) -> None:
         if modes["fg"]:
             self.fg_24b(*(int(clamp(rgb["fg"][key], 0, 255)) for key in "rgb"), *slices)
         if modes["bg"]:
@@ -383,11 +414,12 @@ class ANSIString(str):
         if modes["ul"]:
             NotImplemented
 
-    def fm(self,
-           parameter: int | str,
-           *slices: Sequence[int, int, int] | slice) -> Self:
+    def fm(
+        self, parameter: int | str, *slices: Annotated[Sequence[int], Length(3)] | slice
+    ) -> Self:
         """Formats (applies styling to) the string in a specified range."""
-        if parameter == SGR.RESET: return self.unfm(*slices)
+        if parameter == SGR.RESET:
+            return self.unfm(*slices)
         style = f"\x1b[{parameter}m"
         if slices:
             for slice_ in slices:
@@ -404,15 +436,15 @@ class ANSIString(str):
                     self.styles[index] = style
         return self
 
-    def fm_w(self,
-             parameter: int | str,
-             *words: str,
-             case_sensitive: bool = True) -> Self:
+    def fm_w(
+        self, parameter: int | str, *words: str, case_sensitive: bool = True
+    ) -> Self:
         """Formats (applies styling to) the word of the string."""
-        return self.fm(parameter, *self._search_spans(*words, case_sensitive=case_sensitive))
+        return self.fm(
+            parameter, *self._search_spans(*words, case_sensitive=case_sensitive)
+        )
 
-    def unfm(self,
-             *slices: Sequence[int, int, int] | slice) -> Self:
+    def unfm(self, *slices: Annotated[Sequence[int], Length(3)] | slice) -> Self:
         """Unformats (removes styling) the string in a specified range."""
         if slices:
             for slice_ in slices:
@@ -425,133 +457,171 @@ class ANSIString(str):
                     del self.styles[index]
         return self
 
-    def unfm_w(self,
-               *words: str,
-               case_sensitive: bool = True) -> Self:
+    def unfm_w(self, *words: str, case_sensitive: bool = True) -> Self:
         """Unformats (removes styling) the string per word index."""
         return self.unfm(*self._search_spans(*words, case_sensitive=case_sensitive))
 
-    def fg_4b(self,
-              parameter: Foreground,
-              *slices: Sequence[int, int, int] | slice) -> Self:
+    def fg_4b(
+        self,
+        parameter: Foreground,
+        *slices: Annotated[Sequence[int], Length(3)] | slice,
+    ) -> Self:
         return self.fm(parameter, *slices)
 
-    def fg_4b_w(self,
-                parameter: Foreground,
-                *words: str,
-                case_sensitive: bool = True) -> Self:
-        return self.fg_4b(parameter, *self._search_spans(*words, case_sensitive=case_sensitive))
+    def fg_4b_w(
+        self,
+        parameter: Foreground,
+        *words: str,
+        case_sensitive: bool = True,
+    ) -> Self:
+        return self.fg_4b(
+            parameter, *self._search_spans(*words, case_sensitive=case_sensitive)
+        )
 
-    def fg_8b(self,
-              parameter: Annotated[int, ValueRange(0, 255)],
-              *slices: Sequence[int, int, int] | slice) -> Self:
+    def fg_8b(
+        self,
+        parameter: Annotated[int, ValueRange(0, 255)],
+        *slices: Annotated[Sequence[int], Length(3)] | slice,
+    ) -> Self:
         """Applies the foreground given by the 8-bit color number (0-255) to the string in a specified range."""
         parameter = f"{Foreground.SET};5;{parameter}"
         return self.fm(parameter, *slices)
 
-    def fg_8b_w(self,
-                parameter: Annotated[int, ValueRange(0, 255)],
-                *words: str,
-                case_sensitive: bool = True) -> Self:
-        return self.fg_8b(parameter, *self._search_spans(*words, case_sensitive=case_sensitive))
+    def fg_8b_w(
+        self,
+        parameter: Annotated[int, ValueRange(0, 255)],
+        *words: str,
+        case_sensitive: bool = True,
+    ) -> Self:
+        return self.fg_8b(
+            parameter, *self._search_spans(*words, case_sensitive=case_sensitive)
+        )
 
-    def fg_24b(self,
-               r: Annotated[int, ValueRange(0, 255)],
-               g: Annotated[int, ValueRange(0, 255)],
-               b: Annotated[int, ValueRange(0, 255)],
-               *slices: Sequence[int, int, int] | slice) -> Self:
+    def fg_24b(
+        self,
+        r: Annotated[int, ValueRange(0, 255)],
+        g: Annotated[int, ValueRange(0, 255)],
+        b: Annotated[int, ValueRange(0, 255)],
+        *slices: Annotated[Sequence[int], Length(3)] | slice,
+    ) -> Self:
         """Applies the foreground given by RGB to the string in a specified range."""
         parameter = f"{Foreground.SET};2;{r};{g};{b}"
         return self.fm(parameter, *slices)
 
-    def fg_24b_w(self,
-                 r: Annotated[int, ValueRange(0, 255)],
-                 g: Annotated[int, ValueRange(0, 255)],
-                 b: Annotated[int, ValueRange(0, 255)],
-                 *words: str,
-                 case_sensitive: bool = True) -> Self:
-        return self.fg_24b(r, g, b, *self._search_spans(*words, case_sensitive=case_sensitive))
+    def fg_24b_w(
+        self,
+        r: Annotated[int, ValueRange(0, 255)],
+        g: Annotated[int, ValueRange(0, 255)],
+        b: Annotated[int, ValueRange(0, 255)],
+        *words: str,
+        case_sensitive: bool = True,
+    ) -> Self:
+        return self.fg_24b(
+            r, g, b, *self._search_spans(*words, case_sensitive=case_sensitive)
+        )
 
-    def bg_4b(self,
-              parameter: Foreground,
-              *slices: Sequence[int, int, int] | slice) -> Self:
+    def bg_4b(
+        self,
+        parameter: Foreground,
+        *slices: Annotated[Sequence[int], Length(3)] | slice,
+    ) -> Self:
         return self.fm(parameter, *slices)
 
-    def bg_4b_w(self,
-                parameter: Foreground,
-                *words: str,
-                case_sensitive: bool = True) -> Self:
-        return self.bg_4b(parameter, *self._search_spans(*words, case_sensitive=case_sensitive))
+    def bg_4b_w(
+        self,
+        parameter: Foreground,
+        *words: str,
+        case_sensitive: bool = True,
+    ) -> Self:
+        return self.bg_4b(
+            parameter, *self._search_spans(*words, case_sensitive=case_sensitive)
+        )
 
-    def bg_8b(self,
-              parameter: Annotated[int, ValueRange(0, 255)],
-              *slices: Sequence[int, int, int] | slice) -> Self:
+    def bg_8b(
+        self,
+        parameter: Annotated[int, ValueRange(0, 255)],
+        *slices: Annotated[Sequence[int], Length(3)] | slice,
+    ) -> Self:
         """Applies the background given by the 8-bit color number (0-255) to the string in a specified range."""
         parameter = f"{Background.SET};5;{parameter}"
         return self.fm(parameter, *slices)
-    
-    def bg_8b_w(self,
-                parameter: Annotated[int, ValueRange(0, 255)],
-                *words: str,
-                case_sensitive: bool = True) -> Self:
-        return self.bg_8b(parameter, *self._search_spans(*words, case_sensitive=case_sensitive))
 
-    def bg_24b(self,
-               r: Annotated[int, ValueRange(0, 255)],
-               g: Annotated[int, ValueRange(0, 255)],
-               b: Annotated[int, ValueRange(0, 255)],
-               *slices: Sequence[int, int, int] | slice) -> Self:
+    def bg_8b_w(
+        self,
+        parameter: Annotated[int, ValueRange(0, 255)],
+        *words: str,
+        case_sensitive: bool = True,
+    ) -> Self:
+        return self.bg_8b(
+            parameter, *self._search_spans(*words, case_sensitive=case_sensitive)
+        )
+
+    def bg_24b(
+        self,
+        r: Annotated[int, ValueRange(0, 255)],
+        g: Annotated[int, ValueRange(0, 255)],
+        b: Annotated[int, ValueRange(0, 255)],
+        *slices: Annotated[Sequence[int], Length(3)] | slice,
+    ) -> Self:
         """Applies the background given by RGB to the string in a specified range."""
         parameter = f"{Background.SET};2;{r};{g};{b}"
         return self.fm(parameter, *slices)
-    
-    def bg_24b_w(self,
-                 r: Annotated[int, ValueRange(0, 255)],
-                 g: Annotated[int, ValueRange(0, 255)],
-                 b: Annotated[int, ValueRange(0, 255)],
-                 *words: str,
-                 case_sensitive: bool = True) -> Self:
-        return self.bg_24b(r, g, b, *self._search_spans(*words, case_sensitive=case_sensitive))
-    
-    def multicolor(self,
-                   sequence: str,
-                   *slices: Annotated[Sequence[int], Length(3)] | slice) -> Self:
+
+    def bg_24b_w(
+        self,
+        r: Annotated[int, ValueRange(0, 255)],
+        g: Annotated[int, ValueRange(0, 255)],
+        b: Annotated[int, ValueRange(0, 255)],
+        *words: str,
+        case_sensitive: bool = True,
+    ) -> Self:
+        return self.bg_24b(
+            r, g, b, *self._search_spans(*words, case_sensitive=case_sensitive)
+        )
+
+    def multicolor(
+        self, sequence: str, *slices: Annotated[Sequence[int], Length(3)] | slice
+    ) -> Self:
         if not slices:
-            slices = tuple((index, index+1) for index in range(0, len(self)))
-        
+            slices = tuple((index, index + 1) for index in range(0, len(self)))
+
         flags = {flag: 0 for flag in ("skipfirst", "cycle", "reverse", "mirror")}
+        char_to_flag = {
+            "*": "skipfirst",
+            "&": "cycle",
+            "@": "reverse",
+            "!": "mirror",
+        }
         offset = 0
         for char in reversed(sequence):
-            if char == "*":
-                flags["skipfirst"] = 1; offset -= 1
-            elif char == "&":
-                flags["cycle"] = 1; offset -= 1
-            elif char == "@":
-                flags["reverse"] = 1; offset -= 1
-            elif char == "!":
-                flags["mirror"] = 1; offset -= 1
+            if char in char_to_flag:
+                flags[char_to_flag[char]] = 1
+                offset -= 1
             elif char == " ":
                 offset -= 1
             else:
                 break
         if offset:
             sequence = sequence[:offset]
-        
+
         rgb = {
             key: {
-                key: {
-                    key: 0 for key in ("r", "g", "b")
-                } for key in ("fg", "bg", "ul")
-            } for key in ("actual", "start")
+                key: {key: 0 for key in ("r", "g", "b")} for key in ("fg", "bg", "ul")
+            }
+            for key in ("actual", "start")
         }
 
         if "$" in sequence:
             start_command, sequence = map(str.strip, sequence.split("$"))
             object_start_command = MulticolorCommand()
             for start_instruction in map(str.strip, start_command.split("|")):
-                match_start_instruction = re.match(Regex.MULTICOLOR_INSTRUCTION, start_instruction)
+                match_start_instruction = re.match(
+                    Regex.MULTICOLOR_INSTRUCTION, start_instruction
+                )
                 object_start_instruction = MulticolorInstruction(
-                    rgb["actual"], **match_start_instruction.groupdict(), repeat=object_start_command.repeat
+                    rgb["actual"],
+                    **match_start_instruction.groupdict(),
+                    repeat=object_start_command.repeat,
                 )
                 if match_start_instruction:
                     object_start_command.instructions.append(object_start_instruction)
@@ -596,7 +666,9 @@ class ANSIString(str):
                 match_instruction = re.match(Regex.MULTICOLOR_INSTRUCTION, instruction)
                 if match_instruction:
                     object_instruction = MulticolorInstruction(
-                        rgb["actual"], **match_instruction.groupdict(), repeat=object_command.repeat
+                        rgb["actual"],
+                        **match_instruction.groupdict(),
+                        repeat=object_command.repeat,
                     )
                     object_command.instructions.append(object_instruction)
             for no in range(object_command.repeat):
@@ -608,7 +680,9 @@ class ANSIString(str):
         if flags["mirror"] and len(commands) > 1:
             mirrored_commands: list[MulticolorCommand] = []
             for command in reversed(commands):
-                mirrored_commands.append(MulticolorCommand(None, command.reset, command.repeat))
+                mirrored_commands.append(
+                    MulticolorCommand(None, command.reset, command.repeat)
+                )
                 for instruction in command.instructions:
                     copied_instruction = copy(instruction)
                     if copied_instruction.operator == "+":
@@ -645,45 +719,52 @@ class ANSIString(str):
                     commands.append(copied_command)
 
         if flags["skipfirst"]:
-            if slices[0] and isinstance(slices[0], Sequence) and isinstance(slices[0][0], (Sequence, slice)):
+            if (
+                slices[0]
+                and isinstance(slices[0], Sequence)
+                and isinstance(slices[0][0], (Sequence, slice))
+            ):
                 self._apply_multicolor_command(rgb["actual"], start_modes, *slices[0])
             else:
                 self._apply_multicolor_command(rgb["actual"], start_modes, slices[0])
             slices = slices[1:]
-        
+
         for obj, command in zip(slices, commands):
-            if obj and isinstance(obj, Sequence) and isinstance(obj[0], (Sequence, slice)):
+            if (
+                obj
+                and isinstance(obj, Sequence)
+                and isinstance(obj[0], (Sequence, slice))
+            ):
                 self._process_multicolor_command(command, rgb, *obj)
             else:
                 self._process_multicolor_command(command, rgb, obj)
 
         return self
-    
-    def multicolor_c(self,
-                     sequence: str,
-                     *coordinates: tuple[int, int]) -> Self:
+
+    def multicolor_c(self, sequence: str, *coordinates: tuple[int, int]) -> Self:
         def transform(coordinates):
             for obj in coordinates:
                 if isinstance(obj, tuple) and isinstance(obj[0], tuple):
                     yield tuple(self._coord_to_slice(coord) for coord in obj)
                 else:
                     yield self._coord_to_slice(obj)
+
         if not coordinates:
             coordinates = self._get_all_coords()
         return self.multicolor(sequence, *transform(coordinates))
 
     def ljust(self, width: int, fillchar: str = " ") -> "ANSIString":
-        return self + fillchar*(width - len(self))
+        return self + fillchar * (width - len(self))
 
     def rjust(self, width: int, fillchar: str = " ") -> "ANSIString":
-        return fillchar*(width - len(self)) + self
+        return fillchar * (width - len(self)) + self
 
     def center(self, width: int, fillchar: str = " ") -> "ANSIString":
         margin = width - len(self)
         left = (margin // 2) + (margin & width & 1)
-        return fillchar*left + self + fillchar*(margin-left)
+        return fillchar * left + self + fillchar * (margin - left)
 
-    def split(self, sep: str|None = None, maxsplit: int = -1) -> list['ANSIString']:
+    def split(self, sep: str | None = None, maxsplit: int = -1) -> list["ANSIString"]:
         actual = super().split(sep, maxsplit)
         min_index = 0
         if not sep:
@@ -691,13 +772,17 @@ class ANSIString(str):
             if self.plain[0] in WHITESPACE:
                 min_index += len(next(whitespace, ""))
         for no, string in enumerate(actual):
-            max_index = min_index+len(string)
-            styles = {index-min_index: self.styles[index] for index in range(min_index, max_index) if index in self.styles}
+            max_index = min_index + len(string)
+            styles = {
+                index - min_index: self.styles[index]
+                for index in range(min_index, max_index)
+                if index in self.styles
+            }
             actual[no] = type(self)(string, StyleDict(styles))
             min_index += len(string) + (len(sep) if sep else len(next(whitespace, "")))
         return actual
-    
-    def rsplit(self, sep: str|None = None, maxsplit: int = -1) -> list['ANSIString']:
+
+    def rsplit(self, sep: str | None = None, maxsplit: int = -1) -> list["ANSIString"]:
         actual = super().rsplit(sep, maxsplit)
         max_index = len(self)
         if not sep:
@@ -705,36 +790,50 @@ class ANSIString(str):
             if self.plain[-1] in WHITESPACE:
                 max_index -= len(next(whitespace, ""))
         for no, string in enumerate(actual[::-1]):
-            min_index = max_index-len(string)
-            styles = {index-min_index: self.styles[index] for index in range(min_index, max_index) if index in self.styles}
-            actual[len(actual)-1-no] = type(self)(string, StyleDict(styles))
+            min_index = max_index - len(string)
+            styles = {
+                index - min_index: self.styles[index]
+                for index in range(min_index, max_index)
+                if index in self.styles
+            }
+            actual[len(actual) - 1 - no] = type(self)(string, StyleDict(styles))
             max_index -= len(string) + (len(sep) if sep else len(next(whitespace, "")))
         return actual
-    
+
     def join(self, iterable: list[str], /) -> "ANSIString":
         styles, increment = {}, 0
         for i, string in enumerate(iterable):
             increment += len(string)
-            if i: increment += len(self)
-            styles.update({increment+index: style for index, style in self.styles.items()})
+            if i:
+                increment += len(self)
+            styles.update(
+                {increment + index: style for index, style in self.styles.items()}
+            )
             if type(string) == ANSIString:
-                styles.update({increment+index-len(string): style for index, style in string.styles.items()})
+                styles.update(
+                    {
+                        increment + index - len(string): style
+                        for index, style in string.styles.items()
+                    }
+                )
         return type(self)(super().join(iterable), StyleDict(styles))
 
     @staticmethod
     def from_ansi(plain: str) -> "ANSIString":
         start, style, styles = 0, "", {}
         decrement, sequences = 0, {}
+
         def smart_replacement(match_: re.Match[str]) -> str:
             nonlocal decrement
             sequence, span = match_.group(0), match_.span(0)
             if sequence.endswith("m"):
-                if span[0]-decrement in sequences:
-                    sequences[span[0]-decrement] += sequence
+                if span[0] - decrement in sequences:
+                    sequences[span[0] - decrement] += sequence
                 else:
-                    sequences[span[0]-decrement] = sequence
+                    sequences[span[0] - decrement] = sequence
             decrement += len(sequence)
             return ""
+
         plain = re.sub(Regex.ANSI_SEQ, smart_replacement, plain)
         for index, sequence in sequences.items():
             for match_ in re.finditer(Regex.SGR_PARAM, sequence):

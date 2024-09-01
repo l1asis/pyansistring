@@ -1,6 +1,15 @@
-__all_ = ["Foreground", "Background", "Underline", "SGR",
-          "Regex", "WHITESPACE", "UNIVERSAL_NEWLINES",
-          "PUNCTUATION"]
+__all__ = [
+    "WHITESPACE",
+    "UNIVERSAL_NEWLINES",
+    "PUNCTUATION",
+    "PUNCTUATION_AND_WHITESPACE",
+    "Foreground",
+    "Background",
+    "Underline",
+    "SGR",
+    "Regex",
+    "MulticolorSequences",
+]
 
 from enum import IntEnum
 from re import compile
@@ -11,12 +20,25 @@ https://en.wikipedia.org/wiki/ANSI_escape_code
 """
 
 WHITESPACE = {" ", "\t", "\n", "\r", "\x0b", "\x0c"}
-UNIVERSAL_NEWLINES = {"\n", "\r", "\r\n", "\x0b", "\x0c", "\x1c", "\x1d", "\x1e", "\x85", "\u2028", "\u2029"}
-PUNCTUATION = {'~', '\\', '%', "'", '@', '_', '(', '.', ':', '$', '&', '"', '=', '<', '-', '*', ']', ')', '^', '/', '[', '{', ',', ';', '|', '+', '>', '?', '}', '`', '!', '#'}
+UNIVERSAL_NEWLINES = {
+    "\n", "\r", "\r\n", "\x0b",
+    "\x0c", "\x1c", "\x1d", "\x1e", 
+    "\x85", "\u2028", "\u2029",
+}
+PUNCTUATION = {
+    "~", "\\", "%", "'", "@", "_",
+    "(", ".", ":", "$", "&", '"',
+    "=", "<", "-", "*", "]", ")",
+    "^", "/", "[", "{", ",", ";",
+    "|", "+", ">", "?", "}", "`",
+    "!", "#",
+}
 PUNCTUATION_AND_WHITESPACE = PUNCTUATION.union(WHITESPACE)
+
 
 class Foreground(IntEnum):
     """SGR foreground color parameters."""
+
     BLACK = 30
     RED = 31
     GREEN = 32
@@ -25,7 +47,7 @@ class Foreground(IntEnum):
     MAGENTA = 35
     CYAN = 36
     WHITE = 37
-    SET = 38 # Next arguments are 5;n or 2;r;g;b
+    SET = 38  # Next arguments are 5;n or 2;r;g;b
     DEFAULT = 39
     BRIGHT_BLACK = 90
     BRIGHT_RED = 91
@@ -36,8 +58,10 @@ class Foreground(IntEnum):
     BRIGHT_CYAN = 96
     BRIGHT_WHITE = 97
 
+
 class Background(IntEnum):
     """SGR background color parameters."""
+
     BLACK = 40
     RED = 41
     GREEN = 42
@@ -46,7 +70,7 @@ class Background(IntEnum):
     MAGENTA = 45
     CYAN = 46
     WHITE = 47
-    SET = 48 # Next arguments are 5;n or 2;r;g;b
+    SET = 48  # Next arguments are 5;n or 2;r;g;b
     DEFAULT = 49
     BRIGHT_BLACK = 100
     BRIGHT_RED = 101
@@ -57,13 +81,17 @@ class Background(IntEnum):
     BRIGHT_CYAN = 106
     BRIGHT_WHITE = 107
 
+
 class Underline(IntEnum):
     """SGR underline color parameters."""
-    SET = 58 # Next arguments are 5;n or 2;r;g;b
+
+    SET = 58  # Next arguments are 5;n or 2;r;g;b
     DEFAULT = 59
+
 
 class SGR(IntEnum):
     """SGR (Select Graphic Rendition) parameters."""
+
     RESET = 0
     BOLD = 1
     DIM = 2
@@ -110,34 +138,35 @@ class SGR(IntEnum):
     SUBSCRIPT = 74
     NEITHER_SUPERSCRIPT_NOR_SUBSCRIPT = 75
 
+
 class Regex:
     """Compiled REs used in the library."""
+
     INT8 = compile(r"(?:25[0-5]|2[0-4][0-9]|1?[0-9]{1,2})")
-    SET8 = compile(fr"(?:(?:38|48|58);5;{INT8.pattern})")
-    SET24 = compile(fr"(?:(?:38|48|58);2;{INT8.pattern}(?:;{INT8.pattern}){r'{0,2}'})")
+    SET8 = compile(rf"(?:(?:38|48|58);5;{INT8.pattern})")
+    SET24 = compile(rf"(?:(?:38|48|58);2;{INT8.pattern}(?:;{INT8.pattern}){r'{0,2}'})")
     SGR_PARAM = compile(
-        fr"(?:{SET24.pattern}|{SET8.pattern}|[0-9]|2[0-9]|3[0-79]|4[0-79]|5[0-79]|[6-9][0-9]|10[0-7])"
+        rf"(?:{SET24.pattern}|{SET8.pattern}|[0-9]|2[0-9]|3[0-79]|4[0-79]|5[0-79]|[6-9][0-9]|10[0-7])"
     )
     ANSI_SEQ = compile(
         r"(?:\x1b[@-Z\\-_]|[\x80-\x9a\x9c-\x9f]|(?:\x1b\[|\x9b)[0-?]*[ -/]*[@-~])"
     )
     ARGUMENTS = r"\((?:\s*{}\s*(?:,\s*{}\s*){quantifier}\s*)\)"
     INT_OR_FLOAT = r"\-?\d+(?:\.\d+)?"
-    INT_OR_FLOAT_OR_INF = fr"(?:{INT_OR_FLOAT}|\-?inf)"
+    INT_OR_FLOAT_OR_INF = rf"(?:{INT_OR_FLOAT}|\-?inf)"
     MULTICOLOR_INSTRUCTION = compile(
         r"(?P<color>[rgb])"
         r"(?P<operator>[\+\-\=\>])"
         r"(?P<value>"
-            r"(?:\d+(?:\.\d+)?)|"
-            rf"(?:random{ARGUMENTS.format(INT_OR_FLOAT, INT_OR_FLOAT, quantifier=r'{1}')})|"
-            r"(?:(?:fg|bg|ul)_[rgb])"
+        r"(?:\d+(?:\.\d+)?)|"
+        rf"(?:random{ARGUMENTS.format(INT_OR_FLOAT, INT_OR_FLOAT, quantifier=r'{1}')})|"
+        r"(?:(?:fg|bg|ul)_[rgb])"
         r")\:"
         r"(?P<mode>fg|bg|ul)?"
-        fr"(?P<minmax>minmax{ARGUMENTS.format(INT_OR_FLOAT_OR_INF, INT_OR_FLOAT_OR_INF, quantifier=r'{1}')})?"
+        rf"(?P<minmax>minmax{ARGUMENTS.format(INT_OR_FLOAT_OR_INF, INT_OR_FLOAT_OR_INF, quantifier=r'{1}')})?"
     )
-    MULTICOLOR_COMMAND = compile(
-        r"(?P<reset>\?|\?\?)?(?P<repeat>repeat\(\d+\))?$"
-    )
+    MULTICOLOR_COMMAND = compile(r"(?P<reset>\?|\?\?)?(?P<repeat>repeat\(\d+\))?$")
+
 
 class MulticolorSequences:
     """
@@ -145,16 +174,16 @@ class MulticolorSequences:
     - start command is separated by "$"
     - commands are separated by "#"
     - instructions are concatenated with "|"
-    
-    SEQUENCE START: 
+
+    SEQUENCE START:
         identical to INSTRUCTION BODY
 
     INSTRUCTION BODY:
-        - [important] color: 
-            - "r": red 
+        - [important] color:
+            - "r": red
             - "g": green
             - "b": blue
-        - [important] operator: 
+        - [important] operator:
             - ">": goto, automatically expands to the given value
             - "=": equal, assigns a value
             - "+": add, adds a value
@@ -162,7 +191,7 @@ class MulticolorSequences:
         - [important] value:
             - int
             - float
-            - random [format: "random(x,y)"] 
+            - random [format: "random(x,y)"]
             - special var ("fg" or "bg" or "ul") + "_" + ("r" or "g" or "b")
         - [important] options ":"
             - [optional] mode: [default: "fg"]
@@ -181,19 +210,22 @@ class MulticolorSequences:
         - [optional] repeat:
             - int
             - "auto": calculates the repeat by itself
-    
+
     SEQUENCE END:
         - [optional] flag:
-            - "@": reverse 
+            - "@": reverse
             - "!": mirror
             - "&": cycle
             - "*": skipfirst, start with the given r, g, b
     """
-    RAINBOW = ("r=255:|g=0:|b=0:  $"
-               "g>255:repeat(auto)#"
-               "r>0:repeat(auto)  #"
-               "b>255:repeat(auto)#"
-               "g>0:repeat(auto)  #"
-               "r>255:repeat(auto)#"
-               "b>0:repeat(auto)  &*")
+
+    RAINBOW = (
+        "r=255:|g=0:|b=0:  $"
+        "g>255:repeat(auto)#"
+        "r>0:repeat(auto)  #"
+        "b>255:repeat(auto)#"
+        "g>0:repeat(auto)  #"
+        "r>255:repeat(auto)#"
+        "b>0:repeat(auto)  &*"
+    )
     REVERSED_RAINBOW = f"{RAINBOW[:-2]} @&*"
