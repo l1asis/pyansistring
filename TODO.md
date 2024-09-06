@@ -132,6 +132,6 @@
 - [X] `multicolor` (apply a specific custom coloring using the provided coloring system)
 - [X] `multicolor_c` (`multicolor` using coordinates, it's useful for multiline strings)
 - [ ] `colormap` (apply a specific predefined coloring)
-- [ ] `rainbow` (apply rainbow coloring (using a separate algorithm))
+- [X] `rainbow` (apply rainbow coloring (using a separate algorithm))
 - [ ] `random_art` (return random color art)
 - [X] `from_ansi` (create `ANSIString` from plain `str` with ANSI escape sequences)

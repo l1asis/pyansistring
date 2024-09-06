@@ -264,6 +264,44 @@ class ANSIStringFeatureTest(BaseTestCase, unittest.TestCase):
             self.extended_assert_equal(a, expected)
             self.assertDictEqual(a.styles, styles)
 
+    def test_rainbow(self):
+        actual = (
+            ANSIString("abcdefghijklmnopqrstuvwxyz").rainbow(skip_whitespace=True),
+            ANSIString("abcdefghijklmnopqrstuvwxyz").rainbow(bg=True),
+        )
+        expected = (
+            ANSIString("abcdefghijklmnopqrstuvwxyz",
+                       StyleDict({0: '\x1b[38;2;255;0;0m', 1: '\x1b[38;2;255;60;0m',
+                                   2: '\x1b[38;2;255;119;0m', 3: '\x1b[38;2;255;179;0m',
+                                   4: '\x1b[38;2;255;234;0m', 5: '\x1b[38;2;217;255;0m',
+                                   6: '\x1b[38;2;157;255;0m', 7: '\x1b[38;2;98;255;0m',
+                                   8: '\x1b[38;2;38;255;0m', 9: '\x1b[38;2;0;255;21m',
+                                   10: '\x1b[38;2;0;255;76m', 11: '\x1b[38;2;0;255;136m',
+                                   12: '\x1b[38;2;0;255;195m', 13: '\x1b[38;2;0;255;255m',
+                                   14: '\x1b[38;2;0;195;255m', 15: '\x1b[38;2;0;136;255m',
+                                   16: '\x1b[38;2;0;76;255m', 17: '\x1b[38;2;0;21;255m',
+                                   18: '\x1b[38;2;38;0;255m', 19: '\x1b[38;2;98;0;255m',
+                                   20: '\x1b[38;2;157;0;255m', 21: '\x1b[38;2;217;0;255m',
+                                   22: '\x1b[38;2;255;0;234m', 23: '\x1b[38;2;255;0;178m',
+                                   24: '\x1b[38;2;255;0;119m', 25: '\x1b[38;2;255;0;60m'})),
+            ANSIString("abcdefghijklmnopqrstuvwxyz",
+                       StyleDict({0: '\x1b[48;2;255;0;0m', 1: '\x1b[48;2;255;60;0m',
+                                  2: '\x1b[48;2;255;119;0m', 3: '\x1b[48;2;255;179;0m',
+                                  4: '\x1b[48;2;255;234;0m', 5: '\x1b[48;2;217;255;0m',
+                                  6: '\x1b[48;2;157;255;0m', 7: '\x1b[48;2;98;255;0m',
+                                  8: '\x1b[48;2;38;255;0m', 9: '\x1b[48;2;0;255;21m',
+                                  10: '\x1b[48;2;0;255;76m', 11: '\x1b[48;2;0;255;136m',
+                                  12: '\x1b[48;2;0;255;195m', 13: '\x1b[48;2;0;255;255m',
+                                  14: '\x1b[48;2;0;195;255m', 15: '\x1b[48;2;0;136;255m',
+                                  16: '\x1b[48;2;0;76;255m', 17: '\x1b[48;2;0;21;255m',
+                                  18: '\x1b[48;2;38;0;255m', 19: '\x1b[48;2;98;0;255m',
+                                  20: '\x1b[48;2;157;0;255m', 21: '\x1b[48;2;217;0;255m',
+                                  22: '\x1b[48;2;255;0;234m', 23: '\x1b[48;2;255;0;178m',
+                                  24: '\x1b[48;2;255;0;119m', 25: '\x1b[48;2;255;0;60m'}))
+        )
+        for a, e in zip(actual, expected):
+            self.extended_assert_equal(a, e)
+
     def test_multicolor(self):
         string = "abcdefghijklmnopqrstuvwxyz"
         actual = (

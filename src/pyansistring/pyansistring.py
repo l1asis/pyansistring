@@ -51,6 +51,15 @@ def rsearch_separators(string: str, allowed: set = WHITESPACE):
 def clamp(value: int | float, min=-float("inf"), max=float("inf")) -> int | float:
     return min if value < min else max if value > max else value
 
+def hsl_to_rgb(hue: int | float, saturation: int = 100, lightness: int = 50) -> tuple[int, int, int]:
+    hue = hue / 100
+    saturation = saturation / 100
+    lightness = lightness / 100
+    def f(n: int | float):
+        k = (n + hue * (10/3)) % 12
+        a = saturation * min(lightness, 1-lightness)
+        return round((lightness - a * max(-1, min(k-3, 9-k, 1))) * 255)
+    return f(0), f(8), f(4)
 
 def wrapper_has_been_modified(method: Callable, bound: bool = False):
     @wraps(method)
@@ -578,6 +587,32 @@ class ANSIString(str):
         return self.bg_24b(
             r, g, b, *self._search_spans(*words, case_sensitive=case_sensitive)
         )
+
+    def rainbow(
+        self, 
+        *slices: Annotated[Sequence[int], Length(3)] | slice,
+        skip_whitespace: bool = False,
+        fg: bool = False,
+        bg: bool = False,
+        ul: bool = False,
+    ) -> Self:
+        if not slices:
+            slices = tuple(
+                (index, index+1) for index, char in enumerate(self.plain)
+                if not (skip_whitespace and char in WHITESPACE)
+            )
+        if not (fg or bg or ul):
+            fg = True
+        length = len(slices)
+        for index, slice_ in enumerate(slices):
+            hue = round(index / length * 360)
+            if fg:
+                self.fg_24b(*hsl_to_rgb(hue), slice_)
+            elif bg:
+                self.bg_24b(*hsl_to_rgb(hue), slice_)
+            elif ul:
+                NotImplemented
+        return self
 
     def multicolor(
         self, sequence: str, *slices: Annotated[Sequence[int], Length(3)] | slice
