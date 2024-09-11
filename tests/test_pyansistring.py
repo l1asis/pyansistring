@@ -1,9 +1,10 @@
 import sys
 import unittest
 
-from pyansistring import (ANSIString, StyleDict, rsearch_separators,
-                          search_separators, search_word_spans)
+from pyansistring import ANSIString, StyleDict
 from pyansistring.constants import *
+from pyansistring.helpers import (rsearch_separators, search_separators,
+                                  search_word_spans)
 
 output = []
 
@@ -629,10 +630,10 @@ class ANSIStringDefaultTest(BaseTestCase, unittest.TestCase):
         steps = 0
         seps = (None, ".", "..", "...")
         maxsplits = (-1, 0, 1, 2, 3)
-        spaces = ANSIString(" hello,   world!    ").fg_24b(0,0,255,(1,2),(5,6)).fg_24b(255,255,0,(10,11),(14,15))
-        dots = ANSIString(".hello,...world!....").fg_24b(0,0,255,(1,2),(5,6)).fg_24b(255,255,0,(10,11),(14,15))
-        hello = f"{blue}h{res}ell{blue}o{res}"
-        world = f"{yellow}w{res}orl{yellow}d{res}"
+        spaces = ANSIString(" Hello,   World!    ").fg_24b(0,0,255,(1,2),(5,6)).fg_24b(255,255,0,(10,11),(14,15))
+        dots = ANSIString(".Hello,...World!....").fg_24b(0,0,255,(1,2),(5,6)).fg_24b(255,255,0,(10,11),(14,15))
+        hello = f"{blue}H{res}ell{blue}o{res}"
+        world = f"{yellow}W{res}orl{yellow}d{res}"
         actual = {
             sep: {
                 maxsplit: (spaces if not sep else dots).split(sep, maxsplit) for maxsplit in maxsplits
@@ -681,6 +682,29 @@ class ANSIStringDefaultTest(BaseTestCase, unittest.TestCase):
                         function_name=(None if not steps else "")
                     )
                     steps += 1
+
+    def test_splitlines(self):
+        blue, yellow, res = f"\x1b[38;2;0;0;255m", f"\x1b[38;2;255;255;0m", "\x1b[0m"
+        hello = f"{blue}H{res}ell{blue}o{res}"
+        world = f"{yellow}W{res}orld{yellow}!{res}"
+        string = ANSIString("\n\nHello, \nWorld!\n\n\n").fg_24b(0,0,255,(2,3),(6,7)).fg_24b(255,255,0,(10,11),(15,16))
+        actual = (
+            string.splitlines(),
+            string.splitlines(True),
+        )
+        expected = (
+            ['', '', f'{hello}, ', f'{world}', '', ''],
+            ['\n', '\n', f'{hello}, \n', f'{world}\n', '\n', '\n'],
+        )
+        for step, (a_list, e_list) in enumerate(zip(actual, expected)):
+            self.assertEqual(len(a_list), len(e_list))
+            a_list, e_list = filter(None, a_list), filter(None, e_list)
+            for a, e in zip(a_list, e_list, strict=True):
+                self.extended_assert_equal(
+                    a, e,
+                    verbose=False,
+                    comment=f"(keeptrue={False if not step else True})",
+                )
     
     def test_startswith(self):
         string = ANSIString("Hello, World!").fm(SGR.BOLD)

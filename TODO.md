@@ -80,7 +80,7 @@
   - [X] whitespace
   - [X] one char
   - [X] two or more chars
-- [ ] `splitlines`
+- [X] `splitlines`
 - [X] `startswith`
 - [ ] `strip`
 - [X] `swapcase`

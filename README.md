@@ -24,6 +24,11 @@ git clone https://github.com/l1asis/pyansistring
 pip install .
 ```
 
+## **Contributing**
+Any ideas (vectors) for improvements, actual help with implementations, bug fixes 
+and anything else is highly appreciated. You can also contribute by adding your 
+own art to the `arts.py` file in the `.\src\pyansistring` directory if you like.
+
 ## **Usage**
 ```python
 from pyansistring import ANSIString

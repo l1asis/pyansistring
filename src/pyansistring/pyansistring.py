@@ -1,8 +1,11 @@
+__all__ = [
+    "StyleDict",
+    "ANSIString",
+]
 
 import re
 from collections.abc import Generator, Hashable, Sequence
 from copy import copy, deepcopy
-from dataclasses import dataclass
 from functools import wraps
 from itertools import cycle
 from random import randint
@@ -10,58 +13,10 @@ from types import MethodType
 from typing import Annotated, Any, Callable, Literal, Self
 
 from pyansistring.constants import *
+from pyansistring.helpers import *
 
 
-def search_word_spans(string: str, word: str) -> Generator[tuple[int, int]]:
-    """Searches for a word spans in a string."""
-    temp, start = "", None
-    for index, char in enumerate(string):
-        if len(temp) < len(word):
-            if char in word[len(temp)]:
-                temp += char
-                if start is None:
-                    start = index
-            else:
-                start, temp = None, ""
-        else:
-            yield start, index
-            start, temp = None, ""
-    if temp and len(temp) == len(word):
-        yield (start, index + 1)
-
-
-def search_separators(string: str, allowed: set = WHITESPACE):
-    r"""Searches for allowed separators in a string."""
-    separator = ""
-    for char in string:
-        if char in allowed:
-            separator += char
-        elif separator:
-            yield separator
-            separator = ""
-    if separator:
-        yield separator
-
-
-def rsearch_separators(string: str, allowed: set = WHITESPACE):
-    r"""Searches for allowed separators in a reversed string."""
-    return search_separators(string[::-1], allowed)
-
-
-def clamp(value: int | float, min=-float("inf"), max=float("inf")) -> int | float:
-    return min if value < min else max if value > max else value
-
-def hsl_to_rgb(hue: int | float, saturation: int = 100, lightness: int = 50) -> tuple[int, int, int]:
-    hue = hue / 100
-    saturation = saturation / 100
-    lightness = lightness / 100
-    def f(n: int | float):
-        k = (n + hue * (10/3)) % 12
-        a = saturation * min(lightness, 1-lightness)
-        return round((lightness - a * max(-1, min(k-3, 9-k, 1))) * 255)
-    return f(0), f(8), f(4)
-
-def wrapper_has_been_modified(method: Callable, bound: bool = False):
+def _wrapper_has_been_modified(method: Callable, bound: bool = False):
     @wraps(method)
     def wrapped(self: "StyleDict", *args, **kwargs):
         previous_length = len(self)
@@ -74,23 +29,6 @@ def wrapper_has_been_modified(method: Callable, bound: bool = False):
         return result
 
     return wrapped
-
-
-@dataclass
-class ValueRange:
-    lo: int
-    hi: int
-
-    def __hash__(self) -> int:
-        return hash((self.lo, self.hi))
-
-
-@dataclass
-class Length:
-    value: int
-
-    def __hash__(self) -> int:
-        return hash(self.value)
 
 
 class StyleDict(dict):
@@ -117,7 +55,7 @@ class StyleDict(dict):
         for name in {"clear", "pop", "popitem", "setdefault", "update"}:
             setattr(
                 self, name,
-                MethodType(wrapper_has_been_modified(getattr(self, name), bound=True), self),
+                MethodType(_wrapper_has_been_modified(getattr(self, name), bound=True), self),
             )
 
     @property
@@ -135,7 +73,7 @@ class StyleDict(dict):
             self._has_been_modified = True
         return super().__setitem__(key, value)
 
-    @wrapper_has_been_modified
+    @_wrapper_has_been_modified
     def __delitem__(self, key: Any) -> None:
         return super().__delitem__(key)
 
@@ -295,7 +233,11 @@ class ANSIString(str):
         return type(self)(super().__getitem__(key), styles)
 
     def __getattribute__(self, name: str):
-        if name in dir(str) and name not in {"ljust", "rjust", "center", "split", "rsplit", "join"}:
+        allowed_names = {
+            "ljust", "rjust", "center", "split",
+            "rsplit", "join", "splitlines",
+        }
+        if name in dir(str) and name not in allowed_names:
 
             def method(self, *args, **kwargs):
                 value = getattr(super(), name)(*args, **kwargs)
@@ -422,6 +364,36 @@ class ANSIString(str):
             self.bg_24b(*(int(clamp(rgb["bg"][key], 0, 255)) for key in "rgb"), *slices)
         if modes["ul"]:
             NotImplemented
+
+    @staticmethod
+    def from_ansi(plain: str) -> "ANSIString":
+        start, style, styles = 0, "", {}
+        decrement, sequences = 0, {}
+
+        def smart_replacement(match_: re.Match[str]) -> str:
+            nonlocal decrement
+            sequence, span = match_.group(0), match_.span(0)
+            if sequence.endswith("m"):
+                if span[0] - decrement in sequences:
+                    sequences[span[0] - decrement] += sequence
+                else:
+                    sequences[span[0] - decrement] = sequence
+            decrement += len(sequence)
+            return ""
+
+        plain = re.sub(Regex.ANSI_SEQ, smart_replacement, plain)
+        for index, sequence in sequences.items():
+            for match_ in re.finditer(Regex.SGR_PARAM, sequence):
+                parameter = match_.group(0)
+                if parameter == "0":
+                    if style:
+                        for sub_index in range(start, index):
+                            styles[sub_index] = style
+                        style = ""
+                else:
+                    style += f"\x1b[{parameter}m"
+                    start = index
+        return ANSIString(plain, styles)
 
     def fm(
         self, parameter: int | str, *slices: Annotated[Sequence[int], Length(3)] | slice
@@ -788,53 +760,6 @@ class ANSIString(str):
             coordinates = self._get_all_coords()
         return self.multicolor(sequence, *transform(coordinates))
 
-    def ljust(self, width: int, fillchar: str = " ") -> "ANSIString":
-        return self + fillchar * (width - len(self))
-
-    def rjust(self, width: int, fillchar: str = " ") -> "ANSIString":
-        return fillchar * (width - len(self)) + self
-
-    def center(self, width: int, fillchar: str = " ") -> "ANSIString":
-        margin = width - len(self)
-        left = (margin // 2) + (margin & width & 1)
-        return fillchar * left + self + fillchar * (margin - left)
-
-    def split(self, sep: str | None = None, maxsplit: int = -1) -> list["ANSIString"]:
-        actual = super().split(sep, maxsplit)
-        min_index = 0
-        if not sep:
-            whitespace = search_separators(self.plain)
-            if self.plain[0] in WHITESPACE:
-                min_index += len(next(whitespace, ""))
-        for no, string in enumerate(actual):
-            max_index = min_index + len(string)
-            styles = {
-                index - min_index: self.styles[index]
-                for index in range(min_index, max_index)
-                if index in self.styles
-            }
-            actual[no] = type(self)(string, StyleDict(styles))
-            min_index += len(string) + (len(sep) if sep else len(next(whitespace, "")))
-        return actual
-
-    def rsplit(self, sep: str | None = None, maxsplit: int = -1) -> list["ANSIString"]:
-        actual = super().rsplit(sep, maxsplit)
-        max_index = len(self)
-        if not sep:
-            whitespace = rsearch_separators(self.plain)
-            if self.plain[-1] in WHITESPACE:
-                max_index -= len(next(whitespace, ""))
-        for no, string in enumerate(actual[::-1]):
-            min_index = max_index - len(string)
-            styles = {
-                index - min_index: self.styles[index]
-                for index in range(min_index, max_index)
-                if index in self.styles
-            }
-            actual[len(actual) - 1 - no] = type(self)(string, StyleDict(styles))
-            max_index -= len(string) + (len(sep) if sep else len(next(whitespace, "")))
-        return actual
-
     def join(self, iterable: list[str], /) -> "ANSIString":
         styles, increment = {}, 0
         for i, string in enumerate(iterable):
@@ -853,32 +778,63 @@ class ANSIString(str):
                 )
         return type(self)(super().join(iterable), StyleDict(styles))
 
-    @staticmethod
-    def from_ansi(plain: str) -> "ANSIString":
-        start, style, styles = 0, "", {}
-        decrement, sequences = 0, {}
+    def ljust(self, width: int, fillchar: str = " ") -> "ANSIString":
+        return self + fillchar * (width - len(self))
 
-        def smart_replacement(match_: re.Match[str]) -> str:
-            nonlocal decrement
-            sequence, span = match_.group(0), match_.span(0)
-            if sequence.endswith("m"):
-                if span[0] - decrement in sequences:
-                    sequences[span[0] - decrement] += sequence
-                else:
-                    sequences[span[0] - decrement] = sequence
-            decrement += len(sequence)
-            return ""
+    def rjust(self, width: int, fillchar: str = " ") -> "ANSIString":
+        return fillchar * (width - len(self)) + self
 
-        plain = re.sub(Regex.ANSI_SEQ, smart_replacement, plain)
-        for index, sequence in sequences.items():
-            for match_ in re.finditer(Regex.SGR_PARAM, sequence):
-                parameter = match_.group(0)
-                if parameter == "0":
-                    if style:
-                        for sub_index in range(start, index):
-                            styles[sub_index] = style
-                        style = ""
-                else:
-                    style += f"\x1b[{parameter}m"
-                    start = index
-        return ANSIString(plain, styles)
+    def center(self, width: int, fillchar: str = " ") -> "ANSIString":
+        margin = width - len(self)
+        left = (margin // 2) + (margin & width & 1)
+        return fillchar * left + self + fillchar * (margin - left)
+
+    def rsplit(self, sep: str | None = None, maxsplit: int = -1) -> list["ANSIString"]:
+        actual = super().rsplit(sep, maxsplit)
+        max_index = len(self)
+        if not sep:
+            whitespace = rsearch_separators(self.plain)
+            if self.plain[-1] in WHITESPACE:
+                max_index -= len(next(whitespace, ""))
+        for no, string in enumerate(actual[::-1]):
+            min_index = max_index - len(string)
+            styles = {
+                index - min_index: self.styles[index]
+                for index in range(min_index, max_index)
+                if index in self.styles
+            }
+            actual[len(actual) - 1 - no] = type(self)(string, StyleDict(styles))
+            max_index -= len(string) + (len(sep) if sep else len(next(whitespace, "")))
+        return actual
+    
+    def split(self, sep: str | None = None, maxsplit: int = -1) -> list["ANSIString"]:
+        actual = super().split(sep, maxsplit)
+        min_index = 0
+        if not sep:
+            whitespace = search_separators(self.plain)
+            if self.plain[0] in WHITESPACE:
+                min_index += len(next(whitespace, ""))
+        for no, string in enumerate(actual):
+            max_index = min_index + len(string)
+            styles = {
+                index - min_index: self.styles[index]
+                for index in range(min_index, max_index)
+                if index in self.styles
+            }
+            actual[no] = type(self)(string, StyleDict(styles))
+            min_index += len(string) + (len(sep) if sep else len(next(whitespace, "")))
+        return actual
+
+    def splitlines(self, /, keepends: bool = False) -> list["ANSIString"]:
+        actual = super().splitlines(keepends)
+        min_index = 0
+        for no, string in enumerate(actual):
+            max_index = min_index + len(string)
+            styles = {
+                index - min_index: self.styles[index]
+                for index in range(min_index, max_index)
+                if index in self.styles
+            }
+            actual[no] = type(self)(string, StyleDict(styles))
+            min_index += len(string) + (0 if keepends else 1)
+        return actual
