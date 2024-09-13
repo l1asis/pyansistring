@@ -5,18 +5,24 @@ build-backend = "hatchling.build"
 [project]
 name = "pyansistring"
 version = "0.0.2"
+requires-python = ">=3.10"
 authors = [
-  { name="Volodymyr Horshenin" },
+  {name="Volodymyr Horshenin"},
 ]
 description = "A small library for fast color styling of the string using ANSI escape sequences."
 readme = "README.md"
-requires-python = ">=3.8"
+license = {file = "LICENSE"}
+keywords = ["colored string", "colored text", "colors", "ANSI escape sequences", "terminal"]
 classifiers = [
-    "Programming Language :: Python :: 3",
-    "License :: OSI Approved :: MIT License",
-    "Operating System :: OS Independent",
+  "Development Status :: 3 - Alpha",
+  "Intended Audience :: Other Audience",
+  "Topic :: Terminals",
+  "Topic :: Text Processing",
+  "License :: OSI Approved :: MIT License",
+  "Programming Language :: Python :: 3",
+  "Operating System :: OS Independent",
 ]
 
 [project.urls]
-Homepage = "https://github.com/l1asis/pyansistring"
+Repository = "https://github.com/l1asis/pyansistring.git"
 Issues = "https://github.com/l1asis/pyansistring/issues"

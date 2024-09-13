@@ -15,12 +15,14 @@ Inspired by [***`rich`***](https://github.com/Textualize/rich) Python library.
 #### For a more comprehensive list of what's been done so far, see the [***TODO***](./TODO.md) section.
 
 ## **Install**
-Since the library is not (yet, but I'll do it) published on [PyPI](https://pypi.org/), it can only be used directly or installed with pip:
+Since the library is published on [PyPI](https://pypi.org/), it can be installed using pip:
+```
+pip install pyansistring
+```
+Or locally, by cloning the project:
 ```
 git clone https://github.com/l1asis/pyansistring
-```
-```
-# current directory: /pyansistring
+cd ./pyansistring/
 pip install .
 ```
 
