@@ -989,8 +989,8 @@ class ANSIString(str):
 
         svg_parts = [
             # "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?>",
-            f'<svg xmlns="http://www.w3.org/2000/svg" width="{total_width}" height="{total_height}" viewBox="0 0 {total_width} {total_height}">',
-            (f'{" "*2}<rect width="100%" height="100%" fill="rgb{background_color}"/>' if not transparent_background else ""),
+            f'<svg xmlns="http://www.w3.org/2000/svg" width="{total_width}" height="{total_height}" viewBox="0 0 {total_width} {total_height}">'
+            + (f'\n{" "*2}<rect width="100%" height="100%" fill="rgb{background_color}"/>' if not transparent_background else "")
         ]
         for svg_rect in rects:
             svg_parts.append(svg_rect)

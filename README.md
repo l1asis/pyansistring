@@ -74,12 +74,15 @@ Or locally **via git**:
 #### Import the necessary classes and initialize an `ANSIString` instance:
 ```python
 from pyansistring.pyansistring import ANSIString
-from pyansistring.constants import SGR, Foreground, Background
+from pyansistring.constants import SGR, Foreground, Background, UnderlineMode
+```
 
+#### Unstyled plain string:
+```python
 text = ANSIString("Hello, World!")
 print(text)
 ```
-![Result: unstyled plain string](./images/usage_unstyled.svg)
+![Result: unstyled plain string](./images/usage/unstyled.svg)
 
 #### Style the whole string:
 ```python
@@ -90,7 +93,7 @@ print(
         .fm(SGR.BOLD)
 )
 ```
-![Result: string with magenta foreground, white background, and bold styling](./images/usage_whole.svg)
+![Result: string with magenta foreground, white background, and bold styling](./images/usage/whole.svg)
 
 #### Style by slice (indices are \[start, end, step\]):
 ```python
@@ -101,7 +104,7 @@ print(
         .fm(SGR.BOLD, (7, 12))               # "World"
 )
 ```
-![Result: string with magenta foreground "Hello", white background "World", and bold styling](./images/usage_slice.svg)
+![Result: string with magenta foreground "Hello", white background "World", and bold styling](./images/usage/slice.svg)
 
 #### Style by words:
 ```python
@@ -112,7 +115,7 @@ print(
         .fm_w(SGR.BOLD, ",")
 )
 ```
-![Result: string with magenta foreground "Hello" and "World", white background "World", and bold comma styling](./images/usage_words.svg)
+![Result: string with magenta foreground "Hello" and "World", white background "World", and bold comma styling](./images/usage/words.svg)
 
 #### SGR parameters like bold and underline:
 ```python
@@ -122,7 +125,7 @@ print(
         .fm(SGR.UNDERLINE)
 )
 ```
-![Result: bold and single underlined string](./images/usage_sgr.svg)
+![Result: bold and single underlined string](./images/usage/sgr.svg)
 
 #### 4-bit examples (doesn't exist for underline):
 ```python
@@ -132,7 +135,7 @@ print(
         .bg_4b(Background.WHITE)
 )
 ```
-![Result: string with magenta foreground and white background](./images/usage_4bit.svg)
+![Result: string with magenta foreground and white background](./images/usage/4bit.svg)
 
 #### 8-bit examples:
 ```python
@@ -143,7 +146,7 @@ print(
         .ul_8b(10)
 )
 ```
-![Result: string with bright magenta foreground, white background, and green underline](./images/usage_8bit.svg)
+![Result: string with bright magenta foreground, white background, and green underline](./images/usage/8bit.svg)
 
 #### 24-bit (True Color) example:
 ```python
@@ -154,9 +157,9 @@ print(
         .ul_24b(0, 255, 0)
 )
 ```
-![Result: string with bright magenta foreground, white background, and green underline](./images/usage_rgb.svg)
+![Result: string with bright magenta foreground, white background, and green underline](./images/usage/rgb.svg)
 
-#### Underline modes:
+#### Underline modes (not "styles" to avoid confusion with other styling):
 ```python
 print(
     ANSIString("Hello, World!")
@@ -164,7 +167,7 @@ print(
         .fm(UnderlineMode.DOUBLE)
 )
 ```
-![Result: underlined text with double bright magenta underline](./images/usage_underline.svg)
+![Result: underlined text with double bright magenta underline](./images/usage/underline.svg)
 
 #### Lengths and plain text:
 ```python
@@ -185,9 +188,8 @@ print(styled.plain)
 from fontTools.ttLib import TTFont
 
 styled = ANSIString("Hello, World!").fg_4b(Foreground.MAGENTA)
-styled.to_svg(font=TTFont("path/to/font.ttf"), save_to_file=True, output_filename="hello_world.svg")
+styled.to_svg(font=TTFont("path/to/font.ttf"), output_file="hello_world.svg")
 ```
-
 
 #### Rainbow text as a separate function:
 ```python
@@ -196,7 +198,7 @@ print(
         .rainbow(fg=True)
 )
 ```
-![Result: rainbow text with automatic transition](./images/usage_rainbow.svg)
+![Result: rainbow text with automatic transition](./images/usage/rainbow.svg)
 
 #### Colored text using multicolor functionality:
 ```python
@@ -205,13 +207,13 @@ print(
         .multicolor((
             "r=0:|g=0:|b=255:   $ "  # Start with blue
             "b>0:repeat(auto)   # "  # Decrease blue
-            "r>255:repeat(auto) | " # Increase green and combine with...
-            "g>255:repeat(auto)   " # Increase red
-            "                   &*" # Cycle & Start without apply flags
+            "r>255:repeat(auto) | "  # Increase green and combine with...
+            "g>255:repeat(auto)   "  # Increase red
+            "                   &*"  # Cycle & Start without apply flags
         ))
 )
 ```
-![Result: multicolor text with a transition effect from blue to yellow](./images/usage_multicolor.svg)
+![Result: multicolor text with a transition effect from blue to yellow](./images/usage/multicolor.svg)
 
 <p align="right">(<a href="#pyansistring">back to top</a>)</p>
 
