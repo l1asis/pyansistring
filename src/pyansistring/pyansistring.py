@@ -824,16 +824,15 @@ class ANSIString(str):
     def to_svg(
         self,
         font: TTFont | Path | str,
-        point_size: int | float,
+        font_size_px: int | float,
         line_height_offset: int | float = 0,
-        letter_spacing_offset: int | float = 0,  # in pixels
+        letter_spacing_offset: int | float = 0,
         padx: tuple[int | float, int | float] = (0, 0),
         pady: tuple[int | float, int | float] = (0, 0),
         transparent_background: bool = True,
         background_color: tuple[int, int, int] = (255, 255, 255),
         convert_text_to_path: bool = False,
-        save_to_file: bool = False,
-        output_filename: str = "output.svg",
+        output_file: str | None = None,
     ) -> str:
         """Generates an SVG representation of the ANSIString using the specified font."""
         if not is_fonttools_available:
@@ -877,7 +876,7 @@ class ANSIString(str):
 
         hmtx = font["hmtx"]
 
-        scale = point_size / units_per_em
+        scale = font_size_px / units_per_em
         
         cell_height = ascent - descent  # or em_height
         line_height = cell_height + line_gap
@@ -887,7 +886,7 @@ class ANSIString(str):
         total_height = (ascent - descent + line_gap) * len(lines) * scale
 
         charno = 0
-        y_cursor = ascent + line_gap
+        y_cursor = ascent + line_gap / 2
         for lineno, line in enumerate(lines):
             x_cursor = 0
             for char in line:
@@ -905,7 +904,7 @@ class ANSIString(str):
                             " "*2
                             + f"<rect "
                             + f"x=\"{x_cursor * scale}\" "
-                            + f"y=\"{(y_cursor - ascent - line_gap) * scale}\" "
+                            + f"y=\"{(y_cursor - ascent - line_gap / 2) * scale}\" "
                             + f"width=\"{advance_width * scale}\" "
                             + f"height=\"{(cell_height + line_gap) * scale}\" "
                             + f"fill=\"rgb{self.style_manager[charno].background.to_rgb()}\""
@@ -1003,7 +1002,7 @@ class ANSIString(str):
         for svg_rect in rects:
             svg_parts.append(svg_rect)
         if not convert_text_to_path:
-            svg_parts.append(f'{" "*2}<text x=\"{padx[0]}\" y=\"{pady[0] + (ascent + line_gap) * scale}\" font-family=\"{font_family}\" font-size=\"{point_size}\" fill=\"black\" letter-spacing=\"{letter_spacing_offset}\">')
+            svg_parts.append(f'{" "*2}<text x=\"{padx[0]}\" y=\"{pady[0] + (ascent + line_gap / 2) * scale}\" font-family=\"{font_family}\" font-size=\"{font_size_px}\" fill=\"black\" letter-spacing=\"{letter_spacing_offset}\">')
             for svg_text in texts:
                 svg_parts.append(svg_text)
             svg_parts.append(f"{" "*2}</text>")
@@ -1013,8 +1012,8 @@ class ANSIString(str):
 
         svg_content ="\n".join(svg_parts)
 
-        if save_to_file:
-            with open(output_filename, "wt", encoding="utf-8") as file:
+        if output_file:
+            with open(output_file, "wt", encoding="utf-8") as file:
                 file.write(svg_content)
 
         return svg_content
