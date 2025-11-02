@@ -1,16 +1,16 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="114.359375" height="18.734375" viewBox="0 0 114.359375 18.734375">
-  <rect x="0.0" y="0.0" width="8.796875" height="18.734375" fill="rgb(255, 255, 255)"/>
-  <rect x="8.796875" y="0.0" width="8.796875" height="18.734375" fill="rgb(255, 255, 255)"/>
-  <rect x="17.59375" y="0.0" width="8.796875" height="18.734375" fill="rgb(255, 255, 255)"/>
-  <rect x="26.390625" y="0.0" width="8.796875" height="18.734375" fill="rgb(255, 255, 255)"/>
-  <rect x="35.1875" y="0.0" width="8.796875" height="18.734375" fill="rgb(255, 255, 255)"/>
-  <rect x="43.984375" y="0.0" width="8.796875" height="18.734375" fill="rgb(255, 255, 255)"/>
-  <rect x="52.78125" y="0.0" width="8.796875" height="18.734375" fill="rgb(255, 255, 255)"/>
-  <rect x="61.578125" y="0.0" width="8.796875" height="18.734375" fill="rgb(255, 255, 255)"/>
-  <rect x="70.375" y="0.0" width="8.796875" height="18.734375" fill="rgb(255, 255, 255)"/>
-  <rect x="79.171875" y="0.0" width="8.796875" height="18.734375" fill="rgb(255, 255, 255)"/>
-  <rect x="87.96875" y="0.0" width="8.796875" height="18.734375" fill="rgb(255, 255, 255)"/>
-  <rect x="96.765625" y="0.0" width="8.796875" height="18.734375" fill="rgb(255, 255, 255)"/>
-  <rect x="105.5625" y="0.0" width="8.796875" height="18.734375" fill="rgb(255, 255, 255)"/>
-  <text x="0" y="13.25" font-family="Consolas" font-size="16" fill="black" letter-spacing="0.0"><tspan x="0" dy="0.0"><tspan fill="rgb(0, 255, 0)" text-decoration="underline auto solid"><tspan fill="rgb(255, 0, 255)">H</tspan></tspan><tspan fill="rgb(0, 255, 0)" text-decoration="underline auto solid"><tspan fill="rgb(255, 0, 255)">e</tspan></tspan><tspan fill="rgb(0, 255, 0)" text-decoration="underline auto solid"><tspan fill="rgb(255, 0, 255)">l</tspan></tspan><tspan fill="rgb(0, 255, 0)" text-decoration="underline auto solid"><tspan fill="rgb(255, 0, 255)">l</tspan></tspan><tspan fill="rgb(0, 255, 0)" text-decoration="underline auto solid"><tspan fill="rgb(255, 0, 255)">o</tspan></tspan><tspan fill="rgb(0, 255, 0)" text-decoration="underline auto solid"><tspan fill="rgb(255, 0, 255)">,</tspan></tspan><tspan fill="rgb(0, 255, 0)" text-decoration="underline auto solid"><tspan fill="rgb(255, 0, 255)"> </tspan></tspan><tspan fill="rgb(0, 255, 0)" text-decoration="underline auto solid"><tspan fill="rgb(255, 0, 255)">W</tspan></tspan><tspan fill="rgb(0, 255, 0)" text-decoration="underline auto solid"><tspan fill="rgb(255, 0, 255)">o</tspan></tspan><tspan fill="rgb(0, 255, 0)" text-decoration="underline auto solid"><tspan fill="rgb(255, 0, 255)">r</tspan></tspan><tspan fill="rgb(0, 255, 0)" text-decoration="underline auto solid"><tspan fill="rgb(255, 0, 255)">l</tspan></tspan><tspan fill="rgb(0, 255, 0)" text-decoration="underline auto solid"><tspan fill="rgb(255, 0, 255)">d</tspan></tspan><tspan fill="rgb(0, 255, 0)" text-decoration="underline auto solid"><tspan fill="rgb(255, 0, 255)">!</tspan></tspan></tspan></text>
+  <rect x="0.0" y="0.0" width="8.796875" height="18.734375" fill="rgb(0, 0, 238)"/>
+  <rect x="8.796875" y="0.0" width="8.796875" height="18.734375" fill="rgb(0, 0, 238)"/>
+  <rect x="17.59375" y="0.0" width="8.796875" height="18.734375" fill="rgb(0, 0, 238)"/>
+  <rect x="26.390625" y="0.0" width="8.796875" height="18.734375" fill="rgb(0, 0, 238)"/>
+  <rect x="35.1875" y="0.0" width="8.796875" height="18.734375" fill="rgb(0, 0, 238)"/>
+  <rect x="43.984375" y="0.0" width="8.796875" height="18.734375" fill="rgb(0, 0, 238)"/>
+  <rect x="52.78125" y="0.0" width="8.796875" height="18.734375" fill="rgb(0, 0, 238)"/>
+  <rect x="61.578125" y="0.0" width="8.796875" height="18.734375" fill="rgb(0, 0, 238)"/>
+  <rect x="70.375" y="0.0" width="8.796875" height="18.734375" fill="rgb(0, 0, 238)"/>
+  <rect x="79.171875" y="0.0" width="8.796875" height="18.734375" fill="rgb(0, 0, 238)"/>
+  <rect x="87.96875" y="0.0" width="8.796875" height="18.734375" fill="rgb(0, 0, 238)"/>
+  <rect x="96.765625" y="0.0" width="8.796875" height="18.734375" fill="rgb(0, 0, 238)"/>
+  <rect x="105.5625" y="0.0" width="8.796875" height="18.734375" fill="rgb(0, 0, 238)"/>
+  <text x="0" y="13.25" font-family="Consolas" font-size="16" fill="black" letter-spacing="0.0"><tspan x="0" dy="0.0"><tspan fill="rgb(95, 175, 215)" text-decoration="underline auto solid"><tspan fill="rgb(255, 255, 0)">H</tspan></tspan><tspan fill="rgb(95, 175, 215)" text-decoration="underline auto solid"><tspan fill="rgb(255, 255, 0)">e</tspan></tspan><tspan fill="rgb(95, 175, 215)" text-decoration="underline auto solid"><tspan fill="rgb(255, 255, 0)">l</tspan></tspan><tspan fill="rgb(95, 175, 215)" text-decoration="underline auto solid"><tspan fill="rgb(255, 255, 0)">l</tspan></tspan><tspan fill="rgb(95, 175, 215)" text-decoration="underline auto solid"><tspan fill="rgb(255, 255, 0)">o</tspan></tspan><tspan fill="rgb(95, 175, 215)" text-decoration="underline auto solid"><tspan fill="rgb(255, 255, 0)">,</tspan></tspan><tspan fill="rgb(95, 175, 215)" text-decoration="underline auto solid"><tspan fill="rgb(255, 255, 0)"> </tspan></tspan><tspan fill="rgb(95, 175, 215)" text-decoration="underline auto solid"><tspan fill="rgb(255, 255, 0)">W</tspan></tspan><tspan fill="rgb(95, 175, 215)" text-decoration="underline auto solid"><tspan fill="rgb(255, 255, 0)">o</tspan></tspan><tspan fill="rgb(95, 175, 215)" text-decoration="underline auto solid"><tspan fill="rgb(255, 255, 0)">r</tspan></tspan><tspan fill="rgb(95, 175, 215)" text-decoration="underline auto solid"><tspan fill="rgb(255, 255, 0)">l</tspan></tspan><tspan fill="rgb(95, 175, 215)" text-decoration="underline auto solid"><tspan fill="rgb(255, 255, 0)">d</tspan></tspan><tspan fill="rgb(95, 175, 215)" text-decoration="underline auto solid"><tspan fill="rgb(255, 255, 0)">!</tspan></tspan></tspan></text>
 </svg>

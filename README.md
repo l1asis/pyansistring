@@ -82,40 +82,40 @@ from pyansistring.constants import SGR, Foreground, Background, UnderlineMode
 text = ANSIString("Hello, World!")
 print(text)
 ```
-![Result: unstyled plain string](./images/usage/unstyled.svg)
+![Result: unstyled plain string in black](./images/usage/unstyled.svg)
 
 #### Style the whole string:
 ```python
 print(
     ANSIString("Hello, World!")
-        .fg_4b(Foreground.MAGENTA)
-        .bg_4b(Background.WHITE)
+        .fg_4b(Foreground.YELLOW)
+        .bg_4b(Background.BLUE)
         .fm(SGR.BOLD)
 )
 ```
-![Result: string with magenta foreground, white background, and bold styling](./images/usage/whole.svg)
+![Result: string with yellow foreground, blue background, and bold styling](./images/usage/whole.svg)
 
 #### Style by slice (indices are \[start, end, step\]):
 ```python
 print(
     ANSIString("Hello, World!")
-        .fg_4b(Foreground.MAGENTA, (0, 5))   # "Hello"
-        .bg_4b(Background.WHITE, (7, 12))    # "World"
-        .fm(SGR.BOLD, (7, 12))               # "World"
+        .fg_4b(Foreground.YELLOW, (0, 5), (7, 12))  # "Hello" and "World"
+        .bg_4b(Background.BLUE, (7, 12))            # "World"
+        .fm(SGR.BOLD, (7, 12))                      # "World"
 )
 ```
-![Result: string with magenta foreground "Hello", white background "World", and bold styling](./images/usage/slice.svg)
+![Result: string where "Hello" and "World" have a yellow foreground. "World" also has a blue background and is in bold.](./images/usage/slice.svg)
 
 #### Style by words:
 ```python
 print(
     ANSIString("Hello, World!")
-        .fg_4b_w(Foreground.MAGENTA, "Hello", "World")
-        .bg_4b_w(Background.WHITE, "World")
-        .fm_w(SGR.BOLD, ",")
+        .fg_4b_w(Foreground.YELLOW, "Hello", "World")
+        .bg_4b_w(Background.BLUE, "World")
+        .fm_w(SGR.BOLD, "Hello", "World")
 )
 ```
-![Result: string with magenta foreground "Hello" and "World", white background "World", and bold comma styling](./images/usage/words.svg)
+![Result: string where "Hello" and "World" have a yellow foreground and bold styling. "World" also has a blue background.](./images/usage/words.svg)
 
 #### SGR parameters like bold and underline:
 ```python
@@ -131,43 +131,44 @@ print(
 ```python
 print(
     ANSIString("Hello, World!")
-        .fg_4b(Foreground.MAGENTA)
-        .bg_4b(Background.WHITE)
+        .fg_4b(Foreground.YELLOW)
+        .bg_4b(Background.BLUE)
 )
 ```
-![Result: string with magenta foreground and white background](./images/usage/4bit.svg)
+![Result: string with yellow foreground and blue background](./images/usage/4bit.svg)
 
 #### 8-bit examples:
 ```python
 print(
     ANSIString("Hello, World!")
-        .fg_8b(201)
-        .bg_8b(15)
-        .ul_8b(10)
+        .fg_8b(11)  # Bright Yellow
+        .bg_8b(4)   # Blue
+        .ul_8b(74)  # Muted Sky Blue
 )
 ```
-![Result: string with bright magenta foreground, white background, and green underline](./images/usage/8bit.svg)
+![Result: string with bright yellow foreground, blue background, and muted sky blue underline](./images/usage/8bit.svg)
 
 #### 24-bit (True Color) example:
 ```python
 print(
     ANSIString("Hello, World!")
-        .fg_24b(255, 0, 255)
-        .bg_24b(255, 255, 255)
-        .ul_24b(0, 255, 0)
+        .fg_24b(255, 255, 0)    # Bright Yellow
+        .bg_24b(0, 0, 238)      # Blue
+        .ul_24b(135, 175, 215)  # Light Steel Blue
 )
 ```
-![Result: string with bright magenta foreground, white background, and green underline](./images/usage/rgb.svg)
+![Result: string with bright yellow foreground, blue background, and light steel blue underline](./images/usage/rgb.svg)
 
 #### Underline modes (not "styles" to avoid confusion with other styling):
 ```python
 print(
     ANSIString("Hello, World!")
-        .ul_8b(201)
+        .bg_24b(255, 255, 255)  # White
+        .ul_24b(255, 0, 0)      # Red
         .fm(UnderlineMode.DOUBLE)
 )
 ```
-![Result: underlined text with double bright magenta underline](./images/usage/underline.svg)
+![Result: string with white background and red double underline](./images/usage/underline.svg)
 
 #### Lengths and plain text:
 ```python

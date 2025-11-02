@@ -932,17 +932,21 @@ class ANSIString(str):
                                     "text-decoration=\"underline auto double\""
                                 )
                             chars.append(
-                                f"<tspan {" ".join(svg_element_attributes)}>"
+                                f"<tspan{(" " + " ".join(svg_element_attributes)) if svg_element_attributes else ""}>"
                                 + escaped_char
                                 + "</tspan>"
                             )
                         else:
+                            if not self.style_manager[charno].foreground:
+                                svg_element_attributes.append(
+                                    f"fill=\"currentColor\""
+                                )
                             chars.append(
                                 f"<tspan "
                                 + f"fill=\"rgb{self.style_manager[charno].underline[0].to_rgb()}\" "
                                 + f"text-decoration=\"underline auto {underline_style_map.get(self.style_manager[charno].underline[1], "solid")}\""
                                 + ">"
-                                + f"<tspan {" ".join(svg_element_attributes)}>"
+                                + f"<tspan{(" " + " ".join(svg_element_attributes)) if svg_element_attributes else ""}>"
                                 + escaped_char
                                 + ("</tspan>"*2)
                             )
