@@ -2355,6 +2355,7 @@ COLOR_THEMES = {
     'eclipse': ECLIPSE_TERMINAL_COLORS,
 }
 
+# FIXME: Find a better name for DEFAULT_THEME (pylance complains about constant naming)
 if sys.platform == "win32":
     # Windows
     if "pwsh" in os.environ.get("SHELL", "").lower() or "powershell" in os.environ.get("TERM", "").lower():
