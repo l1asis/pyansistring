@@ -827,8 +827,6 @@ class ANSIString(str):
         font_size_px: int | float,
         line_height_offset: int | float = 0,
         letter_spacing_offset: int | float = 0,
-        padx: tuple[int | float, int | float] = (0, 0),
-        pady: tuple[int | float, int | float] = (0, 0),
         transparent_background: bool = True,
         background_color: tuple[int, int, int] = (255, 255, 255),
         convert_text_to_path: bool = False,
@@ -877,16 +875,16 @@ class ANSIString(str):
         hmtx = font["hmtx"]
 
         scale = font_size_px / units_per_em
-        
-        cell_height = ascent - descent  # or em_height
-        line_height = cell_height + line_gap
-        line_height_px = (ascent - descent + line_gap) * scale
+
+        em_height = ascent - descent
+        line_height = em_height + line_gap + line_height_offset
+        line_height_px = line_height * scale
 
         total_width = 0
-        total_height = (ascent - descent + line_gap) * len(lines) * scale
+        total_height = line_height * len(lines) * scale
 
         charno = 0
-        y_cursor = ascent + line_gap / 2
+        y_cursor = ascent + line_gap / 2 + line_height_offset / 2
         for lineno, line in enumerate(lines):
             x_cursor = 0
             for char in line:
@@ -904,9 +902,9 @@ class ANSIString(str):
                             " "*2
                             + f"<rect "
                             + f"x=\"{x_cursor * scale}\" "
-                            + f"y=\"{(y_cursor - ascent - line_gap / 2) * scale}\" "
-                            + f"width=\"{advance_width * scale}\" "
-                            + f"height=\"{(cell_height + line_gap) * scale}\" "
+                            + f"y=\"{(y_cursor - ascent - line_gap / 2 - line_height_offset / 2) * scale}\" "
+                            + f"width=\"{(advance_width + letter_spacing_offset) * scale}\" "
+                            + f"height=\"{line_height_px}\" "
                             + f"fill=\"rgb{self.style_manager[charno].background.to_rgb()}\""
                             + "/>"
                         )
@@ -975,25 +973,20 @@ class ANSIString(str):
                             f"{" "*2}<path d=\"{pen.getCommands()}\"/>"
                         )
 
-                x_cursor += advance_width
-                charno += 1  # string char
+                x_cursor += advance_width + letter_spacing_offset
+                charno += 1  # character
             
             if not convert_text_to_path:
                 texts.append(
-                    f"{" "*4}<tspan x=\"0\" dy=\"{0 if lineno == 0 else line_height_px}\">\n{" "*6}{"".join(chars)}\n{" "*4}</tspan>"
+                    f"{" "*4}<tspan x=\"0\" dy=\"{line_height_offset / 2 * scale if lineno == 0 else line_height_px}\">\n{" "*6}{"".join(chars)}\n{" "*4}</tspan>"
                 )
                 chars.clear()
 
-            # Move to next line
             if x_cursor * scale > total_width:
                 total_width = x_cursor * scale
             y_cursor += line_height
             charno += 1  # newline
 
-        print(total_width, total_height)
-        print(paths)
-
-        # Example: building SVG
         svg_parts = [
             # "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?>",
             f'<svg xmlns="http://www.w3.org/2000/svg" width="{total_width}" height="{total_height}" viewBox="0 0 {total_width} {total_height}">',
@@ -1002,7 +995,7 @@ class ANSIString(str):
         for svg_rect in rects:
             svg_parts.append(svg_rect)
         if not convert_text_to_path:
-            svg_parts.append(f'{" "*2}<text x=\"{padx[0]}\" y=\"{pady[0] + (ascent + line_gap / 2) * scale}\" font-family=\"{font_family}\" font-size=\"{font_size_px}\" fill=\"black\" letter-spacing=\"{letter_spacing_offset}\">')
+            svg_parts.append(f'{" "*2}<text x=\"{0}\" y=\"{(ascent + line_gap / 2) * scale}\" font-family=\"{font_family}\" font-size=\"{font_size_px}\" fill=\"black\" letter-spacing=\"{letter_spacing_offset * scale}\">')
             for svg_text in texts:
                 svg_parts.append(svg_text)
             svg_parts.append(f"{" "*2}</text>")
