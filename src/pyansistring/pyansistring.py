@@ -978,7 +978,7 @@ class ANSIString(str):
             
             if not convert_text_to_path:
                 texts.append(
-                    f"{" "*4}<tspan x=\"0\" dy=\"{line_height_offset / 2 * scale if lineno == 0 else line_height_px}\">\n{" "*6}{"".join(chars)}\n{" "*4}</tspan>"
+                    f"<tspan x=\"0\" dy=\"{line_height_offset / 2 * scale if lineno == 0 else line_height_px}\">{"".join(chars)}</tspan>"
                 )
                 chars.clear()
 
@@ -995,10 +995,11 @@ class ANSIString(str):
         for svg_rect in rects:
             svg_parts.append(svg_rect)
         if not convert_text_to_path:
-            svg_parts.append(f'{" "*2}<text x=\"{0}\" y=\"{(ascent + line_gap / 2) * scale}\" font-family=\"{font_family}\" font-size=\"{font_size_px}\" fill=\"black\" letter-spacing=\"{letter_spacing_offset * scale}\">')
-            for svg_text in texts:
-                svg_parts.append(svg_text)
-            svg_parts.append(f"{" "*2}</text>")
+            svg_parts.append(
+                f'{" "*2}<text x=\"{0}\" y=\"{(ascent + line_gap / 2) * scale}\" font-family=\"{font_family}\" font-size=\"{font_size_px}\" fill=\"black\" letter-spacing=\"{letter_spacing_offset * scale}\">'
+                + "".join(texts)
+                + f"</text>"
+            )
         for svg_path in paths:
             svg_parts.append(svg_path)
         svg_parts.append("</svg>")
