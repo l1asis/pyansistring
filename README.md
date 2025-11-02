@@ -82,7 +82,7 @@ from pyansistring.constants import SGR, Foreground, Background, UnderlineMode
 text = ANSIString("Hello, World!")
 print(text)
 ```
-![Result: unstyled plain string in black](./images/usage/unstyled.svg)
+![Result: unstyled plain string in black](https://raw.githubusercontent.com/l1asis/pyansistring/refs/heads/main/images/usage/unstyled.svg)
 
 #### Style the whole string:
 ```python
@@ -93,7 +93,7 @@ print(
         .fm(SGR.BOLD)
 )
 ```
-![Result: string with yellow foreground, blue background, and bold styling](./images/usage/whole.svg)
+![Result: string with yellow foreground, blue background, and bold styling](https://raw.githubusercontent.com/l1asis/pyansistring/refs/heads/main/images/usage/whole.svg)
 
 #### Style by slice (indices are \[start, end, step\]):
 ```python
@@ -104,7 +104,7 @@ print(
         .fm(SGR.BOLD, (7, 12))                      # "World"
 )
 ```
-![Result: string where "Hello" and "World" have a yellow foreground. "World" also has a blue background and is in bold.](./images/usage/slice.svg)
+![Result: string where "Hello" and "World" have a yellow foreground. "World" also has a blue background and is in bold.](https://raw.githubusercontent.com/l1asis/pyansistring/refs/heads/main/images/usage/slice.svg)
 
 #### Style by words:
 ```python
@@ -115,7 +115,7 @@ print(
         .fm_w(SGR.BOLD, "Hello", "World")
 )
 ```
-![Result: string where "Hello" and "World" have a yellow foreground and bold styling. "World" also has a blue background.](./images/usage/words.svg)
+![Result: string where "Hello" and "World" have a yellow foreground and bold styling. "World" also has a blue background.](https://raw.githubusercontent.com/l1asis/pyansistring/refs/heads/main/images/usage/words.svg)
 
 #### SGR parameters like bold and underline:
 ```python
@@ -125,7 +125,7 @@ print(
         .fm(SGR.UNDERLINE)
 )
 ```
-![Result: bold and single underlined string](./images/usage/sgr.svg)
+![Result: bold and single underlined string](https://raw.githubusercontent.com/l1asis/pyansistring/refs/heads/main/images/usage/sgr.svg)
 
 #### 4-bit examples (doesn't exist for underline):
 ```python
@@ -135,7 +135,7 @@ print(
         .bg_4b(Background.BLUE)
 )
 ```
-![Result: string with yellow foreground and blue background](./images/usage/4bit.svg)
+![Result: string with yellow foreground and blue background](https://raw.githubusercontent.com/l1asis/pyansistring/refs/heads/main/images/usage/4bit.svg)
 
 #### 8-bit examples:
 ```python
@@ -146,7 +146,7 @@ print(
         .ul_8b(74)  # Muted Sky Blue
 )
 ```
-![Result: string with bright yellow foreground, blue background, and muted sky blue underline](./images/usage/8bit.svg)
+![Result: string with bright yellow foreground, blue background, and muted sky blue underline](https://raw.githubusercontent.com/l1asis/pyansistring/refs/heads/main/images/usage/8bit.svg)
 
 #### 24-bit (True Color) example:
 ```python
@@ -157,7 +157,7 @@ print(
         .ul_24b(135, 175, 215)  # Light Steel Blue
 )
 ```
-![Result: string with bright yellow foreground, blue background, and light steel blue underline](./images/usage/rgb.svg)
+![Result: string with bright yellow foreground, blue background, and light steel blue underline](https://raw.githubusercontent.com/l1asis/pyansistring/refs/heads/main/images/usage/rgb.svg)
 
 #### Underline modes (not "styles" to avoid confusion with other styling):
 ```python
@@ -168,7 +168,7 @@ print(
         .fm(UnderlineMode.DOUBLE)
 )
 ```
-![Result: string with white background and red double underline](./images/usage/underline.svg)
+![Result: string with white background and red double underline](https://raw.githubusercontent.com/l1asis/pyansistring/refs/heads/main/images/usage/underline.svg)
 
 #### Lengths and plain text:
 ```python
@@ -218,7 +218,7 @@ print(
         .rainbow(fg=True)
 )
 ```
-![Result: rainbow text with automatic transition](./images/usage/rainbow.svg)
+![Result: rainbow text with automatic transition](https://raw.githubusercontent.com/l1asis/pyansistring/refs/heads/main/images/usage/rainbow.svg)
 
 #### Colored text using multicolor functionality:
 ```python
@@ -233,7 +233,7 @@ print(
         ))
 )
 ```
-![Result: multicolor text with a transition effect from blue to yellow](./images/usage/multicolor.svg)
+![Result: multicolor text with a transition effect from blue to yellow](https://raw.githubusercontent.com/l1asis/pyansistring/refs/heads/main/images/usage/multicolor.svg)
 
 <p align="right">(<a href="#pyansistring">back to top</a>)</p>
 
