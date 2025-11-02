@@ -1,5 +1,5 @@
 # pyansistring
-![pyansistring Banner](./images/banner.png)
+![pyansistring Banner](https://raw.githubusercontent.com/l1asis/pyansistring/refs/heads/main/images/banner.png)
 
 ## About The Project
 
@@ -183,13 +183,32 @@ print(styled.plain)
 # "Hello, World!"
 ```
 
-#### ANSIString conversion to SVG:
+#### ANSIString conversion to SVG text:
 ```python
 from fontTools.ttLib import TTFont
 
 styled = ANSIString("Hello, World!").fg_4b(Foreground.MAGENTA)
-styled.to_svg(font=TTFont("path/to/font.ttf"), output_file="hello_world.svg")
+styled.to_svg(
+    font=TTFont("path/to/font.ttf"),
+    font_size_px=16,
+    output_file="hello_world.svg"
+)
 ```
+
+#### ANSIString conversion to SVG path (for better compatibility when font is not guaranteed to be present):
+```python
+from fontTools.ttLib import TTFont
+
+styled = ANSIString("Hello, World!").fg_4b(Foreground.MAGENTA)
+styled.to_svg(
+    font=TTFont("path/to/font.ttf"),
+    font_size_px=16,
+    convert_text_to_path=True,
+    output_file="hello_world_path.svg"
+)
+```
+
+**Note:** The `convert_text_to_path` parameter does not affect the visual appearance of the generated SVG. It only changes how the text is represented within the SVG file. But, it does not support bold and italic styles or underlines at the moment.
 
 #### Rainbow text as a separate function:
 ```python
