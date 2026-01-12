@@ -23,7 +23,7 @@ Inspired by [***rich***](https://github.com/Textualize/rich) and [***colorama***
 
 ### Prerequisites
 
-* Python 3.10 or higher
+* Python 3.11 or higher
     * Linux: https://docs.python.org/3/using/unix.html
     * Windows: https://docs.python.org/3/using/windows.html
     * macOS: https://docs.python.org/3/using/mac.html

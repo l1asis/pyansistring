@@ -5,36 +5,35 @@ build-backend = "hatchling.build"
 [project]
 name = "pyansistring"
 version = "0.1.0"
+dependencies = []
+requires-python = ">=3.11"
 authors = [
   {name="Volodymyr Horshenin"},
 ]
-requires-python = ">=3.10"
 description = "A library for string color styling using ANSI escape sequences."
 readme = "README.md"
-license = {file = "LICENSE"}
+license = "MIT"
+license-files = ["LICEN[CS]E*"]
 keywords = [
-  "string-coloring",
-  "colorize",
-  "terminal-text",
-  "console-output",
-  "ANSI-colors",
-  "ANSI-escape-codes",
-  "terminal",
-  "cli",
-  "logging",
-  "debugging",
-  "tui",
-  "styling",
-  "text-formatting",
+  "ansi", "color", "terminal", "console", "cli", "tui",
+  "ansi-colors", "ansi-escape-codes", "terminal-colors", "colored-text",
+  "text-formatting", "text-styling", "string-formatting", "colorize",
+  "logging", "debugging", "rich-text"
 ]
 classifiers = [
-  "Development Status :: 3 - Alpha",
+  "Development Status :: 4 - Beta",
   "Intended Audience :: Developers",
   "Topic :: Terminals",
   "Topic :: Text Processing",
-  "License :: OSI Approved :: MIT License",
-  "Programming Language :: Python :: 3",
+  "Topic :: Software Development :: Libraries :: Python Modules",
+  "Topic :: System :: Logging",
+  "Environment :: Console",
   "Operating System :: OS Independent",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
 ]
 
 [project.optional-dependencies]
@@ -43,9 +42,8 @@ all = [
 ]
 img = [
   "fonttools",
-  "pillow",
 ]
 
 [project.urls]
-Repository = "https://github.com/l1asis/pyansistring"
+Repository = "https://github.com/l1asis/pyansistring.git"
 Issues = "https://github.com/l1asis/pyansistring/issues"
