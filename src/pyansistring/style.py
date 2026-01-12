@@ -76,7 +76,7 @@ class Color(metaclass=FrozenMeta):
             prefix = str(prefix) + separator
         if self.mode == "24bit" and isinstance(self.value, tuple):
             r, g, b = self.value
-            return f"{prefix}2{separator*2 if separator==":" else ";"}{r}{separator}{g}{separator}{b}"
+            return f"{prefix}2{separator*2 if separator==':' else ';'}{r}{separator}{g}{separator}{b}"
         elif self.mode == "8bit" and isinstance(self.value, int):
             return f"{prefix}5{separator}{self.value}"
         elif self.mode == "4bit" and isinstance(self.value, int):
@@ -156,7 +156,7 @@ class Style(metaclass=FrozenMeta):
             f"foreground={self.foreground!r}, "
             f"background={self.background!r}, "
             f"underline=({self.underline[0]!r}, UnderlineMode.{self.underline[1].name}), "
-            f"attributes={'{'}{", ".join(f"SGR.{SGR(attr).name}" for attr in self.attributes)}{'}'})"
+            f"attributes={'{'}{', '.join(f'SGR.{SGR(attr).name}' for attr in self.attributes)}{'}'})"
         )
     
     def __hash__(self) -> int:

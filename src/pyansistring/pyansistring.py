@@ -934,7 +934,7 @@ class ANSIString(str):
                                     "text-decoration=\"underline auto double\""
                                 )
                             chars.append(
-                                f"<tspan{(" " + " ".join(svg_element_attributes)) if svg_element_attributes else ""}>"
+                                f"<tspan{(' ' + ' '.join(svg_element_attributes)) if svg_element_attributes else ''}>"
                                 + escaped_char
                                 + "</tspan>"
                             )
@@ -946,9 +946,9 @@ class ANSIString(str):
                             chars.append(
                                 f"<tspan "
                                 + f"fill=\"rgb{self.style_manager[charno].underline[0].to_rgb()}\" "
-                                + f"text-decoration=\"underline auto {underline_style_map.get(self.style_manager[charno].underline[1], "solid")}\""
+                                + f"text-decoration=\"underline auto {underline_style_map.get(self.style_manager[charno].underline[1], 'solid')}\""
                                 + ">"
-                                + f"<tspan{(" " + " ".join(svg_element_attributes)) if svg_element_attributes else ""}>"
+                                + f"<tspan{(' ' + ' '.join(svg_element_attributes)) if svg_element_attributes else ''}>"
                                 + escaped_char
                                 + ("</tspan>"*2)
                             )
@@ -964,7 +964,7 @@ class ANSIString(str):
                         ... # TODO: bold, italic, underline solution for path
 
                         paths.append(
-                            f"{" "*2}<path {" ".join(svg_element_attributes)}/>"
+                            f"{' '*2}<path {' '.join(svg_element_attributes)}/>"
                         )
                 else:
                     if not convert_text_to_path:
@@ -976,7 +976,7 @@ class ANSIString(str):
                         glyph_set[glyph_name].draw(t_pen)
                         
                         paths.append(
-                            f"{" "*2}<path d=\"{pen.getCommands()}\"/>"
+                            f"{' '*2}<path d=\"{pen.getCommands()}\"/>"
                         )
 
                 x_cursor += advance_width + letter_spacing_offset
@@ -984,7 +984,7 @@ class ANSIString(str):
             
             if not convert_text_to_path:
                 texts.append(
-                    f"<tspan x=\"0\" dy=\"{line_height_offset / 2 * scale if lineno == 0 else line_height_px}\">{"".join(chars)}</tspan>"
+                    f"<tspan x=\"0\" dy=\"{line_height_offset / 2 * scale if lineno == 0 else line_height_px}\">{''.join(chars)}</tspan>"
                 )
                 chars.clear()
 
