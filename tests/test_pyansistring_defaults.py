@@ -1,6 +1,6 @@
 import unittest
 
-from .test_pyansistring_features import ExtendedAssertMixin
+from tests.test_pyansistring_features import ExtendedAssertMixin
 from pyansistring import ANSIString, StyleManager # type: ignore
 from pyansistring.style import Style, Color  # type: ignore
 from pyansistring.constants import *
