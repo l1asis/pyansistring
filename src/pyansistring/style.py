@@ -359,10 +359,15 @@ class Style(metaclass=FrozenMeta):
         )
 
     def merge(self, other: "Style") -> "Style":
+        ul_color = other.underline[0] or self.underline[0]
+        if other.underline[0] or other.underline[1] != UnderlineMode.SINGLE:
+            ul_mode = other.underline[1]
+        else:
+            ul_mode = self.underline[1]
         return Style(
             foreground=other.foreground or self.foreground,
             background=other.background or self.background,
-            underline=(other.underline[0] or self.underline[0], other.underline[1]),
+            underline=(ul_color, ul_mode),
             attributes=other.attributes | self.attributes
         )
     

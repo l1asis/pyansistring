@@ -6,34 +6,60 @@ __all__ = [
 ]
 
 import re
-from collections.abc import Generator, Sequence, Iterable
+from collections.abc import Generator, Iterable, Sequence
 from copy import copy, deepcopy
 from itertools import cycle
 from pathlib import Path
 from random import randint
-from typing import Annotated, Any, Self, Union, SupportsIndex, TYPE_CHECKING
+from typing import TYPE_CHECKING, Annotated, Any, Self, SupportsIndex, Union
 
 if not TYPE_CHECKING:
     try:
-        from fontTools.ttLib import TTFont
         from fontTools.pens.svgPathPen import SVGPathPen
         from fontTools.pens.transformPen import TransformPen
+        from fontTools.ttLib import TTFont
+
         is_fonttools_available = True
     except Exception:
         is_fonttools_available = False
 else:
-    from fontTools.ttLib import TTFont
     from fontTools.pens.svgPathPen import SVGPathPen
     from fontTools.pens.transformPen import TransformPen
+    from fontTools.ttLib import TTFont
+
     is_fonttools_available = True
 
+from ._helpers import *
 from .constants import *
-from .helpers import *
 from .style import Style
 from .style_manager import StyleManager
 
+
 class MulticolorInstruction:
-    """Class representing a single instruction in a multicolor command."""
+    """
+    Represents a single instruction in a multicolor command, which defines how
+    to modify a specific color channel (foreground, background, or underline)
+    based on an operator and value.
+
+    Parameters
+    ----------
+    color: str
+        The color channel to modify ("r", "g", or "b").
+    operator: str
+        The operator to apply ("=", "+", or "-").
+    value: str
+        The value to use for the operation, which can be a number, a random range, or a reference to another color channel.
+    processed_value: int | float
+        The processed numeric value after evaluating the `value` string, which is used for calculations in
+        the multicolor command.
+    mode: str
+        The mode of the color channel ("fg" for foreground, "bg" for background, or "ul" for underline).
+    minmax: tuple[float, float] | str | None
+        The minimum and maximum values for the color channel, which can be a tuple, a string in the format "minmax(min, max)", or None for default (0, 255).
+    repeat: int
+        The number of times to repeat this instruction, which is used for distributing changes across multiple slices in a multicolor command.
+    """
+
     color: str
     operator: str
     value: str
@@ -89,7 +115,20 @@ class MulticolorInstruction:
 
 
 class MulticolorCommand:
-    """Class representing a multicolor command with multiple instructions."""
+    """
+    Represents a multicolor command consisting of multiple instructions and optional reset and repeat parameters.
+
+    Parameters
+    ----------
+    instructions: list[MulticolorInstruction] | None
+        List of instructions to be applied in this command.
+    reset: str | None
+        Reset mode for the command. Can be "?" to reset to the current RGB values at
+        the time of command execution, "??" to reset to the RGB values at the time of command creation, or None for no reset.
+    repeat: int | str | None
+        Number of times to repeat the command. Can be an integer or "auto" for automatic distribution across slices.
+    """
+
     def __init__(
         self,
         instructions: list[MulticolorInstruction] | None = None,
@@ -105,30 +144,15 @@ class MulticolorCommand:
 
 
 class ANSIString(str):
-    r"""
-    String class that allows you to extend your vanilla str with ANSI escape sequences for coloring/styling.
+    """Subclass of `str` that supports ANSI styling through an associated :class:`StyleManager`."""
 
-    Instance Attributes:
-        _styles: dictionary containing pairs of char indices with ANSI escape sequences.
-        _styled: plain string to which ANSI e.s. from `_styles` has been applied.
-
-    Properties:
-        styles: a getter for `_styles`.
-        styled: a getter for `_styled` (checks if `styles` has been modified and renders it if so).
-        plain: unformatted, normal string.
-        actual_length: returns the length of `styled`.
-
-    Note:
-        *The `ANSIString` class is unhashable for consistency, because `styles` is an unhashable dict
-        that we can change.
-    """
     _style_manager: StyleManager
     _styled_text: str
 
     def __new__(
         cls,
         plain_text: str = "",
-        style_manager: StyleManager | dict[int, Style] | dict[int, str] | None = None
+        style_manager: StyleManager | dict[int, Style] | dict[int, str] | None = None,
     ) -> Self:
         instance = super().__new__(cls, plain_text)
         if isinstance(style_manager, StyleManager):
@@ -136,8 +160,7 @@ class ANSIString(str):
         elif isinstance(style_manager, dict):
             instance._style_manager = StyleManager(
                 {
-                    key: Style.from_ansi(value) 
-                    if isinstance(value, str) else value 
+                    key: Style.from_ansi(value) if isinstance(value, str) else value
                     for key, value in style_manager.items()
                 }
             )
@@ -184,13 +207,20 @@ class ANSIString(str):
         """Concatenates another string or ANSIString to this ANSIString."""
         style_manager = self.style_manager.copy()
         if isinstance(other, ANSIString):
-            style_manager.update({len(self) + index: value for index, value in other.style_manager.items()})
+            style_manager.update(
+                {
+                    len(self) + index: value
+                    for index, value in other.style_manager.items()
+                }
+            )
             other = other.plain_text
         return type(self)(self.plain_text + other, style_manager)
 
     def __radd__(self, other: Union[str, "ANSIString"]) -> "ANSIString":
         """Concatenates this ANSIString to another string or ANSIString."""
-        styles = {index + len(other): value for index, value in self.style_manager.items()}
+        styles = {
+            index + len(other): value for index, value in self.style_manager.items()
+        }
         if isinstance(other, ANSIString):
             styles.update(other.style_manager)
             other = other.plain_text
@@ -220,6 +250,7 @@ class ANSIString(str):
             "splitlines",
         }
         if name in dir(str) and name not in allowed_passthrough:
+
             def method(self: Self, *args: Any, **kwargs: Any) -> Any:
                 result = getattr(str, name)(self.plain_text, *args, **kwargs)
 
@@ -246,7 +277,11 @@ class ANSIString(str):
     def _render(self) -> str:
         """Renders the ANSIString to its final output form."""
         return "".join(
-            f"{self.style_manager[index].ansi}{char}\x1b[0m" if index in self.style_manager else char
+            (
+                f"{self.style_manager[index].ansi}{char}\x1b[0m"
+                if index in self.style_manager
+                else char
+            )
             for index, char in enumerate(self.plain_text)
         )
 
@@ -271,10 +306,12 @@ class ANSIString(str):
 
     def _get_all_coords(self) -> tuple[tuple[int, int], ...]:
         """Returns all (x, y) coordinates of the characters in the plain text."""
+
         def transform(lengths: Iterable[int]) -> Generator[tuple[int, int], None, None]:
             for y, length in enumerate(lengths):
                 for x in range(length):
                     yield (x, y)
+
         return tuple(transform(len(line) for line in self.plain_text.splitlines()))
 
     def _get_indices(
@@ -293,7 +330,10 @@ class ANSIString(str):
         """Searches for words in the plain text and returns their spans as tuples of (start, end)."""
         flags = 0 if case_sensitive else re.IGNORECASE
         joined_words = "|".join(re.escape(word) for word in words)
-        spans = (match.span(0) for match in re.finditer(joined_words, self.plain_text, flags=flags))
+        spans = (
+            match.span(0)
+            for match in re.finditer(joined_words, self.plain_text, flags=flags)
+        )
         return tuple(spans)
 
     def _process_multicolor_command(
@@ -316,11 +356,17 @@ class ANSIString(str):
             if not modes[instruction.mode]:
                 modes[instruction.mode] = True
             if instruction.operator == "=":
-                rgb["actual"][instruction.mode][instruction.color] = instruction.processed_value
+                rgb["actual"][instruction.mode][
+                    instruction.color
+                ] = instruction.processed_value
             elif instruction.operator == "+":
-                rgb["actual"][instruction.mode][instruction.color] += instruction.processed_value
+                rgb["actual"][instruction.mode][
+                    instruction.color
+                ] += instruction.processed_value
             elif instruction.operator == "-":
-                rgb["actual"][instruction.mode][instruction.color] -= instruction.processed_value
+                rgb["actual"][instruction.mode][
+                    instruction.color
+                ] -= instruction.processed_value
 
             rgb["actual"][instruction.mode][instruction.color] = clamp(
                 rgb["actual"][instruction.mode][instruction.color], *instruction.minmax
@@ -555,7 +601,7 @@ class ANSIString(str):
         return self.bg_24b(
             r, g, b, *self._search_spans(*words, case_sensitive=case_sensitive)
         )
-    
+
     def ul_4b(
         self,
         parameter: Underline,
@@ -812,6 +858,7 @@ class ANSIString(str):
 
     def multicolor_c(self, sequence: str, *coordinates: tuple[int, int]) -> Self:
         """Applies a multicolor sequence to the string at specified (x, y) coordinates."""
+
         def transform(coordinates):
             for obj in coordinates:
                 if isinstance(obj, tuple) and isinstance(obj[0], tuple):
@@ -827,194 +874,281 @@ class ANSIString(str):
         self,
         font: TTFont | Path | str,
         font_size_px: int | float,
+        font_bold: TTFont | Path | str | None = None,
+        font_italic: TTFont | Path | str | None = None,
+        font_bold_italic: TTFont | Path | str | None = None,
+        font_thin: TTFont | Path | str | None = None,
         line_height_offset: int | float = 0,
         letter_spacing_offset: int | float = 0,
+        weight: int | None = None,
+        skew: int | None = None,
         transparent_background: bool = True,
         background_color: tuple[int, int, int] = (255, 255, 255),
         convert_text_to_path: bool = False,
         output_file: str | None = None,
     ) -> str:
-        """Generates an SVG representation of the ANSIString using the specified font."""
+        """
+        Generates an SVG representation of the ANSIString using the specified font.
+
+        Parameters
+        ----------
+        font: TTFont | Path | str
+            Base font. Variable fonts are also supported.
+        font_size_px: int | float
+            Font size in pixels.
+        line_height_offset: int | float
+            Extra vertical spacing between lines (in font units).
+        letter_spacing_offset: int | float
+            Extra horizontal spacing between characters (in font units).
+        weight: int | None
+            Faux-bold stroke weight (100-900), used only as a last-resort fallback
+            when no dedicated bold font or variable `wght` axis is available.
+        skew: int | None
+            Faux-italic skew angle in degrees, used only as a last-resort fallback
+            when no dedicated italic font or variable `ital`/`slnt` axis is available.
+        font_bold: TTFont | Path | str | None
+            Font used for :pyattr:`SGR.BOLD` characters.
+            (For when `font` is not a variable font).
+        font_italic: TTFont | Path | str | None
+            Font used for :pyattr:`SGR.ITALIC` characters.
+            (For when `font` is not a variable font).
+        font_bold_italic: TTFont | Path | str | None
+            Font used for characters that are both bold and italic.
+            (For when `font` is not a variable font).
+        font_thin: TTFont | Path | str | None
+            Font used for :pyattr:`SGR.DIM` characters.
+            (For when `font` is not a variable font).
+        transparent_background: bool
+            When `True`, no background rectangle is drawn.
+        background_color: tuple[int, int, int]
+            RGB tuple used when *transparent_background* is `False`.
+        convert_text_to_path: bool
+            When `True`, glyphs render as `<path>` instead of `<text>`.
+        output_file: str | None
+            Optional file path to write the SVG output.
+
+        Returns
+        -------
+        svg_content: str
+            The generated SVG content as a string.
+        """
         if not is_fonttools_available:
             raise ImportError(
                 "The 'fontTools' package is required to use the 'to_svg' method. "
                 "Please install it using 'pip install fonttools'."
             )
-        if isinstance(font, (Path, str)):
-            font = TTFont(font)
+        font = load_font(font)
 
-        escape_table = {
-            "&": "&amp;",
-            "<": "&lt;",
-            ">": "&gt;",
-            '"': "&quot;",
-            "'": "&#39;",
-        }
-        underline_style_map = {
-            UnderlineMode.SINGLE: "solid",
-            UnderlineMode.DOUBLE: "double",
-            UnderlineMode.DOTTED: "dotted",
-            UnderlineMode.DASHED: "dashed",
-            UnderlineMode.CURLY: "wavy",
-        }
-        lines = self.plain_text.splitlines(keepends=False)
-        svg_parts: list[str] = []
-        texts: list[str] = []
-        paths: list[str] = []
-        rects: list[str] = []
-        chars: list[str] = []
+        # Load variation fonts
+        loaded_bold = load_font(font_bold) if font_bold is not None else None
+        loaded_italic = load_font(font_italic) if font_italic is not None else None
+        loaded_bold_italic = (
+            load_font(font_bold_italic) if font_bold_italic is not None else None
+        )
+        loaded_thin = load_font(font_thin) if font_thin is not None else None
 
-        font_family = font['name'].getDebugName(1) or "sans-serif"
+        variants = prepare_font_variants(
+            font,
+            loaded_bold,
+            loaded_italic,
+            loaded_bold_italic,
+            loaded_thin,
+        )
 
-        cmap = font.getBestCmap()
-        glyph_set = font.getGlyphSet()
-
-        units_per_em = font['head'].unitsPerEm
-        ascent = font['hhea'].ascent
-        descent = font['hhea'].descent
-        line_gap = font['hhea'].lineGap
-
-        hmtx = font["hmtx"]
-
+        # Font metrics (from the base font)
+        font_family = font["name"].getDebugName(1) or "sans-serif"
+        units_per_em = font["head"].unitsPerEm
+        ascent = font["hhea"].ascent
+        descent = font["hhea"].descent
+        line_gap = font["hhea"].lineGap
+        underline_pos = font["post"].underlinePosition
+        underline_thickness = font["post"].underlineThickness
         scale = font_size_px / units_per_em
-
-        em_height = ascent - descent
-        line_height = em_height + line_gap + line_height_offset
+        line_height = (ascent - descent) + line_gap + line_height_offset
         line_height_px = line_height * scale
 
-        total_width = 0
-        total_height = line_height * len(lines) * scale
+        # Faux fallback values (used only when no real variation exists)
+        faux_weight = weight if weight is not None else 700
 
+        # Render state
+        lines = self.plain_text.splitlines(keepends=False)
+        rects: list[str] = []
+        paths: list[str] = []
+        underlines: list[str] = []
+        texts: list[str] = []
+        chars: list[str] = []
+
+        total_width = 0.0
+        total_height = line_height * len(lines) * scale
+        italic_extra_width = 0.0
+        italic_left_overflow = 0.0
+        underline_max_bottom = 0.0
+
+        # Character loop
         charno = 0
         y_cursor = ascent + line_gap / 2 + line_height_offset / 2
+
         for lineno, line in enumerate(lines):
             x_cursor = 0
             for char in line:
-                escaped_char: str = escape_table.get(char, char)
+                escaped = SVG_ESCAPE.get(char, char)
+                style = self.style_manager.get(charno)
 
-                glyph_name = cmap.get(ord(char), ".notdef")
-                glyph = glyph_set.get(glyph_name, glyph_set[".notdef"])
-                advance_width, _ = hmtx[glyph_name]
+                # Resolve font variant for this character
+                style_key = get_style_key(style)
+                variant = variants.get(style_key, variants["regular"])
 
-                if charno in self.style_manager:
-                    svg_element_attributes: list[str] = []
+                glyph_name = variant.cmap.get(ord(char), ".notdef")
+                advance_width = variant.glyph_set[glyph_name].width
+                x_px = x_cursor * scale
+                y_px = y_cursor * scale
 
-                    if self.style_manager[charno].background:
-                        rects.append(
-                            " "*2
-                            + f"<rect "
-                            + f"x=\"{x_cursor * scale}\" "
-                            + f"y=\"{(y_cursor - ascent - line_gap / 2 - line_height_offset / 2) * scale}\" "
-                            + f"width=\"{(advance_width + letter_spacing_offset) * scale}\" "
-                            + f"height=\"{line_height_px}\" "
-                            + f"fill=\"rgb{self.style_manager[charno].background.to_rgb()}\""
-                            + "/>"
-                        )
-                    if self.style_manager[charno].foreground:
-                        svg_element_attributes.append(
-                            f"fill=\"rgb{self.style_manager[charno].foreground.to_rgb()}\""
-                        )
+                # Background rect
+                if style is not None and style.background:
+                    bg_y = (
+                        y_cursor - ascent - line_gap / 2 - line_height_offset / 2
+                    ) * scale
+                    rects.append(
+                        f'  <rect x="{x_px}" y="{bg_y}" '
+                        f'width="{(advance_width + letter_spacing_offset) * scale}" '
+                        f'height="{line_height_px}" '
+                        f'fill="rgb{style.background.to_rgb()}"/>'
+                    )
 
-                    if not convert_text_to_path:
-                        if SGR.BOLD in self.style_manager[charno].attributes:
-                            svg_element_attributes.append(
-                                "font-weight=\"bold\""
-                            )
-                        if SGR.ITALIC in self.style_manager[charno].attributes:
-                            svg_element_attributes.append(
-                                "font-style=\"italic\""
-                            )
-                        if not self.style_manager[charno].underline[0]:
-                            if SGR.UNDERLINE in self.style_manager[charno].attributes:
-                                svg_element_attributes.append(
-                                    "text-decoration=\"underline auto solid\""
-                                )
-                            elif SGR.DOUBLE_UNDERLINE in self.style_manager[charno].attributes:
-                                svg_element_attributes.append(
-                                    "text-decoration=\"underline auto double\""
-                                )
+                # Foreground fill attribute
+                fill_attrs: list[str] = []
+                if style is not None and style.foreground:
+                    fill_attrs.append(f'fill="rgb{style.foreground.to_rgb()}"')
+
+                # Text mode (using <text> and <tspan>)
+                if not convert_text_to_path:
+                    if style is not None:
+                        if SGR.BOLD in style.attributes:
+                            fill_attrs.append('font-weight="bold"')
+                        if SGR.ITALIC in style.attributes:
+                            fill_attrs.append('font-style="italic"')
+                        if SGR.DIM in style.attributes:
+                            fill_attrs.append('font-weight="lighter"')
+
+                        if style.underline[0]:
+                            # Coloured underline: outer tspan carries the decoration
+                            if not style.foreground:
+                                fill_attrs.append('fill="currentColor"')
+                            ul_css = UNDERLINE_CSS.get(style.underline[1], "solid")
+                            inner = tspan(escaped, fill_attrs)
                             chars.append(
-                                f"<tspan{(' ' + ' '.join(svg_element_attributes)) if svg_element_attributes else ''}>"
-                                + escaped_char
-                                + "</tspan>"
+                                f'<tspan fill="rgb{style.underline[0].to_rgb()}" '
+                                f'text-decoration="underline auto {ul_css}">'
+                                f"{inner}</tspan>"
                             )
                         else:
-                            if not self.style_manager[charno].foreground:
-                                svg_element_attributes.append(
-                                    f"fill=\"currentColor\""
-                                )
-                            chars.append(
-                                f"<tspan "
-                                + f"fill=\"rgb{self.style_manager[charno].underline[0].to_rgb()}\" "
-                                + f"text-decoration=\"underline auto {underline_style_map.get(self.style_manager[charno].underline[1], 'solid')}\""
-                                + ">"
-                                + f"<tspan{(' ' + ' '.join(svg_element_attributes)) if svg_element_attributes else ''}>"
-                                + escaped_char
-                                + ("</tspan>"*2)
-                            )
+                            if SGR.UNDERLINE in style.attributes:
+                                fill_attrs.append('text-decoration="underline auto solid"')
+                            elif SGR.DOUBLE_UNDERLINE in style.attributes:
+                                fill_attrs.append('text-decoration="underline auto double"')
+                            chars.append(tspan(escaped, fill_attrs))
                     else:
-                        pen = SVGPathPen(glyph_set)
-                        t_pen = TransformPen(pen, (scale, 0, 0, -scale, x_cursor * scale, y_cursor * scale))
-                        
-                        glyph_set[glyph_name].draw(t_pen)
-                        svg_element_attributes.append(
-                            f"d=\"{pen.getCommands()}\""
-                        ) # FIXME: check for whitespace
+                        chars.append(f"<tspan>{escaped}</tspan>")
 
-                        ... # TODO: bold, italic, underline solution for path
-
-                        paths.append(
-                            f"{' '*2}<path {' '.join(svg_element_attributes)}/>"
-                        )
+                # Path mode (using <path> and other shapes)
                 else:
-                    if not convert_text_to_path:
-                        chars.append(f"<tspan>{escape_table.get(char, char)}</tspan>")
-                    else:
-                        pen = SVGPathPen(glyph_set)
-                        t_pen = TransformPen(pen, (scale, 0, 0, -scale, x_cursor * scale, y_cursor * scale))
-                        
-                        glyph_set[glyph_name].draw(t_pen)
-                        
-                        paths.append(
-                            f"{' '*2}<path d=\"{pen.getCommands()}\"/>"
+                    effective_skew = resolve_skew(variant.needs_faux_italic, skew)
+                    t_pen, pen, left_ov, right_ov = svg_create_transform_pen(
+                        variant.glyph_set,
+                        scale,
+                        x_px,
+                        y_px,
+                        ascent,
+                        descent,
+                        effective_skew,
+                    )
+                    italic_left_overflow = max(italic_left_overflow, left_ov)
+                    italic_extra_width = max(italic_extra_width, right_ov)
+
+                    variant.glyph_set[glyph_name].draw(t_pen)
+                    path_attrs = list(fill_attrs)
+                    path_attrs.append(f'd="{pen.getCommands()}"')
+                    path_attrs.extend(
+                        svg_weight_stroke_attrs(
+                            style,
+                            variant.needs_faux_bold,
+                            faux_weight,
+                            font_size_px,
+                            transparent_background,
+                            background_color,
                         )
+                    )
+                    paths.append(f'  <path {" ".join(path_attrs)}/>')
+
+                    # Underline (path mode only)
+                    if style is not None:
+                        ul_color, ul_mode = svg_resolve_underline(style)
+                        if ul_color and ul_mode is not None:
+                            ul_y = (y_cursor - underline_pos) * scale
+                            ul_h = max(underline_thickness * scale, 1)
+                            ul_w = (advance_width + letter_spacing_offset) * scale
+                            new_elems, max_bot = svg_build_underline_elements(
+                                ul_color,
+                                ul_mode,
+                                x_px,
+                                ul_y,
+                                ul_w,
+                                ul_h,
+                            )
+                            underlines.extend(new_elems)
+                            underline_max_bottom = max(underline_max_bottom, max_bot)
 
                 x_cursor += advance_width + letter_spacing_offset
-                charno += 1  # character
-            
+                charno += 1
+
+            # End of line
             if not convert_text_to_path:
-                texts.append(
-                    f"<tspan x=\"0\" dy=\"{line_height_offset / 2 * scale if lineno == 0 else line_height_px}\">{''.join(chars)}</tspan>"
+                dy = (
+                    str(line_height_offset / 2 * scale)
+                    if lineno == 0
+                    else str(line_height_px)
                 )
+                texts.append(f'<tspan x="0" dy="{dy}">{"".join(chars)}</tspan>')
                 chars.clear()
 
-            if x_cursor * scale > total_width:
-                total_width = x_cursor * scale
+            total_width = max(total_width, x_cursor * scale)
+            total_height = max(total_height, underline_max_bottom)
             y_cursor += line_height
             charno += 1  # newline
 
-        svg_parts = [
-            # "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?>",
-            f'<svg xmlns="http://www.w3.org/2000/svg" width="{total_width}" height="{total_height}" viewBox="0 0 {total_width} {total_height}">'
-            + (f'\n{" "*2}<rect width="100%" height="100%" fill="rgb{background_color}"/>' if not transparent_background else "")
+        # Assemble SVG
+        total_width_with_italic = (
+            total_width + italic_extra_width + italic_left_overflow
+        )
+        svg_parts: list[str] = [
+            f'<svg xmlns="http://www.w3.org/2000/svg" '
+            f'width="{total_width_with_italic}" height="{total_height}" '
+            f'viewBox="{-italic_left_overflow} 0 {total_width_with_italic} {total_height}">'
+            + (
+                f'\n  <rect x="{-italic_left_overflow}" width="100%" height="100%" '
+                f'fill="rgb{background_color}"/>'
+                if not transparent_background
+                else ""
+            )
         ]
-        for svg_rect in rects:
-            svg_parts.append(svg_rect)
+        svg_parts.extend(rects)
         if not convert_text_to_path:
             svg_parts.append(
-                f'{" "*2}<text x=\"{0}\" y=\"{(ascent + line_gap / 2) * scale}\" font-family=\"{font_family}\" font-size=\"{font_size_px}\" fill=\"black\" letter-spacing=\"{letter_spacing_offset * scale}\">'
+                f'  <text x="0" y="{(ascent + line_gap / 2) * scale}" '
+                f'font-family="{font_family}" font-size="{font_size_px}" '
+                f'fill="black" letter-spacing="{letter_spacing_offset * scale}">'
                 + "".join(texts)
-                + f"</text>"
+                + "</text>"
             )
-        for svg_path in paths:
-            svg_parts.append(svg_path)
+        svg_parts.extend(paths)
+        svg_parts.extend(underlines)
         svg_parts.append("</svg>")
 
-        svg_content ="\n".join(svg_parts)
+        svg_content = "\n".join(svg_parts)
 
         if output_file:
-            with open(output_file, "wt", encoding="utf-8") as file:
-                file.write(svg_content)
+            with open(output_file, "wt", encoding="utf-8") as f:
+                f.write(svg_content)
 
         return svg_content
 
@@ -1026,7 +1160,10 @@ class ANSIString(str):
             if i:
                 increment += len(self)
             styles.update(
-                {increment + index: style for index, style in self.style_manager.items()}
+                {
+                    increment + index: style
+                    for index, style in self.style_manager.items()
+                }
             )
             if type(string) == ANSIString:
                 styles.update(
