@@ -37,6 +37,7 @@ Inspired by [***rich***](https://github.com/Textualize/rich) and [***colorama***
 You can install the package **via pip**:
 ```sh
 pip install pyansistring # or pip3 install pyansistring
+pip install pyansistring[svg] # for SVG conversion support
 ```
 
 Or locally **via git**:
@@ -65,6 +66,7 @@ Or locally **via git**:
 5. Install the package
     ```sh
     pip install .
+    pip install .[svg] # for SVG conversion support
     ```
 
 <p align="right">(<a href="#pyansistring">back to top</a>)</p>
@@ -209,7 +211,15 @@ styled.to_svg(
 )
 ```
 
-**Note:** The `convert_text_to_path` parameter does not affect the visual appearance of the generated SVG. It only changes how the text is represented within the SVG file. But, it does not support bold and italic styles or underlines at the moment.
+> [!info] SVG Conversion and Text-to-Path Option
+> Please note that when `convert_text_to_path` is set to `True`, the characters will be converted into vector shapes, which can help ensure that the appearance of the text remains **consistent across different platforms and devices**, even if the specified font is not available. However, this also means that the text **will no longer be selectable or searchable** in the SVG file, as it will be treated as **graphical elements** rather than text. Neither will it be 100% identical to how it looks in the terminal or being rendered as text in the SVG.
+
+> [!warning] SVG Conversion Limitations
+> Supported SGR parameters for SVG conversion include:
+> * Foreground and background colors (4-bit, 8-bit, and 24-bit)
+> * Underline colors with all modes (single, double, curly, dotted, dashed)
+> * Bold and italic font styles
+> Unsupported SGR parameters (e.g., strikethrough, inverse, etc.) will be ignored during SVG conversion.
 
 #### Rainbow text as a separate function:
 ```python
@@ -234,6 +244,8 @@ print(
 )
 ```
 ![Result: multicolor text with a transition effect from blue to yellow](https://raw.githubusercontent.com/l1asis/pyansistring/refs/heads/main/images/usage/multicolor.svg)
+
+For more examples, see the [examples](./examples) directory.
 
 <p align="right">(<a href="#pyansistring">back to top</a>)</p>
 
