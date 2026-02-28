@@ -2439,22 +2439,26 @@ class Regex:
     ARGUMENTS = r"\((?:\s*{}\s*(?:,\s*{}\s*){quantifier}\s*)\)"
     INT_OR_FLOAT = r"\-?\d+(?:\.\d+)?"
     INT_OR_FLOAT_OR_INF = rf"(?:{INT_OR_FLOAT}|\-?inf)"
+    _MINMAX_ARGS = ARGUMENTS.format(
+        INT_OR_FLOAT_OR_INF,
+        INT_OR_FLOAT_OR_INF,
+        quantifier=r"{1}",
+    )
+    _RANDOM_ARGS = ARGUMENTS.format(
+        INT_OR_FLOAT,
+        INT_OR_FLOAT,
+        quantifier=r"{1}",
+    )
     MULTICOLOR_INSTRUCTION = compile(
         r"(?P<color>[rgb])"
         r"(?P<operator>[\+\-\=\>])"
         r"(?P<value>"
         r"(?:\d+(?:\.\d+)?)|"
-        rf"(?:random{ARGUMENTS.format(INT_OR_FLOAT, INT_OR_FLOAT, quantifier=r'{1}')})|"
+        rf"(?:random{_RANDOM_ARGS})|"
         r"(?:(?:fg|bg|ul)_[rgb])"
         r")\:"
         r"(?P<mode>fg|bg|ul)?"
-        rf"(?P<minmax>minmax{
-            ARGUMENTS.format(
-                INT_OR_FLOAT_OR_INF,
-                INT_OR_FLOAT_OR_INF,
-                quantifier=r'{1}',
-            )
-        })?"
+        rf"(?P<minmax>minmax{_MINMAX_ARGS})?"
     )
     MULTICOLOR_COMMAND = compile(r"(?P<reset>\?|\?\?)?(?P<repeat>repeat\(\d+\))?$")
 
