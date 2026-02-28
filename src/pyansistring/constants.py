@@ -30,7 +30,7 @@ __all__ = [
 
 import os
 import sys
-from enum import Enum, IntEnum
+from enum import Enum, EnumMeta, IntEnum
 from re import compile
 from typing import Literal
 
@@ -72,13 +72,22 @@ PUNCTUATION_AND_WHITESPACE = PUNCTUATION.union(WHITESPACE)
 # fmt: on
 
 
-class ColorMode(IntEnum):
+class MetaEnum(EnumMeta):
+    def __contains__(cls, item: object) -> bool:
+        try:
+            cls(item)
+        except ValueError:
+            return False
+        return True
+
+
+class ColorMode(IntEnum, metaclass=MetaEnum):
     PALETTE = 5  # 8-bit
     TRUE_COLOR = 2  # 24-bit
     TRUECOLOR = 2  # alias
 
 
-class Foreground(IntEnum):
+class Foreground(IntEnum, metaclass=MetaEnum):
     BLACK = 30
     RED = 31
     GREEN = 32
@@ -99,7 +108,7 @@ class Foreground(IntEnum):
     BRIGHT_WHITE = 97
 
 
-class Background(IntEnum):
+class Background(IntEnum, metaclass=MetaEnum):
     BLACK = 40
     RED = 41
     GREEN = 42
@@ -120,12 +129,12 @@ class Background(IntEnum):
     BRIGHT_WHITE = 107
 
 
-class Underline(IntEnum):
+class Underline(IntEnum, metaclass=MetaEnum):
     SET = 58
     DEFAULT = 59
 
 
-class UnderlineMode(IntEnum):
+class UnderlineMode(IntEnum, metaclass=MetaEnum):
     """Underline modes (style of underlining)."""
 
     SINGLE = 1
@@ -135,7 +144,7 @@ class UnderlineMode(IntEnum):
     DASHED = 5
 
 
-class SGR(IntEnum):
+class SGR(IntEnum, metaclass=MetaEnum):
     """Select Graphic Rendition (SGR) parameters."""
 
     RESET = 0
@@ -167,7 +176,7 @@ class SGR(IntEnum):
     RESET_SCRIPT = 75
 
 
-class NamedColors(Enum):
+class NamedColors(Enum, metaclass=MetaEnum):
     """
     A collection of named colors with their RGB values.
     Source: https://convertingcolors.com/named-colors.html
