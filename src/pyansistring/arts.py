@@ -5,7 +5,6 @@ __all__ = [
 
 from pyansistring.pyansistring import ANSIString
 
-
 PLAIN_ARTS = {
     "BANNER": (
         "                 ^___^           ░░░                                            \n"

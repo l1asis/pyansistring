@@ -15,16 +15,12 @@ from typing import TYPE_CHECKING, Annotated, Any, Self, SupportsIndex, Union
 
 if not TYPE_CHECKING:
     try:
-        from fontTools.pens.svgPathPen import SVGPathPen
-        from fontTools.pens.transformPen import TransformPen
         from fontTools.ttLib import TTFont
 
         is_fonttools_available = True
     except Exception:
         is_fonttools_available = False
 else:
-    from fontTools.pens.svgPathPen import SVGPathPen
-    from fontTools.pens.transformPen import TransformPen
     from fontTools.ttLib import TTFont
 
     is_fonttools_available = True
@@ -290,7 +286,7 @@ class ANSIString(str):
         index = 0
         lengths = tuple(len(line) for line in self.plain_text.splitlines())
         if not lengths:
-            raise IndexError(f"wrong y coordinate (empty string)")
+            raise IndexError("wrong y coordinate (empty string)")
         elif not (0 <= coord[1] < len(lengths)):
             raise IndexError(f"wrong y coordinate (0<=y<{len(lengths)})")
         for y, length in enumerate(lengths):

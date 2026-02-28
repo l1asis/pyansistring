@@ -3,8 +3,15 @@ from functools import cached_property
 from typing import Any, Literal
 
 from .constants import *
-from .constants import ColorMode, UnderlineMode, COLORS_8BIT, COLOR_THEMES, DEFAULT_THEME
+from .constants import (
+    COLOR_THEMES,
+    COLORS_8BIT,
+    DEFAULT_THEME,
+    ColorMode,
+    UnderlineMode,
+)
 from .frozen import FrozenMeta
+
 
 class Color(metaclass=FrozenMeta):
     """

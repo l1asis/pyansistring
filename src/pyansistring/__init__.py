@@ -15,27 +15,26 @@ try:
 except PackageNotFoundError:
     __version__ = "unknown"
 
+from .constants import (
+    COLOR_THEMES,
+    COLORS_8BIT,
+    DEFAULT_THEME,
+    PUNCTUATION,
+    PUNCTUATION_AND_WHITESPACE,
+    SGR,
+    UNIVERSAL_NEWLINES,
+    WHITESPACE,
+    Background,
+    ColorMode,
+    Foreground,
+    MulticolorSequences,
+    Regex,
+    Underline,
+    UnderlineMode,
+)
 from .pyansistring import ANSIString
 from .style import Color, Style
 from .style_manager import StyleManager
-
-from .constants import (
-    ColorMode,
-    Foreground,
-    Background,
-    Underline,
-    UnderlineMode,
-    SGR,
-    COLORS_8BIT,
-    COLOR_THEMES,
-    DEFAULT_THEME,
-    WHITESPACE,
-    UNIVERSAL_NEWLINES,
-    PUNCTUATION,
-    PUNCTUATION_AND_WHITESPACE,
-    Regex,
-    MulticolorSequences,
-)
 
 __all__ = [
     "ANSIString",

@@ -27,9 +27,9 @@ __all__ = [
     "MulticolorSequences",
 ]
 
-import sys
 import os
-from enum import IntEnum, Enum
+import sys
+from enum import Enum, IntEnum
 from re import compile
 
 """

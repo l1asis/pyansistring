@@ -1,9 +1,8 @@
 from functools import wraps
 from types import MethodType
-from typing import Any, Callable, TypeVar, ParamSpec, cast
+from typing import Any, Callable, ParamSpec, TypeVar, cast
 
 from .style import Style
-
 
 P = ParamSpec("P")
 R = TypeVar("R")
