@@ -2,9 +2,10 @@
 ![pyansistring Banner](https://raw.githubusercontent.com/l1asis/pyansistring/refs/heads/main/images/banner.png)
 
 [![CI Build](https://github.com/l1asis/pyansistring/actions/workflows/test.yml/badge.svg)](https://github.com/l1asis/pyansistring/actions)
-[![codecov](https://codecov.io/gh/l1asis/pyansistring/graph/badge.svg)](https://codecov.io/gh/l1asis/pyansistring)
+[![Coverage](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/l1asis/9f30f8200703cf6886ab323e86b9f0a1/raw/pyansistring_coverage.json)](https://gist.github.com/l1asis/9f30f8200703cf6886ab323e86b9f0a1#file-pyansistring_coverage-json)
 [![PyPI - Version](https://img.shields.io/pypi/v/pyansistring.svg)](https://pypi.org/project/pyansistring/)
 [![PyPI - Python Version](https://img.shields.io/pypi/pyversions/pyansistring.svg)](https://pypi.org/project/pyansistring/)
+![PyPI - Downloads](https://img.shields.io/pypi/dm/pyansistring)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](https://opensource.org/licenses/MIT)
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 

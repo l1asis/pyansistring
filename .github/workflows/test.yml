@@ -54,9 +54,32 @@ jobs:
       run: |
         python -m coverage run -m pytest -v
         python -m coverage report -m
-        python -m coverage xml
-    - name: Upload coverage to Codecov ☁️
+        python -m coverage json
+
+        TOTAL=$(python -c "import json; print(int(float(json.load(open('coverage.json'))['totals']['percent_covered'])))")
+        echo "total=$TOTAL" >> $GITHUB_ENV
+        
+        # Determine badge color based on granular coverage thresholds
+        if [ "$TOTAL" -ge 95 ]; then
+          echo "color=brightgreen" >> $GITHUB_ENV
+        elif [ "$TOTAL" -ge 90 ]; then
+          echo "color=green" >> $GITHUB_ENV
+        elif [ "$TOTAL" -ge 85 ]; then
+          echo "color=yellowgreen" >> $GITHUB_ENV
+        elif [ "$TOTAL" -ge 80 ]; then
+          echo "color=yellow" >> $GITHUB_ENV
+        elif [ "$TOTAL" -ge 70 ]; then
+          echo "color=orange" >> $GITHUB_ENV
+        else
+          echo "color=red" >> $GITHUB_ENV
+        fi
+    - name: Update Coverage Badge Gist 🪪
       if: matrix.python-version == '3.14'
-      uses: codecov/codecov-action@v5
+      uses: Schneegans/dynamic-badges-action@v1.7.0
       with:
-        fail_ci_if_error: false
+        auth: ${{ secrets.GIST_SECRET }}
+        gistID: 9f30f8200703cf6886ab323e86b9f0a1
+        filename: pyansistring_coverage.json
+        label: coverage
+        message: ${{ env.total }}%
+        color: ${{ env.color }}
