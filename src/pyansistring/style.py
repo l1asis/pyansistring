@@ -7,7 +7,23 @@ from .constants import ColorMode, UnderlineMode, COLORS_8BIT, COLOR_THEMES, DEFA
 from .frozen import FrozenMeta
 
 class Color(metaclass=FrozenMeta):
-    """Unified color representation"""
+    """
+    Unified color representation.
+
+    Parameters
+    ----------
+    mode: Literal["4bit", "8bit", "24bit"] | None
+        The color mode or None for unset.
+    value: Foreground | Background | Underline | int | tuple[int, int, int] | None
+        The color value.
+
+    Attributes
+    ----------
+    mode: Literal["4bit", "8bit", "24bit"] | None
+        The color mode or None for unset.
+    value: int | tuple[int, int, int] | None
+        The normalized color value.
+    """
     
     def __init__(
         self,
@@ -110,7 +126,31 @@ class Color(metaclass=FrozenMeta):
             return (0, 0, 0)  # Default
 
 class Style(metaclass=FrozenMeta):
+    """
+    Composite style representation.
 
+    Parameters
+    ----------
+    foreground: Color | tuple[str, Any]
+        The foreground color.
+    background: Color | tuple[str, Any]
+        The background color.
+    underline: tuple[Color | tuple[str, Any], UnderlineMode | int]
+        The underline color and mode.
+    attributes: frozenset[SGR | int]
+        The set of SGR attributes.
+
+    Attributes
+    ----------
+    foreground: Color
+        The foreground color.
+    background: Color
+        The background color.
+    underline: tuple[Color, UnderlineMode]
+        The underline color and mode.
+    attributes: frozenset[SGR]
+        The set of SGR attributes.
+    """
     def __init__(
         self,
         foreground: Color | tuple[str, Any] = Color(),
