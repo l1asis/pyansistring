@@ -23,6 +23,7 @@ __all__ = [
     "ECLIPSE_TERMINAL_COLORS",
     "COLOR_THEMES",
     "DEFAULT_THEME",
+    "ThemeName",
     "Regex",
     "MulticolorSequences",
 ]
@@ -31,6 +32,21 @@ import os
 import sys
 from enum import Enum, IntEnum
 from re import compile
+from typing import Literal
+
+ThemeName = Literal[
+    "vga",
+    "windows_xp",
+    "powershell",
+    "vscode",
+    "windows_10",
+    "terminal_app",
+    "putty",
+    "mirc",
+    "xterm",
+    "ubuntu",
+    "eclipse",
+]
 
 """
 Sources used:
@@ -2362,43 +2378,47 @@ COLOR_THEMES = {
     "eclipse": ECLIPSE_TERMINAL_COLORS,
 }
 
-# FIXME: Find a better name for DEFAULT_THEME (pylance complains about constant naming)
-if sys.platform == "win32":
-    # Windows
-    if (
-        "pwsh" in os.environ.get("SHELL", "").lower()
-        or "powershell" in os.environ.get("TERM", "").lower()
-    ):
-        DEFAULT_THEME = "powershell"
-    elif "vscode" in os.environ.get("TERM_PROGRAM", "").lower():
-        DEFAULT_THEME = "vscode"
-    elif os.environ.get("WT_SESSION"):
-        DEFAULT_THEME = "windows_10"
-    else:
-        DEFAULT_THEME = "windows_xp"
-elif sys.platform == "darwin":
-    # macOS
-    if "vscode" in os.environ.get("TERM_PROGRAM", "").lower():
-        DEFAULT_THEME = "vscode"
-    else:
-        DEFAULT_THEME = "terminal_app"
-else:
-    # Linux/Unix systems
-    term_program = os.environ.get("TERM_PROGRAM", "").lower()
-    term = os.environ.get("TERM", "").lower()
 
-    if "vscode" in term_program:
-        DEFAULT_THEME = "vscode"
-    elif "putty" in term:
-        DEFAULT_THEME = "putty"
-    elif "mirc" in term:
-        DEFAULT_THEME = "mirc"
-    elif "ubuntu" in term:
-        DEFAULT_THEME = "ubuntu"
-    elif "eclipse" in term_program:
-        DEFAULT_THEME = "eclipse"
+def _detect_default_theme() -> ThemeName:
+    if sys.platform == "win32":
+        # Windows
+        if (
+            "pwsh" in os.environ.get("SHELL", "").lower()
+            or "powershell" in os.environ.get("TERM", "").lower()
+        ):
+            return "powershell"
+        elif "vscode" in os.environ.get("TERM_PROGRAM", "").lower():
+            return "vscode"
+        elif os.environ.get("WT_SESSION"):
+            return "windows_10"
+        else:
+            return "windows_xp"
+    elif sys.platform == "darwin":
+        # macOS
+        if "vscode" in os.environ.get("TERM_PROGRAM", "").lower():
+            return "vscode"
+        else:
+            return "terminal_app"
     else:
-        DEFAULT_THEME = "xterm"
+        # Linux/Unix systems
+        term_program = os.environ.get("TERM_PROGRAM", "").lower()
+        term = os.environ.get("TERM", "").lower()
+
+        if "vscode" in term_program:
+            return "vscode"
+        elif "putty" in term:
+            return "putty"
+        elif "mirc" in term:
+            return "mirc"
+        elif "ubuntu" in term:
+            return "ubuntu"
+        elif "eclipse" in term_program:
+            return "eclipse"
+        else:
+            return "xterm"
+
+
+DEFAULT_THEME: ThemeName = _detect_default_theme()
 
 
 class Regex:

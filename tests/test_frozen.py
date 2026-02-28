@@ -29,7 +29,7 @@ class TestFrozenMeta:
     def test_cannot_set_new_attribute(self, frozen_instance: object):
         """Adding a brand-new attribute must be rejected."""
         with pytest.raises(AttributeError, match="has not attribute"):
-            frozen_instance.totally_new_attr = 42  # type: ignore
+            setattr(frozen_instance, "totally_new_attr", 42)
 
     def test_cannot_delete_attribute(self, frozen_instance: object):
         """Deleting an existing attribute must be rejected."""

@@ -1,30 +1,26 @@
 from functools import wraps
 from types import MethodType
-from typing import Any, Callable, ParamSpec, TypeVar, cast
+from typing import Any, Callable
 
 from .style import Style
 
-P = ParamSpec("P")
-R = TypeVar("R")
-
 
 def _detect_style_change(
-    method: Callable[P, R], is_method_bound: bool = False
-) -> Callable[P, R]:
+    method: Callable[..., Any], is_method_bound: bool = False
+) -> Callable[..., Any]:
     """Decorator to detect changes in the StyleManager and set the modified flag."""
 
     @wraps(method)
-    def wrapped(self: "StyleManager", *args: P.args, **kwargs: P.kwargs) -> R:
+    def wrapped(self: "StyleManager", *args: Any, **kwargs: Any) -> Any:
         previous_length = len(self)
         if not is_method_bound:
-            result = method(self, *args, **kwargs)  # type: ignore
+            result = method(self, *args, **kwargs)
         else:
             result = method(*args, **kwargs)
-        if not self._has_been_modified and previous_length != len(self):  # type: ignore
-            self._has_been_modified = True  # type: ignore
-        return result  # type: ignore
+        self.notify_if_changed(previous_length)
+        return result
 
-    return cast(Callable[P, R], wrapped)
+    return wrapped
 
 
 class StyleManager(dict[int, Style]):
@@ -76,10 +72,15 @@ class StyleManager(dict[int, Style]):
             self._has_been_modified = False
         return result
 
+    def notify_if_changed(self, previous_length: int) -> None:
+        """Update the modified flag if the collection length changed."""
+        if not self._has_been_modified and previous_length != len(self):
+            self._has_been_modified = True
+
     def __repr__(self) -> str:
         """Return a string representation of the StyleManager."""
         # TODO: it is too verbose, but it is useful for debugging
-        return f"StyleManager({dict.__repr__(self)})"  # type: ignore
+        return f"StyleManager({super().__repr__()})"
 
     def __setitem__(self, key: Any, value: Any) -> None:
         """Set a `Style` instance in the dictionary."""

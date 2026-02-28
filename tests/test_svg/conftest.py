@@ -1,13 +1,31 @@
 """Shared fixtures and helpers for SVG export tests."""
 
+from typing import TYPE_CHECKING
+
 import pytest
-from fontTools.pens.svgPathPen import SVGPathPen  # type: ignore
+from fontTools.pens.svgPathPen import SVGPathPen  # type: ignore[import-untyped]
 
 import pyansistring.pyansistring as pas
 from pyansistring import ANSIString
 
+if TYPE_CHECKING:
+    from fontTools.ttLib import TTFont as _TTFontBase  # type: ignore[import-untyped]
+else:
+    _TTFontBase = object
 
-class _Glyph:
+__all__ = [
+    "FakeTTFont",
+    "FakeGlyph",
+    "FakeGlyphSet",
+    "FakeHead",
+    "FakeHhea",
+    "FakeHmtx",
+    "FakeName",
+    "FakePost",
+]
+
+
+class FakeGlyph:
     def __init__(self, width: int = 600, *, marker: int = 0) -> None:
         self.width = width
         self._marker = marker
@@ -30,38 +48,38 @@ class _Glyph:
         pen.closePath()
 
 
-class _GlyphSet(dict[str, _Glyph]):
+class FakeGlyphSet(dict[str, FakeGlyph]):
     """dict subclass so `glyph_set[name]` and `glyph_set.get()` work."""
 
     pass
 
 
-class _Head:
+class FakeHead:
     unitsPerEm = 1000
 
 
-class _Hhea:
+class FakeHhea:
     ascent = 800
     descent = -200
     lineGap = 200
 
 
-class _Hmtx:
+class FakeHmtx:
     def __getitem__(self, key: str):
         return (600, 0)  # (advance_width, lsb)
 
 
-class _Name:
+class FakeName:
     def getDebugName(self, _):
         return "FakeFont"
 
 
-class _Post:
+class FakePost:
     underlinePosition = -100
     underlineThickness = 50
 
 
-class FakeTTFont:
+class FakeTTFont(_TTFontBase):
     """Lightweight stand-in for `fontTools.ttLib.TTFont`.
 
     Supports the `"fvar" in font` check (always `False` since
@@ -80,11 +98,11 @@ class FakeTTFont:
         glyph_width: int = 600,
     ) -> None:
         self._tables = tables or {
-            "head": _Head(),
-            "hhea": _Hhea(),
-            "hmtx": _Hmtx(),
-            "name": _Name(),
-            "post": _Post(),
+            "head": FakeHead(),
+            "hhea": FakeHhea(),
+            "hmtx": FakeHmtx(),
+            "name": FakeName(),
+            "post": FakePost(),
         }
         self._glyph_marker = glyph_marker
         self._glyph_width = glyph_width
@@ -95,13 +113,15 @@ class FakeTTFont:
     def __contains__(self, key: str) -> bool:
         return key in self._tables
 
-    def getBestCmap(self) -> dict[int, str]:
+    def getBestCmap(self, cmapPreferences: object = None) -> dict[int, str]:  # type: ignore[override]
         return {}  # all chars fall back to .notdef
 
-    def getGlyphSet(self, *, location: dict[str, float] | None = None):
-        return _GlyphSet(
+    def getGlyphSet(  # type: ignore[override]
+        self, *, location: dict[str, float] | None = None, **_kw: object
+    ) -> FakeGlyphSet:
+        return FakeGlyphSet(
             {
-                ".notdef": _Glyph(self._glyph_width, marker=self._glyph_marker),
+                ".notdef": FakeGlyph(self._glyph_width, marker=self._glyph_marker),
             }
         )
 

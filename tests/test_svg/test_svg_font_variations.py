@@ -19,38 +19,38 @@ from pyansistring._helpers import (
     prepare_font_variants,
     resolve_skew,
 )
-from pyansistring.constants import SGR
+from pyansistring.constants import SGR, UnderlineMode
 from pyansistring.style import Color, Style
 from tests.test_svg.conftest import (
+    FakeHead,
+    FakeHhea,
+    FakeHmtx,
+    FakeName,
+    FakePost,
     FakeTTFont,
-    _Head,  # type: ignore
-    _Hhea,  # type: ignore
-    _Hmtx,  # type: ignore
-    _Name,  # type: ignore
-    _Post,  # type: ignore
 )
 
 
-def _make_font(
+def make_font(
     glyph_width: int = 600,
     *,
     glyph_marker: int = 0,
-    fvar_axes: list["_FakeAxis"] | None = None,
+    fvar_axes: list["FakeAxis"] | None = None,
 ) -> FakeTTFont:
     """Create a FakeTTFont, optionally with fvar axes and a glyph marker."""
     tables: dict[str, object] = {
-        "head": _Head(),
-        "hhea": _Hhea(),
-        "hmtx": _Hmtx(),
-        "name": _Name(),
-        "post": _Post(),
+        "head": FakeHead(),
+        "hhea": FakeHhea(),
+        "hmtx": FakeHmtx(),
+        "name": FakeName(),
+        "post": FakePost(),
     }
     if fvar_axes is not None:
-        tables["fvar"] = _FakeFvar(fvar_axes)
+        tables["fvar"] = FakeFvar(fvar_axes)
     return FakeTTFont(tables=tables, glyph_width=glyph_width, glyph_marker=glyph_marker)
 
 
-class _FakeAxis:
+class FakeAxis:
     """Minimal stand-in for fontTools fvar Axis."""
 
     def __init__(self, tag: str, min_val: int, default_val: int, max_val: int) -> None:
@@ -60,56 +60,56 @@ class _FakeAxis:
         self.maxValue = max_val
 
 
-class _FakeFvar:
+class FakeFvar:
     """Minimal stand-in for an fvar table."""
 
-    def __init__(self, axes: list[_FakeAxis]) -> None:
+    def __init__(self, axes: list[FakeAxis]) -> None:
         self.axes = axes
 
 
 @pytest.fixture(autouse=True)
-def _enable_fonttools():  # type: ignore
+def _enable_fonttools() -> None:  # pyright: ignore[reportUnusedFunction]
     """Ensure fonttools guard is enabled for every test in this module."""
     pas.is_fonttools_available = True
 
 
 @pytest.fixture
 def regular_font() -> FakeTTFont:
-    return _make_font(600, glyph_marker=10)
+    return make_font(600, glyph_marker=10)
 
 
 @pytest.fixture
 def bold_font() -> FakeTTFont:
     """Bold font variant with wider glyphs and distinct marker."""
-    return _make_font(650, glyph_marker=20)
+    return make_font(650, glyph_marker=20)
 
 
 @pytest.fixture
 def italic_font() -> FakeTTFont:
     """Italic font variant with narrower glyphs and distinct marker."""
-    return _make_font(580, glyph_marker=30)
+    return make_font(580, glyph_marker=30)
 
 
 @pytest.fixture
 def bold_italic_font() -> FakeTTFont:
     """Bold-italic font variant."""
-    return _make_font(640, glyph_marker=40)
+    return make_font(640, glyph_marker=40)
 
 
 @pytest.fixture
 def thin_font() -> FakeTTFont:
     """Thin font variant with narrower glyphs."""
-    return _make_font(550, glyph_marker=50)
+    return make_font(550, glyph_marker=50)
 
 
 @pytest.fixture
 def variable_font() -> FakeTTFont:
     """Variable font with wght + ital axes."""
-    return _make_font(
+    return make_font(
         600,
         fvar_axes=[
-            _FakeAxis("wght", 100, 400, 900),
-            _FakeAxis("ital", 0, 0, 1),
+            FakeAxis("wght", 100, 400, 900),
+            FakeAxis("ital", 0, 0, 1),
         ],
     )
 
@@ -117,10 +117,10 @@ def variable_font() -> FakeTTFont:
 @pytest.fixture
 def variable_font_wght_only() -> FakeTTFont:
     """Variable font with only wght axis."""
-    return _make_font(
+    return make_font(
         600,
         fvar_axes=[
-            _FakeAxis("wght", 100, 400, 900),
+            FakeAxis("wght", 100, 400, 900),
         ],
     )
 
@@ -128,10 +128,10 @@ def variable_font_wght_only() -> FakeTTFont:
 @pytest.fixture
 def variable_font_slnt_only() -> FakeTTFont:
     """Variable font with only slnt axis."""
-    return _make_font(
+    return make_font(
         600,
         fvar_axes=[
-            _FakeAxis("slnt", -12, 0, 0),
+            FakeAxis("slnt", -12, 0, 0),
         ],
     )
 
@@ -149,7 +149,7 @@ class TestGetStyleKey:
         style = Style(
             foreground=Color.from_24bit(255, 0, 0),
             background=Color.unset(),
-            underline=(Color.unset(), None),
+            underline=(Color.unset(), UnderlineMode.SINGLE),
             attributes=frozenset(),
         )
         assert get_style_key(style) == "regular"
@@ -158,7 +158,7 @@ class TestGetStyleKey:
         style = Style(
             foreground=Color.unset(),
             background=Color.unset(),
-            underline=(Color.unset(), None),
+            underline=(Color.unset(), UnderlineMode.SINGLE),
             attributes=frozenset({SGR.BOLD}),
         )
         assert get_style_key(style) == "bold"
@@ -167,7 +167,7 @@ class TestGetStyleKey:
         style = Style(
             foreground=Color.unset(),
             background=Color.unset(),
-            underline=(Color.unset(), None),
+            underline=(Color.unset(), UnderlineMode.SINGLE),
             attributes=frozenset({SGR.ITALIC}),
         )
         assert get_style_key(style) == "italic"
@@ -176,7 +176,7 @@ class TestGetStyleKey:
         style = Style(
             foreground=Color.unset(),
             background=Color.unset(),
-            underline=(Color.unset(), None),
+            underline=(Color.unset(), UnderlineMode.SINGLE),
             attributes=frozenset({SGR.BOLD, SGR.ITALIC}),
         )
         assert get_style_key(style) == "bold_italic"
@@ -185,7 +185,7 @@ class TestGetStyleKey:
         style = Style(
             foreground=Color.unset(),
             background=Color.unset(),
-            underline=(Color.unset(), None),
+            underline=(Color.unset(), UnderlineMode.SINGLE),
             attributes=frozenset({SGR.DIM}),
         )
         assert get_style_key(style) == "thin"
@@ -372,7 +372,7 @@ class TestFontBoldItalicParam:
         assert "stroke-width=" not in svg
 
     def test_bold_italic_falls_back_to_bold_plus_faux_italic(
-        self, regular_font, bold_font
+        self, regular_font: FakeTTFont, bold_font: FakeTTFont
     ):
         """Without font_bold_italic, bold font + faux italic is used."""
         s = ANSIString("AB").fm(SGR.BOLD).fm(SGR.ITALIC)
@@ -416,7 +416,7 @@ class TestVariableFont:
     def test_variable_font_italic_no_faux(self, variable_font: FakeTTFont):
         s = ANSIString("AB").fm(SGR.ITALIC)
         svg_var = s.to_svg(variable_font, font_size_px=16, convert_text_to_path=True)
-        svg_reg = s.to_svg(_make_font(600), font_size_px=16, convert_text_to_path=True)
+        svg_reg = s.to_svg(make_font(600), font_size_px=16, convert_text_to_path=True)
         # Both should work; variable font has native italic so no faux skew
         w_var = float(svg_var.split('width="')[1].split('"')[0])
         w_reg = float(svg_reg.split('width="')[1].split('"')[0])
@@ -439,7 +439,7 @@ class TestVariableFont:
             convert_text_to_path=True,
         )
         svg_reg = s.to_svg(
-            _make_font(600),
+            make_font(600),
             font_size_px=16,
             convert_text_to_path=True,
         )

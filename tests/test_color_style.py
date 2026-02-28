@@ -14,6 +14,18 @@ from pyansistring.constants import (
 from pyansistring.style import Color, Style
 
 
+def _get_fg(s: Style) -> Color:
+    return s.foreground
+
+
+def _get_bg(s: Style) -> Color:
+    return s.background
+
+
+def _get_ul_color(s: Style) -> Color:
+    return s.underline[0]
+
+
 class TestColorConstruction:
     """Color(...) creation and truthiness."""
 
@@ -211,49 +223,49 @@ class TestStyleWithStyle:
         [
             pytest.param(
                 (Foreground.CYAN,),
-                lambda s: s.foreground,  # type: ignore
+                _get_fg,
                 Color.from_4bit(Foreground.CYAN),
                 id="fg-4bit",
             ),
             pytest.param(
                 (Foreground.SET, 200),
-                lambda s: s.foreground,  # type: ignore
+                _get_fg,
                 Color.from_8bit(200),
                 id="fg-8bit",
             ),
             pytest.param(
                 (Foreground.SET, 10, 20, 30),
-                lambda s: s.foreground,  # type: ignore
+                _get_fg,
                 Color.from_24bit(10, 20, 30),
                 id="fg-24bit",
             ),
             pytest.param(
                 (Background.YELLOW,),
-                lambda s: s.background,  # type: ignore
+                _get_bg,
                 Color.from_4bit(Background.YELLOW),
                 id="bg-4bit",
             ),
             pytest.param(
                 (Background.SET, 200),
-                lambda s: s.background,  # type: ignore
+                _get_bg,
                 Color.from_8bit(200),
                 id="bg-8bit",
             ),
             pytest.param(
                 (Background.SET, 10, 20, 30),
-                lambda s: s.background,  # type: ignore
+                _get_bg,
                 Color.from_24bit(10, 20, 30),
                 id="bg-24bit",
             ),
             pytest.param(
                 (Underline.SET, 135),
-                lambda s: s.underline[0],  # type: ignore
+                _get_ul_color,
                 Color.from_8bit(135),
                 id="ul-8bit",
             ),
             pytest.param(
                 (Underline.SET, 10, 20, 30),
-                lambda s: s.underline[0],  # type: ignore
+                _get_ul_color,
                 Color.from_24bit(10, 20, 30),
                 id="ul-24bit",
             ),
@@ -403,42 +415,42 @@ class TestStyleConvenienceFactories:
             pytest.param(
                 Style.fg_4bit,
                 (Foreground.RED,),
-                lambda s: s.foreground,  # type: ignore
+                _get_fg,
                 Color.from_4bit(Foreground.RED),
                 id="fg_4bit",
             ),
             pytest.param(
                 Style.bg_4bit,
                 (Background.GREEN,),
-                lambda s: s.background,  # type: ignore
+                _get_bg,
                 Color.from_4bit(Background.GREEN),
                 id="bg_4bit",
             ),
             pytest.param(
                 Style.fg_8bit,
                 (100,),
-                lambda s: s.foreground,  # type: ignore
+                _get_fg,
                 Color.from_8bit(100),
                 id="fg_8bit",
             ),
             pytest.param(
                 Style.bg_8bit,
                 (200,),
-                lambda s: s.background,  # type: ignore
+                _get_bg,
                 Color.from_8bit(200),
                 id="bg_8bit",
             ),
             pytest.param(
                 Style.fg_24bit,
                 (1, 2, 3),
-                lambda s: s.foreground,  # type: ignore
+                _get_fg,
                 Color.from_24bit(1, 2, 3),
                 id="fg_24bit",
             ),
             pytest.param(
                 Style.bg_24bit,
                 (4, 5, 6),
-                lambda s: s.background,  # type: ignore
+                _get_bg,
                 Color.from_24bit(4, 5, 6),
                 id="bg_24bit",
             ),

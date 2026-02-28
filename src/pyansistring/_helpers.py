@@ -26,9 +26,9 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, NamedTuple
 
-from fontTools.pens.svgPathPen import SVGPathPen
-from fontTools.pens.transformPen import TransformPen
-from fontTools.ttLib import TTFont
+from fontTools.pens.svgPathPen import SVGPathPen  # type: ignore[import-untyped]
+from fontTools.pens.transformPen import TransformPen  # type: ignore[import-untyped]
+from fontTools.ttLib import TTFont  # type: ignore[import-untyped]
 
 from pyansistring.constants import SGR, WHITESPACE, UnderlineMode
 from pyansistring.style import Style
@@ -87,7 +87,9 @@ def find_spans(string: str, substring: str) -> Generator[tuple[int, int], None, 
         j = i = i + j + len(substring)
 
 
-def search_separators(string: str, allowed: set[str] = WHITESPACE):
+def search_separators(
+    string: str, allowed: set[str] = WHITESPACE
+) -> Generator[str, None, None]:
     """Search for allowed separators in a string."""
     separator = ""
     for char in string:
@@ -100,7 +102,9 @@ def search_separators(string: str, allowed: set[str] = WHITESPACE):
         yield separator
 
 
-def rsearch_separators(string: str, allowed: set[str] = WHITESPACE):
+def rsearch_separators(
+    string: str, allowed: set[str] = WHITESPACE
+) -> Generator[str, None, None]:
     """Search for allowed separators in a string, starting from the end."""
     return search_separators(string[::-1], allowed)
 
@@ -198,8 +202,19 @@ def prepare_font_variants(
         Mapping from style keys ("regular", "bold", "italic", "bold_italic",
         "thin") to pre-computed FontVariant tuples.
     """
-    main_cmap = font.getBestCmap()
-    main_gs = font.getGlyphSet()
+
+    # -- fontTools helper wrappers (no stubs available) --
+    def _cmap(f: TTFont) -> dict[int, str]:
+        return f.getBestCmap()  # type: ignore[no-any-return]
+
+    def _gs(f: TTFont, **kw: Any) -> Any:
+        return f.getGlyphSet(**kw)  # type: ignore[no-any-return]
+
+    def _fvar_axes(f: TTFont) -> dict[str, Any]:
+        return {a.axTag: a for a in f["fvar"].axes}  # type: ignore[union-attr]
+
+    main_cmap = _cmap(font)
+    main_gs = _gs(font)
 
     variants: dict[str, FontVariant] = {
         "regular": FontVariant(main_gs, main_cmap, False, False),
@@ -209,7 +224,7 @@ def prepare_font_variants(
     has_fvar = "fvar" in font
     var_axes: dict[str, Any] = {}
     if has_fvar:
-        var_axes = {a.axTag: a for a in font["fvar"].axes}
+        var_axes = _fvar_axes(font)
 
     has_wght = "wght" in var_axes
     has_ital = "ital" in var_axes
@@ -218,14 +233,14 @@ def prepare_font_variants(
     # Bold
     if font_bold is not None:
         variants["bold"] = FontVariant(
-            font_bold.getGlyphSet(),
-            font_bold.getBestCmap(),
+            _gs(font_bold),
+            _cmap(font_bold),
             False,
             False,
         )
     elif has_wght:
         variants["bold"] = FontVariant(
-            font.getGlyphSet(location={"wght": 700}),
+            _gs(font, location={"wght": 700}),
             main_cmap,
             False,
             False,
@@ -236,21 +251,21 @@ def prepare_font_variants(
     # Italic
     if font_italic is not None:
         variants["italic"] = FontVariant(
-            font_italic.getGlyphSet(),
-            font_italic.getBestCmap(),
+            _gs(font_italic),
+            _cmap(font_italic),
             False,
             False,
         )
     elif has_ital:
         variants["italic"] = FontVariant(
-            font.getGlyphSet(location={"ital": 1}),
+            _gs(font, location={"ital": 1}),
             main_cmap,
             False,
             False,
         )
     elif has_slnt:
         variants["italic"] = FontVariant(
-            font.getGlyphSet(location={"slnt": var_axes["slnt"].minValue}),
+            _gs(font, location={"slnt": var_axes["slnt"].minValue}),
             main_cmap,
             False,
             False,
@@ -261,8 +276,8 @@ def prepare_font_variants(
     # Bold Italic
     if font_bold_italic is not None:
         variants["bold_italic"] = FontVariant(
-            font_bold_italic.getGlyphSet(),
-            font_bold_italic.getBestCmap(),
+            _gs(font_bold_italic),
+            _cmap(font_bold_italic),
             False,
             False,
         )
@@ -273,7 +288,7 @@ def prepare_font_variants(
         else:
             loc["slnt"] = var_axes["slnt"].minValue
         variants["bold_italic"] = FontVariant(
-            font.getGlyphSet(location=loc),
+            _gs(font, location=loc),
             main_cmap,
             False,
             False,
@@ -281,23 +296,23 @@ def prepare_font_variants(
     elif font_bold is not None:
         # Bold font available, faux italic only
         variants["bold_italic"] = FontVariant(
-            font_bold.getGlyphSet(),
-            font_bold.getBestCmap(),
+            _gs(font_bold),
+            _cmap(font_bold),
             False,
             True,
         )
     elif font_italic is not None:
         # Italic font available, faux bold only
         variants["bold_italic"] = FontVariant(
-            font_italic.getGlyphSet(),
-            font_italic.getBestCmap(),
+            _gs(font_italic),
+            _cmap(font_italic),
             True,
             False,
         )
     elif has_wght:
         # Variable bold + faux italic
         variants["bold_italic"] = FontVariant(
-            font.getGlyphSet(location={"wght": 700}),
+            _gs(font, location={"wght": 700}),
             main_cmap,
             False,
             True,
@@ -306,7 +321,7 @@ def prepare_font_variants(
         # Variable italic + faux bold
         loc = {"ital": 1} if has_ital else {"slnt": var_axes["slnt"].minValue}
         variants["bold_italic"] = FontVariant(
-            font.getGlyphSet(location=loc),
+            _gs(font, location=loc),
             main_cmap,
             True,
             False,
@@ -318,14 +333,14 @@ def prepare_font_variants(
     # Thin (SGR.DIM)
     if font_thin is not None:
         variants["thin"] = FontVariant(
-            font_thin.getGlyphSet(),
-            font_thin.getBestCmap(),
+            _gs(font_thin),
+            _cmap(font_thin),
             False,
             False,
         )
     elif has_wght:
         variants["thin"] = FontVariant(
-            font.getGlyphSet(location={"wght": var_axes["wght"].minValue}),
+            _gs(font, location={"wght": var_axes["wght"].minValue}),
             main_cmap,
             False,
             False,

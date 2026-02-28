@@ -11,6 +11,7 @@ from .constants import (
     ColorMode,
     Foreground,
     Regex,
+    ThemeName,
     Underline,
     UnderlineMode,
 )
@@ -111,27 +112,18 @@ class Color(metaclass=FrozenMeta):
 
     def to_rgb(
         self,
-        theme: Literal[
-            "vga",
-            "windows_xp",
-            "powershell",
-            "vscode",
-            "windows_10",
-            "terminal_app",
-            "putty",
-            "mirc",
-            "xterm",
-            "ubuntu",
-            "eclipse",
-        ] = DEFAULT_THEME,
+        theme: ThemeName = DEFAULT_THEME,
     ) -> tuple[int, int, int]:
         """Returns the RGB value of the color based on the theme."""
         if self.mode == "24bit":
-            return self.value  # type: ignore
+            assert isinstance(self.value, tuple)
+            return self.value
         elif self.mode == "8bit":
-            return COLORS_8BIT[self.value]  # type: ignore
+            assert isinstance(self.value, int)
+            return COLORS_8BIT[self.value]
         elif self.mode == "4bit":
-            return COLOR_THEMES[theme][self.value]  # type: ignore
+            assert isinstance(self.value, int)
+            return COLOR_THEMES[theme][self.value]
         else:
             return (0, 0, 0)  # Default
 
@@ -167,7 +159,7 @@ class Style(metaclass=FrozenMeta):
         self,
         foreground: Color | tuple[str, Any] = Color(),
         background: Color | tuple[str, Any] = Color(),
-        underline: tuple[Color | tuple[str, Any], UnderlineMode | int] = (
+        underline: tuple[Color | tuple[str, Any], UnderlineMode | int | None] = (
             Color(),
             UnderlineMode.SINGLE,
         ),

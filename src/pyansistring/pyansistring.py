@@ -11,7 +11,7 @@ from copy import copy, deepcopy
 from itertools import cycle
 from pathlib import Path
 from random import randint
-from typing import TYPE_CHECKING, Annotated, Any, Self, SupportsIndex, Union
+from typing import TYPE_CHECKING, Annotated, Any, Self, SupportsIndex, Union, cast
 
 if not TYPE_CHECKING:
     try:
@@ -21,7 +21,7 @@ if not TYPE_CHECKING:
     except Exception:
         is_fonttools_available = False
 else:
-    from fontTools.ttLib import TTFont
+    from fontTools.ttLib import TTFont  # type: ignore[import]
 
     is_fonttools_available = True
 
@@ -98,7 +98,7 @@ class MulticolorInstruction:
     minmax: tuple[float, float]
     repeat: int
 
-    def __init__(self, rgb: dict[str, dict[str, int]], **kwargs) -> None:
+    def __init__(self, rgb: dict[str, dict[str, int | float]], **kwargs: Any) -> None:
         allowed_keys = {"color", "operator", "value", "mode", "minmax", "repeat"}
         missing_keys = tuple(k for k in allowed_keys if k not in kwargs)
         if not kwargs or len(missing_keys):
@@ -109,17 +109,20 @@ class MulticolorInstruction:
             )
 
         self.rgb = rgb
-        for k, v in kwargs.items():
-            setattr(self, k, v)
+        self.color = str(kwargs["color"])
+        self.operator = str(kwargs["operator"])
+        self.value = str(kwargs["value"])
+        self.repeat = int(kwargs["repeat"]) if kwargs.get("repeat") else 1
+
+        minmax_raw = kwargs.get("minmax")
+        if isinstance(minmax_raw, str):
+            parts = minmax_raw[7:-1].split(",")
+            self.minmax = (float(parts[0]), float(parts[1]))
+        else:
+            self.minmax = (0.0, 255.0)
+
+        self.mode = str(kwargs.get("mode") or "fg")
         self.processed_value = self.process_value(self.value)
-
-        if isinstance(self.minmax, str):
-            self.minmax = tuple(map(float, self.minmax[7:-1].split(",")))
-        elif self.minmax is None:
-            self.minmax = (0, 255)
-
-        if not self.mode:
-            self.mode = "fg"
 
         if self.operator == ">":
             base_value = rgb[self.mode][self.color]
@@ -131,17 +134,18 @@ class MulticolorInstruction:
                 self.processed_value = (base_value - self.processed_value) / self.repeat
 
     def process_value(self, value: str, save: bool = False) -> int | float:
+        result: int | float
         if value.startswith("random"):
             from_value, to_value = map(int, value[7:-1].split(","))
-            value = randint(from_value, to_value)
+            result = randint(from_value, to_value)
         elif value.endswith(("r", "g", "b")):
             mode, color = value.split("_")
-            value = self.rgb[mode][color]
+            result = self.rgb[mode][color]
         else:
-            value = float(value)
+            result = float(value)
         if save:
-            self.processed_value = value
-        return value
+            self.processed_value = result
+        return result
 
 
 class MulticolorCommand:
@@ -302,11 +306,13 @@ class ANSIString(str):
                 if isinstance(result, str):
                     return type(self)(result, self.style_manager)
                 elif isinstance(result, list):
-                    return [type(self)(item, self.style_manager) for item in result]  # type: ignore
+                    items = cast(list[str], result)
+                    return [type(self)(item, self.style_manager) for item in items]
                 elif isinstance(result, tuple):
+                    items_t = cast(tuple[str, ...], result)
                     return tuple(
-                        type(self)(item, self.style_manager) for item in result
-                    )  # type: ignore
+                        type(self)(item, self.style_manager) for item in items_t
+                    )
                 return result
 
             return method.__get__(self)
@@ -395,17 +401,16 @@ class ANSIString(str):
     def _process_multicolor_command(
         self,
         command: MulticolorCommand,
-        rgb: dict[str, dict[str, dict[str, int]]],
+        rgb: dict[str, dict[str, dict[str, int | float]]],
         *slices: Annotated[Sequence[int], Length(3)] | slice,
-    ):
+    ) -> dict[str, bool]:
         """Processes a multicolor command and applies it to the ANSIString."""
+        reset_rgb: dict[str, dict[str, int | float]] | None = None
         if command.reset:
             if command.reset == "?":
                 reset_rgb = deepcopy(rgb["actual"])
             elif command.reset == "??":
                 reset_rgb = deepcopy(rgb["start"])
-        else:
-            reset_rgb = None
 
         modes = {"fg": False, "bg": False, "ul": False}
         for instruction in command.instructions:
@@ -438,17 +443,20 @@ class ANSIString(str):
 
     def _apply_multicolor_command(
         self,
-        rgb: dict[str, dict[str, int]],
+        rgb: dict[str, dict[str, int | float]],
         modes: dict[str, bool],
         *slices: Annotated[Sequence[int], Length(3)] | slice,
     ) -> None:
         """Applies the current RGB values to the specified slices."""
         if modes["fg"]:
-            self.fg_24b(*(int(clamp(rgb["fg"][key], 0, 255)) for key in "rgb"), *slices)
+            r, g, b = (int(clamp(rgb["fg"][key], 0, 255)) for key in "rgb")
+            self.fg_24b(r, g, b, *slices)
         if modes["bg"]:
-            self.bg_24b(*(int(clamp(rgb["bg"][key], 0, 255)) for key in "rgb"), *slices)
+            r, g, b = (int(clamp(rgb["bg"][key], 0, 255)) for key in "rgb")
+            self.bg_24b(r, g, b, *slices)
         if modes["ul"]:
-            self.ul_24b(*(int(clamp(rgb["ul"][key], 0, 255)) for key in "rgb"), *slices)
+            r, g, b = (int(clamp(rgb["ul"][key], 0, 255)) for key in "rgb")
+            self.ul_24b(r, g, b, *slices)
 
     @staticmethod
     def from_ansi(plain: str) -> "ANSIString":
@@ -807,13 +815,14 @@ class ANSIString(str):
         if offset:
             sequence = sequence[:offset]
 
-        rgb = {
+        rgb: dict[str, dict[str, dict[str, int | float]]] = {
             key: {
-                key: {key: 0 for key in ("r", "g", "b")} for key in ("fg", "bg", "ul")
+                key: {key: 0.0 for key in ("r", "g", "b")} for key in ("fg", "bg", "ul")
             }
             for key in ("actual", "start")
         }
 
+        start_modes: dict[str, bool] = {"fg": False, "bg": False, "ul": False}
         if "$" in sequence:
             start_command, sequence = map(str.strip, sequence.split("$"))
             object_start_command = MulticolorCommand()
@@ -821,13 +830,14 @@ class ANSIString(str):
                 match_start_instruction = re.match(
                     Regex.MULTICOLOR_INSTRUCTION, start_instruction
                 )
+                if not match_start_instruction:
+                    continue
                 object_start_instruction = MulticolorInstruction(
                     rgb["actual"],
                     **match_start_instruction.groupdict(),
                     repeat=object_start_command.repeat,
                 )
-                if match_start_instruction:
-                    object_start_command.instructions.append(object_start_instruction)
+                object_start_command.instructions.append(object_start_instruction)
             start_modes = self._process_multicolor_command(object_start_command, rgb)
             rgb["start"] = deepcopy(rgb["actual"])
 
@@ -835,7 +845,7 @@ class ANSIString(str):
         auto_length = slices_length
         auto_count = 0
         span_decrement = 0
-        list_repeats = []
+        list_repeats: list[int | str] = []
         for match_repeat in re.finditer(r"repeat\((?P<value>\d+|auto)\)", sequence):
             start, stop = match_repeat.span()
             if match_repeat["value"] == "auto":
@@ -862,6 +872,8 @@ class ANSIString(str):
         commands: list[MulticolorCommand] = []
         for command in map(str.strip, sequence.split("#")):
             match_command = re.search(Regex.MULTICOLOR_COMMAND, command)
+            if not match_command:
+                continue
             object_command = MulticolorCommand(None, **match_command.groupdict())
             if object_command.repeat == 0:
                 continue
@@ -874,7 +886,7 @@ class ANSIString(str):
                         repeat=object_command.repeat,
                     )
                     object_command.instructions.append(object_instruction)
-            for no in range(object_command.repeat):
+            for _ in range(object_command.repeat):
                 commands.append(deepcopy(object_command))
                 self._process_multicolor_command(object_command, rgb)
 
@@ -927,7 +939,7 @@ class ANSIString(str):
                 and isinstance(slices[0], Sequence)
                 and isinstance(slices[0][0], (Sequence, slice))
             ):
-                self._apply_multicolor_command(rgb["actual"], start_modes, *slices[0])
+                self._apply_multicolor_command(rgb["actual"], start_modes, *slices[0])  # type: ignore[arg-type]
             else:
                 self._apply_multicolor_command(rgb["actual"], start_modes, slices[0])
             slices = slices[1:]
@@ -938,28 +950,41 @@ class ANSIString(str):
                 and isinstance(obj, Sequence)
                 and isinstance(obj[0], (Sequence, slice))
             ):
-                self._process_multicolor_command(command, rgb, *obj)
+                self._process_multicolor_command(command, rgb, *obj)  # type: ignore[arg-type]
             else:
                 self._process_multicolor_command(command, rgb, obj)
 
         return self
 
-    def multicolor_c(self, sequence: str, *coordinates: tuple[int, int]) -> Self:
+    def multicolor_c(
+        self,
+        sequence: str,
+        *coordinates: tuple[int, int] | tuple[tuple[int, int], ...],
+    ) -> Self:
         """
         Applies a multicolor sequence to the string
         at specified (x, y) coordinates.
         """
 
-        def transform(coordinates):
+        def transform(
+            coordinates: tuple[tuple[int, int], ...]
+            | tuple[tuple[tuple[int, int], ...], ...],
+        ) -> Generator[tuple[slice, ...] | slice, None, None]:
             for obj in coordinates:
-                if isinstance(obj, tuple) and isinstance(obj[0], tuple):
-                    yield tuple(self._coord_to_slice(coord) for coord in obj)
+                if isinstance(obj[0], tuple):
+                    yield tuple(
+                        self._coord_to_slice(cast(tuple[int, int], coord))
+                        for coord in obj
+                    )
                 else:
-                    yield self._coord_to_slice(obj)
+                    yield self._coord_to_slice(cast(tuple[int, int], obj))
 
         if not coordinates:
             coordinates = self._get_all_coords()
-        return self.multicolor(sequence, *transform(coordinates))
+        return self.multicolor(
+            sequence,
+            *transform(coordinates),  # type: ignore[arg-type]
+        )
 
     def to_svg(
         self,
@@ -1047,13 +1072,13 @@ class ANSIString(str):
         )
 
         # Font metrics (from the base font)
-        font_family = font["name"].getDebugName(1) or "sans-serif"
-        units_per_em = font["head"].unitsPerEm
-        ascent = font["hhea"].ascent
-        descent = font["hhea"].descent
-        line_gap = font["hhea"].lineGap
-        underline_pos = font["post"].underlinePosition
-        underline_thickness = font["post"].underlineThickness
+        font_family = cast(str, font["name"].getDebugName(1)) or "sans-serif"  # type: ignore[union-attr]
+        units_per_em = cast(int, font["head"].unitsPerEm)  # type: ignore[union-attr]
+        ascent = cast(int, font["hhea"].ascent)  # type: ignore[union-attr]
+        descent = cast(int, font["hhea"].descent)  # type: ignore[union-attr]
+        line_gap = cast(int, font["hhea"].lineGap)  # type: ignore[union-attr]
+        underline_pos = cast(int, font["post"].underlinePosition)  # type: ignore[union-attr]
+        underline_thickness = cast(int, font["post"].underlineThickness)  # type: ignore[union-attr]
         scale = font_size_px / units_per_em
         line_height = (ascent - descent) + line_gap + line_height_offset
         line_height_px = line_height * scale
@@ -1274,20 +1299,20 @@ class ANSIString(str):
         return self + fillchar * (int(width) - len(self))
 
     def rjust(self, width: SupportsIndex, fillchar: str = " ") -> "ANSIString":
-        return fillchar * (int(width) - len(self)) + self  # type: ignore
+        return self.__radd__(fillchar * (int(width) - len(self)))
 
     def center(self, width: SupportsIndex, fillchar: str = " ") -> "ANSIString":
         margin = int(width) - len(self)
         left = (margin // 2) + (margin & int(width) & 1)
-        return fillchar * left + self + fillchar * (margin - left)  # type: ignore
+        return self.__radd__(fillchar * left) + fillchar * (margin - left)
 
-    def rsplit(
+    def rsplit(  # type: ignore[override]
         self, sep: str | None = None, maxsplit: SupportsIndex = -1
-    ) -> list["ANSIString"]:  # type: ignore
-        actual = super().rsplit(sep, maxsplit)
+    ) -> list["ANSIString"]:
+        actual: list[Any] = list(super().rsplit(sep, maxsplit))
         max_index = len(self)
+        whitespace = rsearch_separators(self.plain_text) if not sep else iter(())
         if not sep:
-            whitespace = rsearch_separators(self.plain_text)
             if self.plain_text[-1] in WHITESPACE:
                 max_index -= len(next(whitespace, ""))
         for no, string in enumerate(actual[::-1]):
@@ -1298,16 +1323,16 @@ class ANSIString(str):
                 if index in self.style_manager
             }
             actual[len(actual) - 1 - no] = type(self)(string, StyleManager(styles))
-            max_index -= len(string) + (len(sep) if sep else len(next(whitespace, "")))  # type: ignore
-        return actual  # type: ignore
+            max_index -= len(string) + (len(sep) if sep else len(next(whitespace, "")))
+        return actual
 
-    def split(
+    def split(  # type: ignore[override]
         self, sep: str | None = None, maxsplit: SupportsIndex = -1
-    ) -> list["ANSIString"]:  # type: ignore
-        actual = super().split(sep, maxsplit)
+    ) -> list["ANSIString"]:
+        actual: list[Any] = list(super().split(sep, maxsplit))
         min_index = 0
+        whitespace = search_separators(self.plain_text) if not sep else iter(())
         if not sep:
-            whitespace = search_separators(self.plain_text)
             if self.plain_text[0] in WHITESPACE:
                 min_index += len(next(whitespace, ""))
         for no, string in enumerate(actual):
@@ -1318,11 +1343,11 @@ class ANSIString(str):
                 if index in self.style_manager
             }
             actual[no] = type(self)(string, StyleManager(styles))
-            min_index += len(string) + (len(sep) if sep else len(next(whitespace, "")))  # type: ignore
-        return actual  # type: ignore
+            min_index += len(string) + (len(sep) if sep else len(next(whitespace, "")))
+        return actual
 
-    def splitlines(self, keepends: bool = False) -> list["ANSIString"]:  # type: ignore
-        actual = super().splitlines(keepends)
+    def splitlines(self, keepends: bool = False) -> list["ANSIString"]:  # type: ignore[override]
+        actual: list[Any] = list(super().splitlines(keepends))
         min_index = 0
         for no, string in enumerate(actual):
             max_index = min_index + len(string)
@@ -1333,4 +1358,4 @@ class ANSIString(str):
             }
             actual[no] = type(self)(string, StyleManager(styles))
             min_index += len(string) + (0 if keepends else 1)
-        return actual  # type: ignore
+        return actual

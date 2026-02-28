@@ -41,15 +41,15 @@ class TestConcatenation:
         "lhs, rhs, expected_fn",
         [
             pytest.param(
-                lambda _: ANSIString("Hello").fm(SGR.BOLD),  # type: ignore
-                lambda _: ANSIString(", World!").fm(SGR.ITALIC),  # type: ignore
-                lambda bc, ic: ansi_wrap("Hello", bc) + ansi_wrap(", World!", ic),  # type: ignore
+                lambda _: ANSIString("Hello").fm(SGR.BOLD),  # type: ignore[reportUnknownLambdaType]
+                lambda _: ANSIString(", World!").fm(SGR.ITALIC),  # type: ignore[reportUnknownLambdaType]
+                lambda bc, ic: ansi_wrap("Hello", bc) + ansi_wrap(", World!", ic),  # type: ignore[reportUnknownLambdaType]
                 id="ansi+ansi",
             ),
             pytest.param(
-                lambda _: ANSIString("Hello").fm(SGR.BOLD),  # type: ignore
-                lambda _: ", World!",  # type: ignore
-                lambda bc, _: ansi_wrap("Hello", bc) + ", World!",  # type: ignore
+                lambda _: ANSIString("Hello").fm(SGR.BOLD),  # type: ignore[reportUnknownLambdaType]
+                lambda _: ", World!",  # type: ignore[reportUnknownLambdaType]
+                lambda bc, _: ansi_wrap("Hello", bc) + ", World!",  # type: ignore[reportUnknownLambdaType]
                 id="ansi+plain",
             ),
         ],
@@ -192,28 +192,28 @@ class TestAlignment:
                 "ljust",
                 17,
                 "<",
-                lambda bc: ansi_wrap("Hello, World!", bc) + "<<<<",  # type: ignore
+                lambda bc: ansi_wrap("Hello, World!", bc) + "<<<<",  # type: ignore[reportUnknownLambdaType]
                 id="ljust-pad",
             ),
             pytest.param(
                 "ljust",
                 13,
                 "<",
-                lambda bc: ansi_wrap("Hello, World!", bc),  # type: ignore
+                lambda bc: ansi_wrap("Hello, World!", bc),  # type: ignore[reportUnknownLambdaType]
                 id="ljust-no-pad",
             ),
             pytest.param(
                 "rjust",
                 17,
                 ">",
-                lambda bc: ">>>>" + ansi_wrap("Hello, World!", bc),  # type: ignore
+                lambda bc: ">>>>" + ansi_wrap("Hello, World!", bc),  # type: ignore[reportUnknownLambdaType]
                 id="rjust-pad",
             ),
             pytest.param(
                 "center",
                 17,
                 "^",
-                lambda bc: "^^" + ansi_wrap("Hello, World!", bc) + "^^",  # type: ignore
+                lambda bc: "^^" + ansi_wrap("Hello, World!", bc) + "^^",  # type: ignore[reportUnknownLambdaType]
                 id="center-pad",
             ),
         ],
