@@ -7,13 +7,31 @@ on:
     branches: [ main ]
 
 jobs:
+  lint:
+    name: Lint & Format 🧹
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v6
+      with:
+        persist-credentials: false
+    - name: Set up Python 3.14 ⚙️
+      uses: actions/setup-python@v6
+      with:
+        python-version: "3.14"
+    - name: Install Ruff 🦀
+      run: python -m pip install ruff
+    - name: Lint and Format 🫧
+      run: |
+        ruff check . --output-format=github
+        ruff format --check .
+
   test:
     name: Test on Python ${{ matrix.python-version }} 🐍
+    needs: lint
     runs-on: ubuntu-latest
     strategy:
       matrix:
         python-version: ["3.11", "3.12", "3.13", "3.14"]
-
     steps:
     - uses: actions/checkout@v6
       with:
@@ -22,10 +40,17 @@ jobs:
       uses: actions/setup-python@v6
       with:
         python-version: ${{ matrix.python-version }}
-    - name: Install package 📦
+    - name: Install dependencies 📦
       run: |
         python -m pip install --upgrade pip
+        python -m pip install pytest coverage
         python -m pip install -e ".[all]"
-    - name: Run tests 🧪
+    - name: Run tests (No Coverage) 🧪
+      if: matrix.python-version != '3.14'
       run: |
-        python -m unittest discover -s tests -p "test_*.py" -v
+        python -m pytest -v
+    - name: Run tests (With Coverage) 🧪📊
+      if: matrix.python-version == '3.14'
+      run: |
+        python -m coverage run -m pytest -v
+        python -m coverage report -m
