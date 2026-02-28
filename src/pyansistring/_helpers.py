@@ -339,7 +339,7 @@ def prepare_font_variants(
 
 def tspan(content: str, attrs: list[str]) -> str:
     """Build a `<tspan>` element with optional attributes."""
-    attr_str = f' {" ".join(attrs)}' if attrs else ""
+    attr_str = f" {' '.join(attrs)}" if attrs else ""
     return f"<tspan{attr_str}>{content}</tspan>"
 
 
@@ -534,7 +534,8 @@ def svg_build_underline_elements(
     Returns
     -------
     element_strings: list[str]
-        A list of SVG element strings (e.g. `<rect>`, `<path>`, `<circle>`, `<line>`) that together render the underline.
+        A list of SVG element strings (e.g. `<rect>`, `<path>`,
+        `<circle>`, `<line>`) that together render the underline.
     max_bottom_y: float
         The maximum y-coordinate of the bottom edge of any element in the underline.
     """

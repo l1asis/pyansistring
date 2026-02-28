@@ -7,11 +7,12 @@ from .style import Style
 P = ParamSpec("P")
 R = TypeVar("R")
 
+
 def _detect_style_change(
-    method: Callable[P, R],
-    is_method_bound: bool = False
+    method: Callable[P, R], is_method_bound: bool = False
 ) -> Callable[P, R]:
     """Decorator to detect changes in the StyleManager and set the modified flag."""
+
     @wraps(method)
     def wrapped(self: "StyleManager", *args: P.args, **kwargs: P.kwargs) -> R:
         previous_length = len(self)
@@ -21,16 +22,20 @@ def _detect_style_change(
             result = method(*args, **kwargs)
         if not self._has_been_modified and previous_length != len(self):  # type: ignore
             self._has_been_modified = True  # type: ignore
-        return result # type: ignore
+        return result  # type: ignore
+
     return cast(Callable[P, R], wrapped)
+
 
 class StyleManager(dict[int, Style]):
     """
-    A dictionary-like class for managing `Style` instances and tracking style modifications.
+    A dictionary-like class for managing `Style` instances
+    and tracking style modifications.
 
-    This class behaves similarly to a dictionary, allowing storage and retrieval of `Style`
-    instances. It also maintains an internal flag to indicate whether any style has been modified 
-    since the last access.
+    This class behaves similarly to a dictionary, allowing
+    storage and retrieval of `Style` instances. It also
+    maintains an internal flag to indicate whether any style
+    has been modified since the last access.
 
     Attributes
     ----------
@@ -49,6 +54,7 @@ class StyleManager(dict[int, Style]):
     >>> style_manager.has_been_modified
     False
     """
+
     _style_cache: dict[int, Style] = {}
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
@@ -58,7 +64,9 @@ class StyleManager(dict[int, Style]):
         for name in {"clear", "pop", "popitem", "setdefault", "update"}:
             method = getattr(self, name)
             wrapped = _detect_style_change(method, is_method_bound=True)
-            setattr(self, name, MethodType(wrapped, self))  # NOTE: wrapped.__get__(self, self.__class__)
+            setattr(
+                self, name, MethodType(wrapped, self)
+            )  # NOTE: wrapped.__get__(self, self.__class__)
 
     @property
     def has_been_modified(self) -> bool:
@@ -74,7 +82,7 @@ class StyleManager(dict[int, Style]):
         return f"StyleManager({dict.__repr__(self)})"  # type: ignore
 
     def __setitem__(self, key: Any, value: Any) -> None:
-        """ Set a `Style` instance in the dictionary."""
+        """Set a `Style` instance in the dictionary."""
         if not isinstance(value, Style):
             raise TypeError("StyleManager values must be Style instances")
         # NOTE: Cache identical Style objects by their hash
@@ -99,10 +107,7 @@ class StyleManager(dict[int, Style]):
         return copied
 
     def remap_styles(
-        self,
-        original: str,
-        formatted: str,
-        visible_only: bool = True
+        self, original: str, formatted: str, visible_only: bool = True
     ) -> dict[int, Style]:
         """Remap styles from the original string to the formatted string."""
         if formatted == original:
@@ -113,17 +118,16 @@ class StyleManager(dict[int, Style]):
             raise ValueError("Original string not found inside formatted string.")
 
         if visible_only:
-            # Copy only styles that fall within the visible range of `original` inside `formatted`
+            # Copy only styles that fall within the visible
+            # range of `original` inside `formatted`
             styles = {
                 index: self[index - pad_left]
                 for index in range(pad_left, pad_left + len(original))
-                if (index - pad_left) in self  # avoid KeyError if self is missing some indexes
+                if (index - pad_left)
+                in self  # avoid KeyError if self is missing some indexes
             }
         else:
             # Remap all style indexes, shifted by pad_left
-            styles = {
-                index + pad_left: self[index]
-                for index in self.keys()
-            }
+            styles = {index + pad_left: self[index] for index in self.keys()}
 
         return styles

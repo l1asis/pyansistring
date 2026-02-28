@@ -28,7 +28,8 @@ class FrozenMeta(type):
             if getattr(self, "_is_frozen", False):
                 if _attribute_exists(self, name):
                     raise AttributeError(
-                        f"{self.__class__.__name__} object attribute {name!r} is read-only"
+                        f"{self.__class__.__name__} object"
+                        f" attribute {name!r} is read-only"
                     )
                 else:
                     raise AttributeError(
@@ -40,7 +41,8 @@ class FrozenMeta(type):
             if getattr(self, "_is_frozen", False):
                 if _attribute_exists(self, name):
                     raise AttributeError(
-                        f"{self.__class__.__name__} object attribute {name!r} is read-only"
+                        f"{self.__class__.__name__} object"
+                        f" attribute {name!r} is read-only"
                     )
                 else:
                     raise AttributeError(

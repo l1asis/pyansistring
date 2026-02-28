@@ -233,7 +233,8 @@ def main() -> None:
     show(
         "mirrored gradient (!)",
         ANSIString("abcdefghijklmnopqrstuvwxyz").multicolor(
-            "r=84:|g=161:|b=255: $ r+50:minmax(0,inf)|g+25:minmax(0,inf) # b-70:minmax(0,inf) !&*"
+            "r=84:|g=161:|b=255: $ r+50:minmax(0,inf)"
+            "|g+25:minmax(0,inf) # b-70:minmax(0,inf) !&*"
         ),
     )
 

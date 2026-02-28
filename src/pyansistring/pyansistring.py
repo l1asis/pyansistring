@@ -25,8 +25,33 @@ else:
 
     is_fonttools_available = True
 
-from ._helpers import *
-from .constants import *
+from ._helpers import (
+    SVG_ESCAPE,
+    UNDERLINE_CSS,
+    Length,
+    ValueRange,
+    clamp,
+    get_style_key,
+    hsl_to_rgb,
+    load_font,
+    prepare_font_variants,
+    resolve_skew,
+    rsearch_separators,
+    search_separators,
+    svg_build_underline_elements,
+    svg_create_transform_pen,
+    svg_resolve_underline,
+    svg_weight_stroke_attrs,
+    tspan,
+)
+from .constants import (
+    SGR,
+    WHITESPACE,
+    Background,
+    Foreground,
+    Regex,
+    Underline,
+)
 from .style import Style
 from .style_manager import StyleManager
 
@@ -44,16 +69,25 @@ class MulticolorInstruction:
     operator: str
         The operator to apply ("=", "+", or "-").
     value: str
-        The value to use for the operation, which can be a number, a random range, or a reference to another color channel.
+        The value to use for the operation, which can be
+        a number, a random range, or a reference to
+        another color channel.
     processed_value: int | float
-        The processed numeric value after evaluating the `value` string, which is used for calculations in
-        the multicolor command.
+        The processed numeric value after evaluating the
+        `value` string, which is used for calculations
+        in the multicolor command.
     mode: str
-        The mode of the color channel ("fg" for foreground, "bg" for background, or "ul" for underline).
+        The mode of the color channel ("fg" for foreground,
+        "bg" for background, or "ul" for underline).
     minmax: tuple[float, float] | str | None
-        The minimum and maximum values for the color channel, which can be a tuple, a string in the format "minmax(min, max)", or None for default (0, 255).
+        The minimum and maximum values for the color
+        channel, which can be a tuple, a string in the
+        format "minmax(min, max)", or None for
+        default (0, 255).
     repeat: int
-        The number of times to repeat this instruction, which is used for distributing changes across multiple slices in a multicolor command.
+        The number of times to repeat this instruction,
+        which is used for distributing changes across
+        multiple slices in a multicolor command.
     """
 
     color: str
@@ -70,7 +104,7 @@ class MulticolorInstruction:
         if not kwargs or len(missing_keys):
             raise TypeError(
                 f"{self.__class__}.__init__() missing {len(missing_keys)}"
-                f" required keyword argument{'s' if len(missing_keys)>1 else ''}:"
+                f" required keyword argument{'s' if len(missing_keys) > 1 else ''}:"
                 ", ".join(missing_keys)
             )
 
@@ -112,17 +146,22 @@ class MulticolorInstruction:
 
 class MulticolorCommand:
     """
-    Represents a multicolor command consisting of multiple instructions and optional reset and repeat parameters.
+    Represents a multicolor command consisting of multiple
+    instructions and optional reset and repeat parameters.
 
     Parameters
     ----------
     instructions: list[MulticolorInstruction] | None
         List of instructions to be applied in this command.
     reset: str | None
-        Reset mode for the command. Can be "?" to reset to the current RGB values at
-        the time of command execution, "??" to reset to the RGB values at the time of command creation, or None for no reset.
+        Reset mode for the command. Can be "?" to reset to
+        the current RGB values at the time of command
+        execution, "??" to reset to the RGB values at the
+        time of command creation, or None for no reset.
     repeat: int | str | None
-        Number of times to repeat the command. Can be an integer or "auto" for automatic distribution across slices.
+        Number of times to repeat the command. Can be an
+        integer or "auto" for automatic distribution
+        across slices.
     """
 
     def __init__(
@@ -140,7 +179,10 @@ class MulticolorCommand:
 
 
 class ANSIString(str):
-    """Subclass of `str` that supports ANSI styling through an associated :class:`StyleManager`."""
+    """
+    Subclass of `str` that supports ANSI styling
+    through an associated :class:`StyleManager`.
+    """
 
     _style_manager: StyleManager
     _styled_text: str
@@ -193,7 +235,10 @@ class ANSIString(str):
 
     def __repr__(self) -> str:
         """Returns a string representation of the ANSIString."""
-        return f"ANSIString({str.__repr__(self.plain_text)}, {self.style_manager if self.style_manager else None})"
+        return (
+            f"ANSIString({str.__repr__(self.plain_text)}, "
+            f"{self.style_manager if self.style_manager else None})"
+        )
 
     def __eq__(self, other: object) -> bool:
         """Checks if the styled text is equal to another string or ANSIString."""
@@ -234,8 +279,12 @@ class ANSIString(str):
         return type(self)(super().__getitem__(key), styles)
 
     def __getattribute__(self, name: str) -> Any:
-        """Handles attribute access, allowing for string methods to return ANSIString."""
-        # TODO: Replace it with a more elegant solution like explicit overrides or dynamic class decorator.
+        """
+        Handles attribute access, allowing for string
+        methods to return ANSIString.
+        """
+        # TODO: Replace it with a more elegant solution like
+        # explicit overrides or dynamic class decorator.
         allowed_passthrough = {
             "ljust",
             "rjust",
@@ -255,7 +304,9 @@ class ANSIString(str):
                 elif isinstance(result, list):
                     return [type(self)(item, self.style_manager) for item in result]  # type: ignore
                 elif isinstance(result, tuple):
-                    return tuple(type(self)(item, self.style_manager) for item in result)  # type: ignore
+                    return tuple(
+                        type(self)(item, self.style_manager) for item in result
+                    )  # type: ignore
                 return result
 
             return method.__get__(self)
@@ -263,7 +314,10 @@ class ANSIString(str):
             return super().__getattribute__(name)
 
     def __format__(self, format_spec: str) -> str:
-        """Formats the ANSIString according to the given format specification and returns rendered text."""
+        """
+        Formats the ANSIString according to the given
+        format specification and returns rendered text.
+        """
         if not format_spec:
             return self.styled_text
         formatted = format(self.plain_text, format_spec)
@@ -313,7 +367,10 @@ class ANSIString(str):
     def _get_indices(
         self, slice_: Annotated[Sequence[int], Length(3)] | slice
     ) -> tuple[int, int, int]:
-        """Converts a slice or a sequence of three integers to start, stop, step indices."""
+        """
+        Converts a slice or a sequence of three integers
+        to start, stop, step indices.
+        """
         if isinstance(slice_, slice):
             start, stop, step = slice_.indices(len(self))
         else:
@@ -323,7 +380,10 @@ class ANSIString(str):
     def _search_spans(
         self, *words: str, case_sensitive: bool = True
     ) -> tuple[tuple[int, int], ...]:
-        """Searches for words in the plain text and returns their spans as tuples of (start, end)."""
+        """
+        Searches for words in the plain text and returns
+        their spans as tuples of (start, end).
+        """
         flags = 0 if case_sensitive else re.IGNORECASE
         joined_words = "|".join(re.escape(word) for word in words)
         spans = (
@@ -352,17 +412,17 @@ class ANSIString(str):
             if not modes[instruction.mode]:
                 modes[instruction.mode] = True
             if instruction.operator == "=":
-                rgb["actual"][instruction.mode][
-                    instruction.color
-                ] = instruction.processed_value
+                rgb["actual"][instruction.mode][instruction.color] = (
+                    instruction.processed_value
+                )
             elif instruction.operator == "+":
-                rgb["actual"][instruction.mode][
-                    instruction.color
-                ] += instruction.processed_value
+                rgb["actual"][instruction.mode][instruction.color] += (
+                    instruction.processed_value
+                )
             elif instruction.operator == "-":
-                rgb["actual"][instruction.mode][
-                    instruction.color
-                ] -= instruction.processed_value
+                rgb["actual"][instruction.mode][instruction.color] -= (
+                    instruction.processed_value
+                )
 
             rgb["actual"][instruction.mode][instruction.color] = clamp(
                 rgb["actual"][instruction.mode][instruction.color], *instruction.minmax
@@ -392,7 +452,10 @@ class ANSIString(str):
 
     @staticmethod
     def from_ansi(plain: str) -> "ANSIString":
-        """Creates an ANSIString from a plain string containing ANSI escape sequences."""
+        """
+        Creates an ANSIString from a plain string
+        containing ANSI escape sequences.
+        """
         start: int = 0
         decrement: int = 0
         style: str = ""
@@ -438,7 +501,9 @@ class ANSIString(str):
                     if index not in self.style_manager:
                         self.style_manager[index] = style
                     else:
-                        self.style_manager[index] = self.style_manager[index].merge(style)
+                        self.style_manager[index] = self.style_manager[index].merge(
+                            style
+                        )
         else:
             for index in range(0, len(self), 1):
                 if index not in self.style_manager:
@@ -477,7 +542,10 @@ class ANSIString(str):
         parameter: Foreground,
         *slices: Annotated[Sequence[int], Length(3)] | slice,
     ) -> Self:
-        """Applies the foreground given by the 4-bit color to the string in a specified range."""
+        """
+        Applies the foreground given by the 4-bit color
+        to the string in a specified range.
+        """
         return self.fm(parameter, *slices)
 
     def fg_4b_w(
@@ -496,7 +564,10 @@ class ANSIString(str):
         parameter: Annotated[int, ValueRange(0, 255)],
         *slices: Annotated[Sequence[int], Length(3)] | slice,
     ) -> Self:
-        """Applies the foreground given by the 8-bit color number (0-255) to the string in a specified range."""
+        """
+        Applies the foreground given by the 8-bit color
+        number (0-255) to the string in a specified range.
+        """
         style = f"\x1b[{Foreground.SET};5;{parameter}m"
         return self.fm(style, *slices)
 
@@ -506,7 +577,10 @@ class ANSIString(str):
         *words: str,
         case_sensitive: bool = True,
     ) -> Self:
-        """Applies the foreground given by the 8-bit color number (0-255) to the word of the string."""
+        """
+        Applies the foreground given by the 8-bit color
+        number (0-255) to the word of the string.
+        """
         return self.fg_8b(
             parameter, *self._search_spans(*words, case_sensitive=case_sensitive)
         )
@@ -540,7 +614,10 @@ class ANSIString(str):
         parameter: Background,
         *slices: Annotated[Sequence[int], Length(3)] | slice,
     ) -> Self:
-        """Applies the background given by the 4-bit color to the string in a specified range."""
+        """
+        Applies the background given by the 4-bit color
+        to the string in a specified range.
+        """
         return self.fm(parameter, *slices)
 
     def bg_4b_w(
@@ -559,7 +636,10 @@ class ANSIString(str):
         parameter: Annotated[int, ValueRange(0, 255)],
         *slices: Annotated[Sequence[int], Length(3)] | slice,
     ) -> Self:
-        """Applies the background given by the 8-bit color number (0-255) to the string in a specified range."""
+        """
+        Applies the background given by the 8-bit color
+        number (0-255) to the string in a specified range.
+        """
         style = f"\x1b[{Background.SET};5;{parameter}m"
         return self.fm(style, *slices)
 
@@ -569,7 +649,10 @@ class ANSIString(str):
         *words: str,
         case_sensitive: bool = True,
     ) -> Self:
-        """Applies the background given by the 8-bit color number (0-255) to the word of the string."""
+        """
+        Applies the background given by the 8-bit color
+        number (0-255) to the word of the string.
+        """
         return self.bg_8b(
             parameter, *self._search_spans(*words, case_sensitive=case_sensitive)
         )
@@ -603,7 +686,10 @@ class ANSIString(str):
         parameter: Underline,
         *slices: Annotated[Sequence[int], Length(3)] | slice,
     ) -> Self:
-        """Applies the underline given by the 4-bit color to the string in a specified range."""
+        """
+        Applies the underline given by the 4-bit color
+        to the string in a specified range.
+        """
         return self.fm(parameter, *slices)
 
     def ul_4b_w(
@@ -622,7 +708,10 @@ class ANSIString(str):
         parameter: Annotated[int, ValueRange(0, 255)],
         *slices: Annotated[Sequence[int], Length(3)] | slice,
     ) -> Self:
-        """Applies the underline given by the 8-bit color number (0-255) to the string in a specified range."""
+        """
+        Applies the underline given by the 8-bit color
+        number (0-255) to the string in a specified range.
+        """
         style = f"\x1b[{Underline.SET}:5:{parameter}m"
         return self.fm(style, *slices)
 
@@ -632,7 +721,10 @@ class ANSIString(str):
         *words: str,
         case_sensitive: bool = True,
     ) -> Self:
-        """Applies the underline given by the 8-bit color number (0-255) to the word of the string."""
+        """
+        Applies the underline given by the 8-bit color
+        number (0-255) to the word of the string.
+        """
         return self.ul_8b(
             parameter, *self._search_spans(*words, case_sensitive=case_sensitive)
         )
@@ -750,7 +842,7 @@ class ANSIString(str):
                 auto_count += 1
                 list_repeats.append("auto")
             else:
-                value = int(repeat["value"])
+                value = int(match_repeat["value"])
                 if value < auto_length:
                     value = auto_length
                 auto_length -= value
@@ -853,7 +945,10 @@ class ANSIString(str):
         return self
 
     def multicolor_c(self, sequence: str, *coordinates: tuple[int, int]) -> Self:
-        """Applies a multicolor sequence to the string at specified (x, y) coordinates."""
+        """
+        Applies a multicolor sequence to the string
+        at specified (x, y) coordinates.
+        """
 
         def transform(coordinates):
             for obj in coordinates:
@@ -1039,9 +1134,13 @@ class ANSIString(str):
                             )
                         else:
                             if SGR.UNDERLINE in style.attributes:
-                                fill_attrs.append('text-decoration="underline auto solid"')
+                                fill_attrs.append(
+                                    'text-decoration="underline auto solid"'
+                                )
                             elif SGR.DOUBLE_UNDERLINE in style.attributes:
-                                fill_attrs.append('text-decoration="underline auto double"')
+                                fill_attrs.append(
+                                    'text-decoration="underline auto double"'
+                                )
                             chars.append(tspan(escaped, fill_attrs))
                     else:
                         chars.append(f"<tspan>{escaped}</tspan>")
@@ -1074,7 +1173,7 @@ class ANSIString(str):
                             background_color,
                         )
                     )
-                    paths.append(f'  <path {" ".join(path_attrs)}/>')
+                    paths.append(f"  <path {' '.join(path_attrs)}/>")
 
                     # Underline (path mode only)
                     if style is not None:
@@ -1119,7 +1218,8 @@ class ANSIString(str):
         svg_parts: list[str] = [
             f'<svg xmlns="http://www.w3.org/2000/svg" '
             f'width="{total_width_with_italic}" height="{total_height}" '
-            f'viewBox="{-italic_left_overflow} 0 {total_width_with_italic} {total_height}">'
+            f'viewBox="{-italic_left_overflow} 0 '
+            f'{total_width_with_italic} {total_height}">'
             + (
                 f'\n  <rect x="{-italic_left_overflow}" width="100%" height="100%" '
                 f'fill="rgb{background_color}"/>'
@@ -1161,7 +1261,7 @@ class ANSIString(str):
                     for index, style in self.style_manager.items()
                 }
             )
-            if type(string) == ANSIString:
+            if type(string) is ANSIString:
                 styles.update(
                     {
                         increment + index - len(string): style
@@ -1181,7 +1281,9 @@ class ANSIString(str):
         left = (margin // 2) + (margin & int(width) & 1)
         return fillchar * left + self + fillchar * (margin - left)  # type: ignore
 
-    def rsplit(self, sep: str | None = None, maxsplit: SupportsIndex = -1) -> list["ANSIString"]:  # type: ignore
+    def rsplit(
+        self, sep: str | None = None, maxsplit: SupportsIndex = -1
+    ) -> list["ANSIString"]:  # type: ignore
         actual = super().rsplit(sep, maxsplit)
         max_index = len(self)
         if not sep:
@@ -1199,7 +1301,9 @@ class ANSIString(str):
             max_index -= len(string) + (len(sep) if sep else len(next(whitespace, "")))  # type: ignore
         return actual  # type: ignore
 
-    def split(self, sep: str | None = None, maxsplit: SupportsIndex = -1) -> list["ANSIString"]:  # type: ignore
+    def split(
+        self, sep: str | None = None, maxsplit: SupportsIndex = -1
+    ) -> list["ANSIString"]:  # type: ignore
         actual = super().split(sep, maxsplit)
         min_index = 0
         if not sep:

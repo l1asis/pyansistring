@@ -2,12 +2,16 @@ import re
 from functools import cached_property
 from typing import Any, Literal
 
-from .constants import *
 from .constants import (
     COLOR_THEMES,
     COLORS_8BIT,
     DEFAULT_THEME,
+    SGR,
+    Background,
     ColorMode,
+    Foreground,
+    Regex,
+    Underline,
     UnderlineMode,
 )
 from .frozen import FrozenMeta
@@ -31,11 +35,16 @@ class Color(metaclass=FrozenMeta):
     value: int | tuple[int, int, int] | None
         The normalized color value.
     """
-    
+
     def __init__(
         self,
         mode: str | None = None,
-        value: Foreground | Background | Underline | tuple[int, int, int] | int | None = None
+        value: Foreground
+        | Background
+        | Underline
+        | tuple[int, int, int]
+        | int
+        | None = None,
     ) -> None:
         if mode in {"4bit", "8bit", "24bit"}:
             self.mode = mode
@@ -50,25 +59,18 @@ class Color(metaclass=FrozenMeta):
 
     def __bool__(self) -> bool:
         return True if (self.mode and self.value) else False
-    
+
     def __repr__(self) -> str:
-        return (
-            'Color('
-            f'mode={self.mode!r}, '
-            f'value={self.value!r})'
-        )
+        return f"Color(mode={self.mode!r}, value={self.value!r})"
 
     def __hash__(self) -> int:
         return hash((self.mode, self.value))
-    
+
     def __eq__(self, other: Any) -> bool:
         if not isinstance(other, Color):
             return NotImplemented
-        return (
-            (self.mode, self.value) == 
-            (other.mode, other.value)
-        )
-    
+        return (self.mode, self.value) == (other.mode, other.value)
+
     @classmethod
     def unset(cls) -> "Color":
         # TODO: Make it a constant?
@@ -77,20 +79,20 @@ class Color(metaclass=FrozenMeta):
     @classmethod
     def from_4bit(cls, color: Foreground | Background | Underline) -> "Color":
         return cls("4bit", color.value)
-    
-    @classmethod  
+
+    @classmethod
     def from_8bit(cls, n: int) -> "Color":
         return cls("8bit", n)
-    
+
     @classmethod
     def from_24bit(cls, r: int, g: int, b: int) -> "Color":
         return cls("24bit", (r, g, b))
-    
+
     def to_sgr_param(
-            self,
-            prefix: Literal[Foreground.SET, Background.SET, Underline.SET] | str = "",
-            format_mode: Literal["standard", "compatible"] = "standard"
-        ) -> str:
+        self,
+        prefix: Literal[Foreground.SET, Background.SET, Underline.SET] | str = "",
+        format_mode: Literal["standard", "compatible"] = "standard",
+    ) -> str:
         if format_mode == "standard" or prefix == Underline.SET:
             separator = ":"
         else:
@@ -99,7 +101,8 @@ class Color(metaclass=FrozenMeta):
             prefix = str(prefix) + separator
         if self.mode == "24bit" and isinstance(self.value, tuple):
             r, g, b = self.value
-            return f"{prefix}2{separator*2 if separator==':' else ';'}{r}{separator}{g}{separator}{b}"
+            sep = separator * 2 if separator == ":" else ";"
+            return f"{prefix}2{sep}{r}{separator}{g}{separator}{b}"
         elif self.mode == "8bit" and isinstance(self.value, int):
             return f"{prefix}5{separator}{self.value}"
         elif self.mode == "4bit" and isinstance(self.value, int):
@@ -107,21 +110,21 @@ class Color(metaclass=FrozenMeta):
         return ""
 
     def to_rgb(
-            self, 
-            theme: Literal[
-                'vga',
-                'windows_xp',
-                'powershell',
-                'vscode',
-                'windows_10',
-                'terminal_app',
-                'putty',
-                'mirc',
-                'xterm',
-                'ubuntu',
-                'eclipse'
-            ] = DEFAULT_THEME
-        ) -> tuple[int, int, int]:
+        self,
+        theme: Literal[
+            "vga",
+            "windows_xp",
+            "powershell",
+            "vscode",
+            "windows_10",
+            "terminal_app",
+            "putty",
+            "mirc",
+            "xterm",
+            "ubuntu",
+            "eclipse",
+        ] = DEFAULT_THEME,
+    ) -> tuple[int, int, int]:
         """Returns the RGB value of the color based on the theme."""
         if self.mode == "24bit":
             return self.value  # type: ignore
@@ -131,6 +134,7 @@ class Color(metaclass=FrozenMeta):
             return COLOR_THEMES[theme][self.value]  # type: ignore
         else:
             return (0, 0, 0)  # Default
+
 
 class Style(metaclass=FrozenMeta):
     """
@@ -158,12 +162,16 @@ class Style(metaclass=FrozenMeta):
     attributes: frozenset[SGR]
         The set of SGR attributes.
     """
+
     def __init__(
         self,
         foreground: Color | tuple[str, Any] = Color(),
         background: Color | tuple[str, Any] = Color(),
-        underline: tuple[Color | tuple[str, Any], UnderlineMode | int] = (Color(), UnderlineMode.SINGLE),
-        attributes: frozenset[SGR | int] = frozenset()
+        underline: tuple[Color | tuple[str, Any], UnderlineMode | int] = (
+            Color(),
+            UnderlineMode.SINGLE,
+        ),
+        attributes: frozenset[SGR | int] = frozenset(),
     ) -> None:
         if isinstance(foreground, tuple):
             self.foreground = Color(*foreground)
@@ -190,36 +198,51 @@ class Style(metaclass=FrozenMeta):
         return self.to_ansi()
 
     def __bool__(self) -> bool:
-        return True if (
-            self.foreground 
-            and self.background
-            and self.underline
-            and self.attributes
-            ) else False
-    
+        return (
+            True
+            if (
+                self.foreground
+                and self.background
+                and self.underline
+                and self.attributes
+            )
+            else False
+        )
+
     def __repr__(self) -> str:
+        attrs = ", ".join(f"SGR.{SGR(attr).name}" for attr in self.attributes)
         return (
             "Style("
             f"foreground={self.foreground!r}, "
             f"background={self.background!r}, "
-            f"underline=({self.underline[0]!r}, UnderlineMode.{self.underline[1].name}), "
-            f"attributes={'{'}{', '.join(f'SGR.{SGR(attr).name}' for attr in self.attributes)}{'}'})"
+            f"underline=({self.underline[0]!r}, "
+            f"UnderlineMode.{self.underline[1].name}), "
+            f"attributes={{{attrs}}})"
         )
-    
+
     def __hash__(self) -> int:
         return hash((self.foreground, self.background, self.underline, self.attributes))
-    
+
     def __eq__(self, other: Any) -> bool:
         if not isinstance(other, Style):
             return NotImplemented
-        return (
-            (self.foreground, self.background, self.underline, self.attributes) == 
-            (other.foreground, other.background, other.underline, other.attributes)
+        return (self.foreground, self.background, self.underline, self.attributes) == (
+            other.foreground,
+            other.background,
+            other.underline,
+            other.attributes,
         )
-    
+
     def with_style(
         self,
-        style: Foreground | Background | Underline | UnderlineMode | SGR | str | int | None = None,
+        style: Foreground
+        | Background
+        | Underline
+        | UnderlineMode
+        | SGR
+        | str
+        | int
+        | None = None,
         *args: int,
     ) -> "Style":
         """
@@ -265,16 +288,13 @@ class Style(metaclass=FrozenMeta):
             return self.from_ansi(style)
 
         return Style(
-            foreground=fg,
-            background=bg,
-            underline=ul,
-            attributes=frozenset(attrs)
+            foreground=fg, background=bg, underline=ul, attributes=frozenset(attrs)
         )
-    
+
     def to_ansi(
         self,
         separate_codes: bool = True,
-        format_mode: Literal['standard', 'compatible'] = "standard"
+        format_mode: Literal["standard", "compatible"] = "standard",
     ) -> str:
         parameters: list[str] = []
 
@@ -284,7 +304,9 @@ class Style(metaclass=FrozenMeta):
             parameters.append(self.background.to_sgr_param(Background.SET, format_mode))
         if self.underline[0]:
             underline_mode = f"{SGR.UNDERLINE}:{self.underline[1]}"
-            underline_style = f"{self.underline[0].to_sgr_param(Underline.SET, format_mode)}"
+            underline_style = (
+                f"{self.underline[0].to_sgr_param(Underline.SET, format_mode)}"
+            )
             parameters.extend((underline_mode, underline_style))
 
         for attr in self.attributes:
@@ -293,7 +315,7 @@ class Style(metaclass=FrozenMeta):
             #     or attr in {SGR.BOLD, SGR.ITALIC}:
             #     parameters.insert(0, f"{attr}")
             # else:
-                parameters.append(f"{attr}")
+            parameters.append(f"{attr}")
 
         if separate_codes:
             return "".join(f"\x1b[{parameter}m" for parameter in parameters)
@@ -305,20 +327,23 @@ class Style(metaclass=FrozenMeta):
         background = Color.unset()
         underline = (Color.unset(), UnderlineMode.SINGLE)
         attributes: set[SGR] = set()
-        
+
         sequences: list[str] = re.findall(Regex.ANSI_SEQ, ansi)
         for sequence in sequences:
             sequence = (
                 sequence.strip()
-                    .removeprefix("\x1b[")
-                    .removeprefix("\\e[")
-                    .removeprefix("\033[")
-                    .removesuffix("m")
-                    + ";" # Add a delimiter to process the last parameter
+                .removeprefix("\x1b[")
+                .removeprefix("\\e[")
+                .removeprefix("\033[")
+                .removesuffix("m")
+                + ";"  # Add a delimiter to process the last parameter
             )
-            
+
             parameter: str = ""
-            style: Literal[Foreground.SET, Background.SET, Underline.SET, SGR.UNDERLINE] | None = None
+            style: (
+                Literal[Foreground.SET, Background.SET, Underline.SET, SGR.UNDERLINE]
+                | None
+            ) = None
             mode: Literal[ColorMode.PALETTE, ColorMode.TRUE_COLOR] | None = None
             rgb: list[int] = []
 
@@ -346,7 +371,10 @@ class Style(metaclass=FrozenMeta):
                         elif sgr_param in Background:
                             background = Color.from_4bit(Background(sgr_param))
                         elif sgr_param in Underline:
-                            underline = (Color.from_4bit(Underline(sgr_param)), underline[1])
+                            underline = (
+                                Color.from_4bit(Underline(sgr_param)),
+                                underline[1],
+                            )
                         elif sgr_param in SGR:
                             attributes.add(SGR(sgr_param))
 
@@ -356,14 +384,14 @@ class Style(metaclass=FrozenMeta):
                             # This special case handles codes like "4:1"
                             if 1 <= sgr_param <= 5:
                                 underline = (underline[0], UnderlineMode(sgr_param))
-                            else: # Fallback for simple underline
+                            else:  # Fallback for simple underline
                                 attributes.add(SGR.UNDERLINE)
                             style = None
                         elif sgr_param == ColorMode.PALETTE:
                             mode = ColorMode.PALETTE
                         elif sgr_param == ColorMode.TRUE_COLOR:
                             mode = ColorMode.TRUE_COLOR
-                    
+
                     # Process color data now that style and mode are set
                     else:
                         if mode == ColorMode.PALETTE:
@@ -374,7 +402,7 @@ class Style(metaclass=FrozenMeta):
                             elif active_style == Underline.SET:
                                 underline = (Color.from_8bit(sgr_param), underline[1])
                             style = mode = None
-                        
+
                         elif mode == ColorMode.TRUE_COLOR:
                             if 0 <= sgr_param <= 255:
                                 rgb.append(sgr_param)
@@ -384,7 +412,7 @@ class Style(metaclass=FrozenMeta):
                                 style = mode = None
                                 rgb.clear()
                                 continue
-                            
+
                             if len(rgb) == 3:
                                 if active_style == Foreground.SET:
                                     foreground = Color.from_24bit(*rgb)
@@ -394,15 +422,16 @@ class Style(metaclass=FrozenMeta):
                                     underline = (Color.from_24bit(*rgb), underline[1])
                                 style = mode = None
                                 rgb.clear()
-                    
-                    parameter = "" # Reset for the next parameter
-                # If char is a delimiter but parameter is empty (e.g., "::"), do nothing.
+
+                    parameter = ""  # Reset for the next parameter
+                # If char is a delimiter but parameter is
+                # empty (e.g., "::"), do nothing.
 
         return cls(
             foreground=foreground,
             background=background,
             underline=underline,
-            attributes=frozenset(attributes)
+            attributes=frozenset(attributes),
         )
 
     def merge(self, other: "Style") -> "Style":
@@ -415,29 +444,31 @@ class Style(metaclass=FrozenMeta):
             foreground=other.foreground or self.foreground,
             background=other.background or self.background,
             underline=(ul_color, ul_mode),
-            attributes=other.attributes | self.attributes
+            attributes=other.attributes | self.attributes,
         )
-    
+
     @classmethod
     def fg_4bit(cls, color: Foreground) -> "Style":
         return cls(foreground=Color.from_4bit(color))
-    
+
     @classmethod
     def bg_4bit(cls, color: Background) -> "Style":
         return cls(background=Color.from_4bit(color))
 
     @classmethod
-    def ul_4bit(cls, color: Underline, mode: UnderlineMode = UnderlineMode.SINGLE) -> "Style":
+    def ul_4bit(
+        cls, color: Underline, mode: UnderlineMode = UnderlineMode.SINGLE
+    ) -> "Style":
         return cls(underline=(Color.from_4bit(color), mode))
 
     @classmethod
     def fg_8bit(cls, n: int) -> "Style":
         return cls(foreground=Color.from_8bit(n))
-    
+
     @classmethod
     def bg_8bit(cls, n: int) -> "Style":
         return cls(background=Color.from_8bit(n))
-    
+
     @classmethod
     def ul_8bit(cls, n: int, mode: UnderlineMode = UnderlineMode.SINGLE) -> "Style":
         return cls(underline=(Color.from_8bit(n), mode))
@@ -449,9 +480,11 @@ class Style(metaclass=FrozenMeta):
     @classmethod
     def bg_24bit(cls, r: int, g: int, b: int) -> "Style":
         return cls(background=Color.from_24bit(r, g, b))
-    
+
     @classmethod
-    def ul_24bit(cls, r: int, g: int, b: int, mode: UnderlineMode = UnderlineMode.SINGLE) -> "Style":
+    def ul_24bit(
+        cls, r: int, g: int, b: int, mode: UnderlineMode = UnderlineMode.SINGLE
+    ) -> "Style":
         return cls(underline=(Color.from_24bit(r, g, b), mode))
 
 
@@ -462,7 +495,7 @@ if __name__ == "__main__":
         ("24bit", (10, 20, 30)),
         ("8bit", 255),
         ("4bit", Foreground.BRIGHT_GREEN),
-        ("4bit", 92)
+        ("4bit", 92),
     )
 
     for case in cases:
@@ -482,7 +515,11 @@ if __name__ == "__main__":
         ((Background.BRIGHT_YELLOW,),),
         ((Underline.SET, 255, 0, 0),),
         ((Foreground.BRIGHT_CYAN,), (Background.BRIGHT_YELLOW,)),
-        ((Foreground.BRIGHT_CYAN,), (Background.BRIGHT_YELLOW,), (Underline.SET, 255, 0, 0))
+        (
+            (Foreground.BRIGHT_CYAN,),
+            (Background.BRIGHT_YELLOW,),
+            (Underline.SET, 255, 0, 0),
+        ),
     )
 
     style = Style()
@@ -490,12 +527,27 @@ if __name__ == "__main__":
         style = Style()
         for to_apply in case:
             style = style.with_style(*to_apply)
-        print(f"\t{style.foreground = }\n\t{style.background = }\n\t{style.underline = }\n\t{style.attributes = }")
+        print(
+            f"\t{style.foreground = }\n"
+            f"\t{style.background = }\n"
+            f"\t{style.underline = }\n"
+            f"\t{style.attributes = }"
+        )
         print(f"ANSI: {repr(ansi := style.to_ansi())}")
         print(f"{ansi}Hello, World!\x1b[0m")
         print(f"FROM ANSI: {Style.from_ansi(ansi) == style}")
 
-    merged = style.merge(Style(foreground=Color.from_8bit(165), attributes=frozenset({SGR.BOLD, SGR.ITALIC})))
-    print(f"\tMERGED {merged.foreground = }\n\t{merged.background = }\n\t{merged.underline = }\n\t{merged.attributes = }")
+    merged = style.merge(
+        Style(
+            foreground=Color.from_8bit(165),
+            attributes=frozenset({SGR.BOLD, SGR.ITALIC}),
+        )
+    )
+    print(
+        f"\tMERGED {merged.foreground = }\n"
+        f"\t{merged.background = }\n"
+        f"\t{merged.underline = }\n"
+        f"\t{merged.attributes = }"
+    )
     print(f"ANSI: {repr(ansi := merged.to_ansi())}")
     print(f"{ansi}Hello, World!\x1b[0m")

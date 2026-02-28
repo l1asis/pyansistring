@@ -67,8 +67,8 @@ add(
     "slice.svg",
     ANSIString("Hello, World!")
     .fg_4b(Foreground.YELLOW, (0, 5), (7, 12))  # "Hello" and "World"
-    .bg_4b(Background.BLUE, (7, 12))            # "World"
-    .fm(SGR.BOLD, (7, 12)),                     # "World"
+    .bg_4b(Background.BLUE, (7, 12))  # "World"
+    .fm(SGR.BOLD, (7, 12)),  # "World"
 )
 
 # ── Styling by word ───────────────────────────────────────────────────────
@@ -89,35 +89,33 @@ add(
 # ── 4-bit colour ──────────────────────────────────────────────────────────
 add(
     "4bit.svg",
-    ANSIString("Hello, World!")
-    .fg_4b(Foreground.YELLOW)
-    .bg_4b(Background.BLUE),
+    ANSIString("Hello, World!").fg_4b(Foreground.YELLOW).bg_4b(Background.BLUE),
 )
 
 # ── 8-bit colour ──────────────────────────────────────────────────────────
 add(
     "8bit.svg",
     ANSIString("Hello, World!")
-    .fg_8b(11)    # Bright Yellow
-    .bg_8b(4)     # Blue
-    .ul_8b(74),   # Muted Sky Blue
+    .fg_8b(11)  # Bright Yellow
+    .bg_8b(4)  # Blue
+    .ul_8b(74),  # Muted Sky Blue
 )
 
 # ── 24-bit (true colour) ──────────────────────────────────────────────────
 add(
     "rgb.svg",
     ANSIString("Hello, World!")
-    .fg_24b(255, 255, 0)      # Bright Yellow
-    .bg_24b(0, 0, 238)        # Blue
-    .ul_24b(135, 175, 215),   # Light Steel Blue
+    .fg_24b(255, 255, 0)  # Bright Yellow
+    .bg_24b(0, 0, 238)  # Blue
+    .ul_24b(135, 175, 215),  # Light Steel Blue
 )
 
 # ── Underline modes ───────────────────────────────────────────────────────
 add(
     "underline.svg",
     ANSIString("Hello, World!")
-    .bg_24b(255, 255, 255)    # White
-    .ul_24b(255, 0, 0)        # Red
+    .bg_24b(255, 255, 255)  # White
+    .ul_24b(255, 0, 0)  # Red
     .fm(UnderlineMode.DOUBLE),
 )
 
