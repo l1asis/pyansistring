@@ -1,6 +1,13 @@
 # pyansistring
 ![pyansistring Banner](https://raw.githubusercontent.com/l1asis/pyansistring/refs/heads/main/images/banner.png)
 
+[![CI Build](https://github.com/l1asis/pyansistring/actions/workflows/test.yml/badge.svg)](https://github.com/l1asis/pyansistring/actions)
+[![codecov](https://codecov.io/gh/l1asis/pyansistring/graph/badge.svg)](https://codecov.io/gh/l1asis/pyansistring)
+[![PyPI - Version](https://img.shields.io/pypi/v/pyansistring.svg)](https://pypi.org/project/pyansistring/)
+[![PyPI - Python Version](https://img.shields.io/pypi/pyversions/pyansistring.svg)](https://pypi.org/project/pyansistring/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](https://opensource.org/licenses/MIT)
+[![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
+
 ## About The Project
 
 [***pyansistring***](https://github.com/l1asis/pyansistring) is a library for **string color styling** using **ANSI escape sequences**. The base class inherits from Python's `str`. You can split, join, or slice the string while **preserving the styling**.
