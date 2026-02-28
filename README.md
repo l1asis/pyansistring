@@ -2,7 +2,7 @@
 ![pyansistring Banner](https://raw.githubusercontent.com/l1asis/pyansistring/refs/heads/main/images/banner.png)
 
 [![CI Build](https://github.com/l1asis/pyansistring/actions/workflows/test.yml/badge.svg)](https://github.com/l1asis/pyansistring/actions)
-[![Coverage](https://img.shields.io/endpoint?url=https://gist.githubusercontent.com/l1asis/9f30f8200703cf6886ab323e86b9f0a1/raw/pyansistring_coverage.json)](https://gist.github.com/l1asis/9f30f8200703cf6886ab323e86b9f0a1#file-pyansistring_coverage-json)
+![Coverage](https://img.shields.io/endpoint?url=https%3A%2F%2Fgist.githubusercontent.com%2Fl1asis%2F9f30f8200703cf6886ab323e86b9f0a1%2Fraw%2Fb11b5516d18e6cf01332906bb9bcf3a4ebf14389%2Fpyansistring_coverage.json)
 [![PyPI - Version](https://img.shields.io/pypi/v/pyansistring.svg)](https://pypi.org/project/pyansistring/)
 [![PyPI - Python Version](https://img.shields.io/pypi/pyversions/pyansistring.svg)](https://pypi.org/project/pyansistring/)
 ![PyPI - Downloads](https://img.shields.io/pypi/dm/pyansistring)
