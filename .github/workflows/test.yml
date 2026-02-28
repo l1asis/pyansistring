@@ -54,3 +54,9 @@ jobs:
       run: |
         python -m coverage run -m pytest -v
         python -m coverage report -m
+        python -m coverage xml
+    - name: Upload coverage to Codecov ☁️
+      if: matrix.python-version == '3.14'
+      uses: codecov/codecov-action@v5
+      with:
+        fail_ci_if_error: false
