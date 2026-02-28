@@ -53,7 +53,7 @@ addopts = "-v"
 testpaths = ["tests"]
 
 [tool.coverage.run]
-source = ["src/pyansistring"]
+source = ["pyansistring"]
 
 [tool.coverage.report]
 show_missing = true
