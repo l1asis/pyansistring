@@ -211,10 +211,10 @@ styled.to_svg(
 )
 ```
 
-> [!NOTE] SVG Conversion and Text-to-Path Option
+> [!NOTE]
 > Please note that when `convert_text_to_path` is set to `True`, the characters will be converted into vector shapes, which can help ensure that the appearance of the text remains **consistent across different platforms and devices**, even if the specified font is not available. However, this also means that the text **will no longer be selectable or searchable** in the SVG file, as it will be treated as **graphical elements** rather than text. Neither will it be 100% identical to how it looks in the terminal or being rendered as text in the SVG.
 
-> [!WARNING] SVG Conversion Limitations
+> [!WARNING]
 > Supported SGR parameters for SVG conversion include:
 > * Foreground and background colors (4-bit, 8-bit, and 24-bit)
 > * Underline colors with all modes (single, double, curly, dotted, dashed)
