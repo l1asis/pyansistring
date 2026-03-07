@@ -90,38 +90,30 @@ class MulticolorInstruction:
         multiple slices in a multicolor command.
     """
 
-    color: str
-    operator: str
-    value: str
-    processed_value: int | float
-    mode: str
-    minmax: tuple[float, float]
-    repeat: int
-
-    def __init__(self, rgb: dict[str, dict[str, int | float]], **kwargs: Any) -> None:
-        allowed_keys = {"color", "operator", "value", "mode", "minmax", "repeat"}
-        missing_keys = tuple(k for k in allowed_keys if k not in kwargs)
-        if not kwargs or len(missing_keys):
-            raise TypeError(
-                f"{self.__class__}.__init__() missing {len(missing_keys)}"
-                f" required keyword argument{'s' if len(missing_keys) > 1 else ''}:"
-                ", ".join(missing_keys)
-            )
-
+    def __init__(
+        self,
+        rgb: dict[str, dict[str, int | float]],
+        /,
+        color: str,
+        operator: str,
+        value: str,
+        mode: str | None,
+        minmax: tuple[float, float] | str | None,
+        repeat: int
+    ) -> None:
         self.rgb = rgb
-        self.color = str(kwargs["color"])
-        self.operator = str(kwargs["operator"])
-        self.value = str(kwargs["value"])
-        self.repeat = int(kwargs["repeat"]) if kwargs.get("repeat") else 1
+        self.color = color
+        self.operator = operator
+        self.value = value
+        self.repeat = repeat
 
-        minmax_raw = kwargs.get("minmax")
-        if isinstance(minmax_raw, str):
-            parts = minmax_raw[7:-1].split(",")
+        if isinstance(minmax, str):
+            parts = minmax[7:-1].split(",")
             self.minmax = (float(parts[0]), float(parts[1]))
         else:
             self.minmax = (0.0, 255.0)
 
-        self.mode = str(kwargs.get("mode") or "fg")
+        self.mode = mode or "fg"
         self.processed_value = self.process_value(self.value)
 
         if self.operator == ">":
@@ -790,11 +782,21 @@ class ANSIString(str):
         return self
 
     def multicolor(
-        self, sequence: str, *slices: Annotated[Sequence[int], Length(3)] | slice
+        self,
+        sequence: str,
+        *slices: Annotated[Sequence[int], Length(3)] | slice,
+        skip_whitespace: bool = False,
     ) -> Self:
         """Applies a multicolor sequence to the string in a specified range."""
         if not slices:
-            slices = tuple((index, index + 1) for index in range(0, len(self)))
+            if skip_whitespace:
+                slices = tuple(
+                    (index, index + 1)
+                    for index, char in enumerate(self.plain_text)
+                    if char not in WHITESPACE
+                )
+            else:
+                slices = tuple((index, index + 1) for index in range(0, len(self)))
 
         flags = {flag: 0 for flag in ("skipfirst", "cycle", "reverse", "mirror")}
         char_to_flag = {
