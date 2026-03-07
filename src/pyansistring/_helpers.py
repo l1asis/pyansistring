@@ -142,17 +142,16 @@ def load_font(font: "TTFont | Path | str") -> "TTFont":
 
 
 def get_style_key(style: "Style | None") -> str:
-    """
-    Map a per-character :class:`Style` to one of the variant keys.
+    """Map a per-character :class:`Style` to one of the variant keys.
 
     Parameters
     ----------
-    style: Style | None
-        The character's Style, or None for default.
+    style : Style | None
+        The character's Style, or ``None`` for default.
 
     Returns
     -------
-    key: Literal["regular", "bold", "italic", "bold_italic", "thin"]
+    key : Literal["regular", "bold", "italic", "bold_italic", "thin"]
         Type key for the font variant to use when rendering this character.
     """
     if style is None:
@@ -178,27 +177,26 @@ def prepare_font_variants(
     font_bold_italic: "TTFont | None",
     font_thin: "TTFont | None",
 ) -> dict[str, FontVariant]:
-    """
-    Build a mapping from style keys to :class:`FontVariant` tuples.
+    """Build a mapping from style keys to :class:`FontVariant` tuples.
 
     Parameters
     ----------
-    font: TTFont
+    font : TTFont
         The main font to use for regular text.
-    font_bold: TTFont | None
-        Optional font to use for bold text. If None, bold will be emulated.
-    font_italic: TTFont | None
-        Optional font to use for italic text. If None, italic will be emulated.
-    font_bold_italic: TTFont | None
-        Optional font to use for bold italic text. If None, bold italic will be
-        emulated.
-    font_thin: TTFont | None
-        Optional font to use for thin (SGR.DIM) text. If None, thin will be
+    font_bold : TTFont | None
+        Optional font to use for bold text. If ``None``, bold will be emulated.
+    font_italic : TTFont | None
+        Optional font to use for italic text. If ``None``, italic will be emulated.
+    font_bold_italic : TTFont | None
+        Optional font to use for bold italic text. If ``None``, bold italic will
+        be emulated.
+    font_thin : TTFont | None
+        Optional font to use for thin (SGR.DIM) text. If ``None``, thin will be
         emulated as regular.
 
     Returns
     -------
-    variants: dict[str, FontVariant]
+    variants : dict[str, FontVariant]
         Mapping from style keys ("regular", "bold", "italic", "bold_italic",
         "thin") to pre-computed FontVariant tuples.
     """
@@ -362,22 +360,21 @@ def resolve_skew(
     needs_faux_italic: bool,
     skew_override: int | None,
 ) -> float | None:
-    """
-    Return the faux-italic skew angle, or `None` when no skew is needed.
+    """Return the faux-italic skew angle, or ``None`` when no skew is needed.
 
     Parameters
     ----------
-    needs_faux_italic: bool
+    needs_faux_italic : bool
         Whether the current font variant requires faux italic emulation.
-    skew_override: int | None
-        Optional user-provided skew angle in degrees. If None, a default of
-        -12° will be used when *needs_faux_italic* is True.
+    skew_override : int | None
+        Optional user-provided skew angle in degrees. If ``None``, a default of
+        -12° will be used when *needs_faux_italic* is ``True``.
 
     Returns
     -------
-    effective_skew: float | None
-        The skew angle to apply for faux italic emulation, or None if no skew
-        is needed.
+    effective_skew : float | None
+        The skew angle to apply for faux italic emulation, or ``None`` if no
+        skew is needed.
     """
     if not needs_faux_italic:
         return None
@@ -395,37 +392,36 @@ def svg_create_transform_pen(
     descent: int,
     effective_skew: float | None,
 ) -> tuple[Any, Any, float, float]:
-    """
-    Create SVGPathPen + TransformPen with optional italic skew.
+    """Create an SVGPathPen + TransformPen with optional italic skew.
 
     Parameters
     ----------
-    glyph_set: Any
+    glyph_set : Any
         The fontTools glyph set to use for rendering.
-    scale: float
+    scale : float
         Font size in pixels divided by the font's units-per-em.
-    x_px: float
+    x_px : float
         Horizontal position in pixels to render the glyph at.
-    y_px: float
+    y_px : float
         Vertical position in pixels to render the glyph at.
-    ascent: int
+    ascent : int
         Font ascent in font units.
-    descent: int
+    descent : int
         Font descent in font units (negative value).
-    effective_skew: float | None
+    effective_skew : float | None
         Skew angle in degrees to apply for faux italic emulation,
-        or None if no skew is needed.
+        or ``None`` if no skew is needed.
 
     Returns
     -------
-    transform_pen: TransformPen
+    transform_pen : TransformPen
         A fontTools pen that applies the necessary transformations for rendering
         the glyph with optional skew.
-    svg_path_pen: SVGPathPen
+    svg_path_pen : SVGPathPen
         The SVGPathPen that was used to generate the path data.
-    left_overflow: float
+    left_overflow : float
         The amount of overflow to the left of the glyph's bounding box.
-    right_overflow: float
+    right_overflow : float
         The amount of overflow to the right of the glyph's bounding box.
     """
     pen = SVGPathPen(glyph_set)
@@ -458,29 +454,30 @@ def svg_weight_stroke_attrs(
     transparent_background: bool,
     background_color: tuple[int, int, int],
 ) -> list[str]:
-    """
-    Build SVG stroke attributes for faux font-weight emulation on `<path>` elements.
+    """Build SVG stroke attributes for faux
+    font-weight emulation on ``<path>`` elements.
 
     Parameters
     ----------
-    style: Style | None
-        The character's Style, or None for default.
-    needs_faux_bold: bool
+    style : Style | None
+        The character's Style, or ``None`` for default.
+    needs_faux_bold : bool
         Whether the current font variant requires faux bold emulation.
-    faux_weight: int
+    faux_weight : int
         The user-provided faux weight (100-900) to emulate, or 400 for normal weight.
-    font_size_px: int | float
+    font_size_px : int | float
         The font size in pixels, used to calculate stroke width.
-    transparent_background: bool
-        Whether the overall background is transparent. If True, faux bold will not
-        be emulated with a background-colored stroke, since that would not be visible.
-    background_color: tuple[int, int, int]
+    transparent_background : bool
+        Whether the overall background is transparent. If ``True``, faux bold will
+        not be emulated with a background-colored stroke, since that would not be
+        visible.
+    background_color : tuple[int, int, int]
         The background color as an RGB tuple, used for faux bold emulation when no
         background color is specified in the Style.
 
     Returns
     -------
-    stroke_attrs: list[str]
+    stroke_attrs : list[str]
         A list of SVG attributes to apply a stroke for faux bold emulation, or an
         empty list if no stroke is needed.
     """
@@ -528,31 +525,31 @@ def svg_build_underline_elements(
     ul_w: float,
     ul_h: float,
 ) -> tuple[list[str], float]:
-    """
-    Build SVG elements for a single-character underline.
+    """Build SVG elements for a single-character underline.
 
     Parameters
     ----------
-    ul_color: str
-        The underline color as an SVG color string (e.g. "rgb(255,0,0)").
-    ul_mode: UnderlineMode
+    ul_color : str
+        The underline color as an SVG color string (e.g. ``"rgb(255,0,0)"``).
+    ul_mode : UnderlineMode
         The underline mode (single, double, curly, dotted, dashed).
-    ul_x: float
+    ul_x : float
         The x-coordinate of the left edge of the underline.
-    ul_y: float
+    ul_y : float
         The y-coordinate of the top edge of the underline.
-    ul_w: float
+    ul_w : float
         The width of the underline.
-    ul_h: float
+    ul_h : float
         The thickness of the underline.
 
     Returns
     -------
-    element_strings: list[str]
-        A list of SVG element strings (e.g. `<rect>`, `<path>`,
-        `<circle>`, `<line>`) that together render the underline.
-    max_bottom_y: float
-        The maximum y-coordinate of the bottom edge of any element in the underline.
+    element_strings : list[str]
+        A list of SVG element strings (e.g. ``<rect>``, ``<path>``,
+        ``<circle>``, ``<line>``) that together render the underline.
+    max_bottom_y : float
+        The maximum y-coordinate of the bottom edge of any element in the
+        underline.
     """
     elems: list[str] = []
     max_bot = 0.0

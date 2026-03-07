@@ -8,7 +8,7 @@ from .style import Style
 def _detect_style_change(
     method: Callable[..., Any], is_method_bound: bool = False
 ) -> Callable[..., Any]:
-    """Decorator to detect changes in the StyleManager and set the modified flag."""
+    """Detect changes in the StyleManager and set the modified flag."""
 
     @wraps(method)
     def wrapped(self: "StyleManager", *args: Any, **kwargs: Any) -> Any:
@@ -24,22 +24,15 @@ def _detect_style_change(
 
 
 class StyleManager(dict[int, Style]):
-    """
-    A dictionary-like class for managing `Style` instances
-    and tracking style modifications.
-
-    This class behaves similarly to a dictionary, allowing
-    storage and retrieval of `Style` instances. It also
-    maintains an internal flag to indicate whether any style
-    has been modified since the last access.
+    """A dict subclass for managing :class:`Style` instances with change tracking.
 
     Attributes
     ----------
     _has_been_modified : bool
-        Indicates whether the styles have been modified since the last check.
+        Whether the styles have been modified since the last check.
     has_been_modified : bool
-        Property. Returns `True` if styles have been modified since the last access;
-        accessing this resets the flag to `False`.
+        Whether styles have been modified since the last access;
+        accessing this property resets the flag to ``False``.
 
     Examples
     --------

@@ -19,21 +19,20 @@ from .frozen import FrozenMeta
 
 
 class Color(metaclass=FrozenMeta):
-    """
-    Unified color representation.
+    """Unified color representation.
 
     Parameters
     ----------
-    mode: Literal["4bit", "8bit", "24bit"] | None
-        The color mode or None for unset.
-    value: Foreground | Background | Underline | int | tuple[int, int, int] | None
+    mode : Literal["4bit", "8bit", "24bit"] | None
+        The color mode or ``None`` for unset.
+    value : Foreground | Background | Underline | int | tuple[int, int, int] | None
         The color value.
 
     Attributes
     ----------
-    mode: Literal["4bit", "8bit", "24bit"] | None
-        The color mode or None for unset.
-    value: int | tuple[int, int, int] | None
+    mode : Literal["4bit", "8bit", "24bit"] | None
+        The color mode or ``None`` for unset.
+    value : int | tuple[int, int, int] | None
         The normalized color value.
     """
 
@@ -114,7 +113,7 @@ class Color(metaclass=FrozenMeta):
         self,
         theme: ThemeName = DEFAULT_THEME,
     ) -> tuple[int, int, int]:
-        """Returns the RGB value of the color based on the theme."""
+        """Return the RGB tuple for this color based on the theme."""
         if self.mode == "24bit":
             assert isinstance(self.value, tuple)
             return self.value
@@ -129,29 +128,28 @@ class Color(metaclass=FrozenMeta):
 
 
 class Style(metaclass=FrozenMeta):
-    """
-    Composite style representation.
+    """Composite style representation.
 
     Parameters
     ----------
-    foreground: Color | tuple[str, Any]
+    foreground : Color | tuple[str, Any]
         The foreground color.
-    background: Color | tuple[str, Any]
+    background : Color | tuple[str, Any]
         The background color.
-    underline: tuple[Color | tuple[str, Any], UnderlineMode | int]
+    underline : tuple[Color | tuple[str, Any], UnderlineMode | int]
         The underline color and mode.
-    attributes: frozenset[SGR | int]
+    attributes : frozenset[SGR | int]
         The set of SGR attributes.
 
     Attributes
     ----------
-    foreground: Color
+    foreground : Color
         The foreground color.
-    background: Color
+    background : Color
         The background color.
-    underline: tuple[Color, UnderlineMode]
+    underline : tuple[Color, UnderlineMode]
         The underline color and mode.
-    attributes: frozenset[SGR]
+    attributes : frozenset[SGR]
         The set of SGR attributes.
     """
 
@@ -237,9 +235,7 @@ class Style(metaclass=FrozenMeta):
         | None = None,
         *args: int,
     ) -> "Style":
-        """
-        Returns a new Style with the given style data applied.
-        """
+        """Return a new Style with the given style data applied."""
         fg = self.foreground
         bg = self.background
         ul = self.underline

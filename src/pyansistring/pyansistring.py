@@ -57,37 +57,32 @@ from .style_manager import StyleManager
 
 
 class MulticolorInstruction:
-    """
-    Represents a single instruction in a multicolor command, which defines how
-    to modify a specific color channel (foreground, background, or underline)
-    based on an operator and value.
+    """A single instruction in a multicolor command for a color channel.
 
     Parameters
     ----------
-    color: str
-        The color channel to modify ("r", "g", or "b").
-    operator: str
-        The operator to apply ("=", "+", or "-").
-    value: str
-        The value to use for the operation, which can be
-        a number, a random range, or a reference to
-        another color channel.
-    processed_value: int | float
-        The processed numeric value after evaluating the
-        `value` string, which is used for calculations
-        in the multicolor command.
-    mode: str
-        The mode of the color channel ("fg" for foreground,
-        "bg" for background, or "ul" for underline).
-    minmax: tuple[float, float] | str | None
-        The minimum and maximum values for the color
-        channel, which can be a tuple, a string in the
-        format "minmax(min, max)", or None for
-        default (0, 255).
-    repeat: int
-        The number of times to repeat this instruction,
-        which is used for distributing changes across
-        multiple slices in a multicolor command.
+    rgb : dict[str, dict[str, int | float]]
+        The current RGB state dictionary, keyed by mode and channel.
+    color : str
+        The color channel to modify (``"r"``, ``"g"``, or ``"b"``).
+    operator : str
+        The operator to apply (``"="``, ``"+"``, or ``"-"``).
+    value : str
+        The value to use for the operation, which can be a number, a random
+        range, or a reference to another color channel.
+    mode : str
+        The mode of the color channel (``"fg"``, ``"bg"``, or ``"ul"``).
+    minmax : tuple[float, float] | str | None
+        The min/max bounds for the color channel, as a tuple, a string in
+        the format ``"minmax(min, max)"``, or ``None`` for default (0, 255).
+    repeat : int
+        The number of times to repeat this instruction.
+
+    Attributes
+    ----------
+    processed_value : int | float
+        The processed numeric value after evaluating *value*, used for
+        calculations in the multicolor command.
     """
 
     def __init__(
@@ -99,7 +94,7 @@ class MulticolorInstruction:
         value: str,
         mode: str | None,
         minmax: tuple[float, float] | str | None,
-        repeat: int
+        repeat: int,
     ) -> None:
         self.rgb = rgb
         self.color = color
@@ -141,23 +136,19 @@ class MulticolorInstruction:
 
 
 class MulticolorCommand:
-    """
-    Represents a multicolor command consisting of multiple
-    instructions and optional reset and repeat parameters.
+    """A multicolor command with instructions and optional reset/repeat.
 
     Parameters
     ----------
-    instructions: list[MulticolorInstruction] | None
+    instructions : list[MulticolorInstruction] | None
         List of instructions to be applied in this command.
-    reset: str | None
-        Reset mode for the command. Can be "?" to reset to
-        the current RGB values at the time of command
-        execution, "??" to reset to the RGB values at the
-        time of command creation, or None for no reset.
-    repeat: int | str | None
-        Number of times to repeat the command. Can be an
-        integer or "auto" for automatic distribution
-        across slices.
+    reset : str | None
+        Reset mode for the command. ``"?"`` resets to the current RGB values at
+        the time of command execution, ``"??"`` resets to the RGB values at the
+        time of command creation, or ``None`` for no reset.
+    repeat : int | str | None
+        Number of times to repeat the command. Can be an integer or ``"auto"``
+        for automatic distribution across slices.
     """
 
     def __init__(
@@ -175,10 +166,7 @@ class MulticolorCommand:
 
 
 class ANSIString(str):
-    """
-    Subclass of `str` that supports ANSI styling
-    through an associated :class:`StyleManager`.
-    """
+    """Subclass of ``str`` that supports ANSI styling via a :class:`StyleManager`."""
 
     _style_manager: StyleManager
     _styled_text: str
@@ -205,43 +193,43 @@ class ANSIString(str):
 
     @property
     def style_manager(self) -> StyleManager:
-        """Returns the StyleManager instance associated with this ANSIString."""
+        """The :class:`StyleManager` instance associated with this ANSIString."""
         return self._style_manager
 
     @property
     def styled_text(self) -> str:
-        """Returns the styled text, applying styles if they have been modified."""
+        """The styled text, recomputed if styles have been modified."""
         if self._style_manager.has_been_modified:
             self._styled_text = self._render()
         return self._styled_text
 
     @property
     def plain_text(self) -> str:
-        """Returns the plain text without any styles."""
+        """The plain text without any styles."""
         return str.__str__(self)
 
     @property
     def actual_length(self) -> int:
-        """Returns the length of the styled text."""
+        """The length of the styled text."""
         return len(self.styled_text)
 
     def __str__(self) -> str:
-        """Returns the styled text."""
+        """Return the styled text."""
         return self.styled_text
 
     def __repr__(self) -> str:
-        """Returns a string representation of the ANSIString."""
+        """Return a string representation of the ANSIString."""
         return (
             f"ANSIString({str.__repr__(self.plain_text)}, "
             f"{self.style_manager if self.style_manager else None})"
         )
 
     def __eq__(self, other: object) -> bool:
-        """Checks if the styled text is equal to another string or ANSIString."""
+        """Check if the styled text is equal to another string or ANSIString."""
         return self.styled_text == other
 
     def __add__(self, other: Union[str, "ANSIString"]) -> "ANSIString":
-        """Concatenates another string or ANSIString to this ANSIString."""
+        """Concatenate another string or ANSIString to this ANSIString."""
         style_manager = self.style_manager.copy()
         if isinstance(other, ANSIString):
             style_manager.update(
@@ -254,7 +242,7 @@ class ANSIString(str):
         return type(self)(self.plain_text + other, style_manager)
 
     def __radd__(self, other: Union[str, "ANSIString"]) -> "ANSIString":
-        """Concatenates this ANSIString to another string or ANSIString."""
+        """Concatenate this ANSIString to another string or ANSIString."""
         styles = {
             index + len(other): value for index, value in self.style_manager.items()
         }
@@ -264,7 +252,7 @@ class ANSIString(str):
         return type(self)(other + self.plain_text, styles)
 
     def __getitem__(self, key: SupportsIndex | slice) -> "ANSIString":
-        """Returns a new ANSIString with the specified slice or index."""
+        """Return a new ANSIString with the specified slice or index."""
         indices = range(len(self))
         selected_indices = indices[key] if isinstance(key, slice) else [indices[key]]
         styles = {
@@ -275,10 +263,7 @@ class ANSIString(str):
         return type(self)(super().__getitem__(key), styles)
 
     def __getattribute__(self, name: str) -> Any:
-        """
-        Handles attribute access, allowing for string
-        methods to return ANSIString.
-        """
+        """Handle attribute access, delegating str methods to return ANSIString."""
         # TODO: Replace it with a more elegant solution like
         # explicit overrides or dynamic class decorator.
         allowed_passthrough = {
@@ -312,10 +297,7 @@ class ANSIString(str):
             return super().__getattribute__(name)
 
     def __format__(self, format_spec: str) -> str:
-        """
-        Formats the ANSIString according to the given
-        format specification and returns rendered text.
-        """
+        """Format the ANSIString with the given format spec and return rendered text."""
         if not format_spec:
             return self.styled_text
         formatted = format(self.plain_text, format_spec)
@@ -323,7 +305,7 @@ class ANSIString(str):
         return str(type(self)(formatted, StyleManager(styles)))
 
     def _render(self) -> str:
-        """Renders the ANSIString to its final output form."""
+        """Render the ANSIString to its final output form."""
         return "".join(
             (
                 f"{self.style_manager[index].ansi}{char}\x1b[0m"
@@ -334,7 +316,7 @@ class ANSIString(str):
         )
 
     def _coord_to_slice(self, coord: tuple[int, int]) -> slice:
-        """Converts a (x, y) coordinate pair to a slice object."""
+        """Convert an (x, y) coordinate pair to a slice object."""
         index = 0
         lengths = tuple(len(line) for line in self.plain_text.splitlines())
         if not lengths:
@@ -353,7 +335,7 @@ class ANSIString(str):
         return slice(index, index + 1)
 
     def _get_all_coords(self) -> tuple[tuple[int, int], ...]:
-        """Returns all (x, y) coordinates of the characters in the plain text."""
+        """Return all (x, y) coordinates of the characters in the plain text."""
 
         def transform(lengths: Iterable[int]) -> Generator[tuple[int, int], None, None]:
             for y, length in enumerate(lengths):
@@ -365,10 +347,7 @@ class ANSIString(str):
     def _get_indices(
         self, slice_: Annotated[Sequence[int], Length(3)] | slice
     ) -> tuple[int, int, int]:
-        """
-        Converts a slice or a sequence of three integers
-        to start, stop, step indices.
-        """
+        """Convert a slice or sequence of three integers to (start, stop, step)."""
         if isinstance(slice_, slice):
             start, stop, step = slice_.indices(len(self))
         else:
@@ -378,10 +357,7 @@ class ANSIString(str):
     def _search_spans(
         self, *words: str, case_sensitive: bool = True
     ) -> tuple[tuple[int, int], ...]:
-        """
-        Searches for words in the plain text and returns
-        their spans as tuples of (start, end).
-        """
+        """Search for words in the plain text and return their (start, end) spans."""
         flags = 0 if case_sensitive else re.IGNORECASE
         joined_words = "|".join(re.escape(word) for word in words)
         spans = (
@@ -396,7 +372,7 @@ class ANSIString(str):
         rgb: dict[str, dict[str, dict[str, int | float]]],
         *slices: Annotated[Sequence[int], Length(3)] | slice,
     ) -> dict[str, bool]:
-        """Processes a multicolor command and applies it to the ANSIString."""
+        """Process a multicolor command and apply it to the ANSIString."""
         reset_rgb: dict[str, dict[str, int | float]] | None = None
         if command.reset:
             if command.reset == "?":
@@ -439,7 +415,7 @@ class ANSIString(str):
         modes: dict[str, bool],
         *slices: Annotated[Sequence[int], Length(3)] | slice,
     ) -> None:
-        """Applies the current RGB values to the specified slices."""
+        """Apply the current RGB values to the specified slices."""
         if modes["fg"]:
             r, g, b = (int(clamp(rgb["fg"][key], 0, 255)) for key in "rgb")
             self.fg_24b(r, g, b, *slices)
@@ -452,10 +428,7 @@ class ANSIString(str):
 
     @staticmethod
     def from_ansi(plain: str) -> "ANSIString":
-        """
-        Creates an ANSIString from a plain string
-        containing ANSI escape sequences.
-        """
+        """Create an ANSIString from a plain string containing ANSI escape sequences."""
         start: int = 0
         decrement: int = 0
         style: str = ""
@@ -490,7 +463,7 @@ class ANSIString(str):
     def fm(
         self, parameter: int | str, *slices: Annotated[Sequence[int], Length(3)] | slice
     ) -> Self:
-        """Formats (applies styling to) the string in a specified range."""
+        """Format (apply styling to) the string in a specified range."""
         # TODO: forbid formatting above the length of the string
         if parameter == SGR.RESET:
             return self.unfm(*slices)
@@ -515,13 +488,13 @@ class ANSIString(str):
     def fm_w(
         self, parameter: int | str, *words: str, case_sensitive: bool = True
     ) -> Self:
-        """Formats (applies styling to) the word of the string."""
+        """Format (apply styling to) matched words of the string."""
         return self.fm(
             parameter, *self._search_spans(*words, case_sensitive=case_sensitive)
         )
 
     def unfm(self, *slices: Annotated[Sequence[int], Length(3)] | slice) -> Self:
-        """Unformats (removes styling) the string in a specified range."""
+        """Remove styling from the string in a specified range."""
         if slices:
             for slice_ in slices:
                 for index in range(*self._get_indices(slice_)):
@@ -534,7 +507,7 @@ class ANSIString(str):
         return self
 
     def unfm_w(self, *words: str, case_sensitive: bool = True) -> Self:
-        """Unformats (removes styling) the string per word index."""
+        """Remove styling from matched words of the string."""
         return self.unfm(*self._search_spans(*words, case_sensitive=case_sensitive))
 
     def fg_4b(
@@ -542,10 +515,7 @@ class ANSIString(str):
         parameter: Foreground,
         *slices: Annotated[Sequence[int], Length(3)] | slice,
     ) -> Self:
-        """
-        Applies the foreground given by the 4-bit color
-        to the string in a specified range.
-        """
+        """Apply a 4-bit foreground color to the string in a specified range."""
         return self.fm(parameter, *slices)
 
     def fg_4b_w(
@@ -554,7 +524,7 @@ class ANSIString(str):
         *words: str,
         case_sensitive: bool = True,
     ) -> Self:
-        """Applies the foreground given by the 4-bit color to the word of the string."""
+        """Apply a 4-bit foreground color to matched words of the string."""
         return self.fg_4b(
             parameter, *self._search_spans(*words, case_sensitive=case_sensitive)
         )
@@ -564,10 +534,7 @@ class ANSIString(str):
         parameter: Annotated[int, ValueRange(0, 255)],
         *slices: Annotated[Sequence[int], Length(3)] | slice,
     ) -> Self:
-        """
-        Applies the foreground given by the 8-bit color
-        number (0-255) to the string in a specified range.
-        """
+        """Apply an 8-bit foreground color to the string in a specified range."""
         style = f"\x1b[{Foreground.SET};5;{parameter}m"
         return self.fm(style, *slices)
 
@@ -577,10 +544,7 @@ class ANSIString(str):
         *words: str,
         case_sensitive: bool = True,
     ) -> Self:
-        """
-        Applies the foreground given by the 8-bit color
-        number (0-255) to the word of the string.
-        """
+        """Apply an 8-bit foreground color to matched words of the string."""
         return self.fg_8b(
             parameter, *self._search_spans(*words, case_sensitive=case_sensitive)
         )
@@ -592,7 +556,7 @@ class ANSIString(str):
         b: Annotated[int, ValueRange(0, 255)],
         *slices: Annotated[Sequence[int], Length(3)] | slice,
     ) -> Self:
-        """Applies the foreground given by RGB to the string in a specified range."""
+        """Apply a 24-bit foreground color to the string in a specified range."""
         style = f"\x1b[{Foreground.SET};2;{r};{g};{b}m"
         return self.fm(style, *slices)
 
@@ -604,7 +568,7 @@ class ANSIString(str):
         *words: str,
         case_sensitive: bool = True,
     ) -> Self:
-        """Applies the foreground given by RGB to the word of the string."""
+        """Apply a 24-bit foreground color to matched words of the string."""
         return self.fg_24b(
             r, g, b, *self._search_spans(*words, case_sensitive=case_sensitive)
         )
@@ -614,10 +578,7 @@ class ANSIString(str):
         parameter: Background,
         *slices: Annotated[Sequence[int], Length(3)] | slice,
     ) -> Self:
-        """
-        Applies the background given by the 4-bit color
-        to the string in a specified range.
-        """
+        """Apply a 4-bit background color to the string in a specified range."""
         return self.fm(parameter, *slices)
 
     def bg_4b_w(
@@ -626,7 +587,7 @@ class ANSIString(str):
         *words: str,
         case_sensitive: bool = True,
     ) -> Self:
-        """Applies the background given by the 4-bit color to the word of the string."""
+        """Apply a 4-bit background color to matched words of the string."""
         return self.bg_4b(
             parameter, *self._search_spans(*words, case_sensitive=case_sensitive)
         )
@@ -636,10 +597,7 @@ class ANSIString(str):
         parameter: Annotated[int, ValueRange(0, 255)],
         *slices: Annotated[Sequence[int], Length(3)] | slice,
     ) -> Self:
-        """
-        Applies the background given by the 8-bit color
-        number (0-255) to the string in a specified range.
-        """
+        """Apply an 8-bit background color to the string in a specified range."""
         style = f"\x1b[{Background.SET};5;{parameter}m"
         return self.fm(style, *slices)
 
@@ -649,10 +607,7 @@ class ANSIString(str):
         *words: str,
         case_sensitive: bool = True,
     ) -> Self:
-        """
-        Applies the background given by the 8-bit color
-        number (0-255) to the word of the string.
-        """
+        """Apply an 8-bit background color to matched words of the string."""
         return self.bg_8b(
             parameter, *self._search_spans(*words, case_sensitive=case_sensitive)
         )
@@ -664,7 +619,7 @@ class ANSIString(str):
         b: Annotated[int, ValueRange(0, 255)],
         *slices: Annotated[Sequence[int], Length(3)] | slice,
     ) -> Self:
-        """Applies the background given by RGB to the string in a specified range."""
+        """Apply a 24-bit background color to the string in a specified range."""
         style = f"\x1b[{Background.SET};2;{r};{g};{b}m"
         return self.fm(style, *slices)
 
@@ -676,7 +631,7 @@ class ANSIString(str):
         *words: str,
         case_sensitive: bool = True,
     ) -> Self:
-        """Applies the background given by RGB to the word of the string."""
+        """Apply a 24-bit background color to matched words of the string."""
         return self.bg_24b(
             r, g, b, *self._search_spans(*words, case_sensitive=case_sensitive)
         )
@@ -686,10 +641,7 @@ class ANSIString(str):
         parameter: Underline,
         *slices: Annotated[Sequence[int], Length(3)] | slice,
     ) -> Self:
-        """
-        Applies the underline given by the 4-bit color
-        to the string in a specified range.
-        """
+        """Apply a 4-bit underline color to the string in a specified range."""
         return self.fm(parameter, *slices)
 
     def ul_4b_w(
@@ -698,7 +650,7 @@ class ANSIString(str):
         *words: str,
         case_sensitive: bool = True,
     ) -> Self:
-        """Applies the underline given by the 4-bit color to the word of the string."""
+        """Apply a 4-bit underline color to matched words of the string."""
         return self.ul_4b(
             parameter, *self._search_spans(*words, case_sensitive=case_sensitive)
         )
@@ -708,10 +660,7 @@ class ANSIString(str):
         parameter: Annotated[int, ValueRange(0, 255)],
         *slices: Annotated[Sequence[int], Length(3)] | slice,
     ) -> Self:
-        """
-        Applies the underline given by the 8-bit color
-        number (0-255) to the string in a specified range.
-        """
+        """Apply an 8-bit underline color to the string in a specified range."""
         style = f"\x1b[{Underline.SET}:5:{parameter}m"
         return self.fm(style, *slices)
 
@@ -721,10 +670,7 @@ class ANSIString(str):
         *words: str,
         case_sensitive: bool = True,
     ) -> Self:
-        """
-        Applies the underline given by the 8-bit color
-        number (0-255) to the word of the string.
-        """
+        """Apply an 8-bit underline color to matched words of the string."""
         return self.ul_8b(
             parameter, *self._search_spans(*words, case_sensitive=case_sensitive)
         )
@@ -736,7 +682,7 @@ class ANSIString(str):
         b: Annotated[int, ValueRange(0, 255)],
         *slices: Annotated[Sequence[int], Length(3)] | slice,
     ) -> Self:
-        """Applies the underline given by RGB to the string in a specified range."""
+        """Apply a 24-bit underline color to the string in a specified range."""
         style = f"\x1b[{Underline.SET}:2::{r}:{g}:{b}m"
         return self.fm(style, *slices)
 
@@ -748,7 +694,7 @@ class ANSIString(str):
         *words: str,
         case_sensitive: bool = True,
     ) -> Self:
-        """Applies the underline given by RGB to the word of the string."""
+        """Apply a 24-bit underline color to matched words of the string."""
         return self.ul_24b(
             r, g, b, *self._search_spans(*words, case_sensitive=case_sensitive)
         )
@@ -761,7 +707,7 @@ class ANSIString(str):
         bg: bool = False,
         ul: bool = False,
     ) -> Self:
-        """Applies a rainbow effect to the string in a specified range."""
+        """Apply a rainbow effect to the string in a specified range."""
         if not slices:
             slices = tuple(
                 (index, index + 1)
@@ -787,7 +733,7 @@ class ANSIString(str):
         *slices: Annotated[Sequence[int], Length(3)] | slice,
         skip_whitespace: bool = False,
     ) -> Self:
-        """Applies a multicolor sequence to the string in a specified range."""
+        """Apply a multicolor sequence to the string in a specified range."""
         if not slices:
             if skip_whitespace:
                 slices = tuple(
@@ -963,10 +909,7 @@ class ANSIString(str):
         sequence: str,
         *coordinates: tuple[int, int] | tuple[tuple[int, int], ...],
     ) -> Self:
-        """
-        Applies a multicolor sequence to the string
-        at specified (x, y) coordinates.
-        """
+        """Apply a multicolor sequence to the string at (x, y) coordinates."""
 
         def transform(
             coordinates: tuple[tuple[int, int], ...]
@@ -1005,49 +948,49 @@ class ANSIString(str):
         convert_text_to_path: bool = False,
         output_file: str | None = None,
     ) -> str:
-        """
-        Generates an SVG representation of the ANSIString using the specified font.
+        """Generate an SVG representation of the ANSIString using the specified font.
 
         Parameters
         ----------
-        font: TTFont | Path | str
+        font : TTFont | Path | str
             Base font. Variable fonts are also supported.
-        font_size_px: int | float
+        font_size_px : int | float
             Font size in pixels.
-        line_height_offset: int | float
+        line_height_offset : int | float
             Extra vertical spacing between lines (in font units).
-        letter_spacing_offset: int | float
+        letter_spacing_offset : int | float
             Extra horizontal spacing between characters (in font units).
-        weight: int | None
+        weight : int | None
             Faux-bold stroke weight (100-900), used only as a last-resort fallback
-            when no dedicated bold font or variable `wght` axis is available.
-        skew: int | None
+            when no dedicated bold font or variable ``wght`` axis is available.
+        skew : int | None
             Faux-italic skew angle in degrees, used only as a last-resort fallback
-            when no dedicated italic font or variable `ital`/`slnt` axis is available.
-        font_bold: TTFont | Path | str | None
-            Font used for :pyattr:`SGR.BOLD` characters.
-            (For when `font` is not a variable font).
-        font_italic: TTFont | Path | str | None
-            Font used for :pyattr:`SGR.ITALIC` characters.
-            (For when `font` is not a variable font).
-        font_bold_italic: TTFont | Path | str | None
-            Font used for characters that are both bold and italic.
-            (For when `font` is not a variable font).
-        font_thin: TTFont | Path | str | None
-            Font used for :pyattr:`SGR.DIM` characters.
-            (For when `font` is not a variable font).
-        transparent_background: bool
-            When `True`, no background rectangle is drawn.
-        background_color: tuple[int, int, int]
-            RGB tuple used when *transparent_background* is `False`.
-        convert_text_to_path: bool
-            When `True`, glyphs render as `<path>` instead of `<text>`.
-        output_file: str | None
+            when no dedicated italic font or variable ``ital``/``slnt`` axis is
+            available.
+        font_bold : TTFont | Path | str | None
+            Font used for :pyattr:`SGR.BOLD` characters (for when *font* is not
+            a variable font).
+        font_italic : TTFont | Path | str | None
+            Font used for :pyattr:`SGR.ITALIC` characters (for when *font* is
+            not a variable font).
+        font_bold_italic : TTFont | Path | str | None
+            Font used for characters that are both bold and italic (for when
+            *font* is not a variable font).
+        font_thin : TTFont | Path | str | None
+            Font used for :pyattr:`SGR.DIM` characters (for when *font* is not
+            a variable font).
+        transparent_background : bool
+            When ``True``, no background rectangle is drawn.
+        background_color : tuple[int, int, int]
+            RGB tuple used when *transparent_background* is ``False``.
+        convert_text_to_path : bool
+            When ``True``, glyphs render as ``<path>`` instead of ``<text>``.
+        output_file : str | None
             Optional file path to write the SVG output.
 
         Returns
         -------
-        svg_content: str
+        svg_content : str
             The generated SVG content as a string.
         """
         if not is_fonttools_available:

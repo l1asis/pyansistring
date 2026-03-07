@@ -177,8 +177,8 @@ class SGR(IntEnum, metaclass=MetaEnum):
 
 
 class NamedColors(Enum, metaclass=MetaEnum):
-    """
-    A collection of named colors with their RGB values.
+    """A collection of named colors with their RGB values.
+
     Source: https://convertingcolors.com/named-colors.html
     """
 
