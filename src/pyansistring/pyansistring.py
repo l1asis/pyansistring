@@ -1232,9 +1232,33 @@ class ANSIString(str):
         return type(self)("".join(parts), StyleManager(result_styles))
 
     def encode(self, encoding: str = "utf-8", errors: str = "strict") -> bytes:
+        """Encode the string to bytes, including ANSI escape codes.
+
+        Parameters
+        ----------
+        encoding : str
+            The name of the encoding to use (e.g., 'utf-8').
+        errors : str
+            The error handling scheme to use for encoding errors. Default is 'strict'.
+
+            Possible values include:
+            - ``strict``: Raise a UnicodeEncodeError on encoding errors.
+            - ``ignore``: Ignore characters that cannot be encoded.
+            - ``replace``: Replace characters that cannot be encoded
+                with a replacement character (e.g., '?').
+            - ``xmlcharrefreplace``: Replace characters that cannot be encoded
+                with XML character references.
+            - ``backslashreplace``: Replace characters that cannot be encoded
+                with backslash escapes.
+            - ``namereplace``: Replace characters that cannot be encoded
+                with \\N{...} escape sequences.
+            - ``surrogateescape``: Use Unicode surrogate code points to
+                represent bytes that cannot be decoded (only relevant for decoding).
+        """
         return self.styled_text.encode(encoding, errors)
 
     def casefold(self) -> "ANSIString":
+        """Return a version of the string suitable for caseless comparisons."""
         actual = super().casefold()
         if actual == self.plain_text:
             return type(self)(actual, self.style_manager.copy())
