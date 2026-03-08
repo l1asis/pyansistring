@@ -1094,7 +1094,7 @@ class ANSIString(str):
         new: str,
         count: SupportsIndex = -1,
     ) -> "ANSIString":
-        """Replace occurrences of *old* with *new*, remapping styles."""
+        """Like ``str.replace``, but remaps styles around replaced segments."""
         max_count = int(count)
         plain = self.plain_text
         old_len = len(old)
@@ -1145,20 +1145,20 @@ class ANSIString(str):
         return type(self)("".join(parts), StyleManager(result_styles))
 
     def removeprefix(self, prefix: str, /) -> "ANSIString":
-        """Remove *prefix* from the beginning if present, shifting styles."""
+        """Like ``str.removeprefix``, but shifts styles past the removed prefix."""
         if self.plain_text.startswith(prefix) and prefix:
             offset = len(prefix)
             return self[offset:]
         return type(self)(self.plain_text, self.style_manager.copy())
 
     def removesuffix(self, suffix: str, /) -> "ANSIString":
-        """Remove *suffix* from the end if present."""
+        """Like ``str.removesuffix``, but preserves styles on the remaining text."""
         if self.plain_text.endswith(suffix) and suffix:
             return self[: len(self) - len(suffix)]
         return type(self)(self.plain_text, self.style_manager.copy())
 
     def partition(self, sep: str, /) -> tuple["ANSIString", "ANSIString", "ANSIString"]:  # type: ignore[override]
-        """Partition around the first occurrence of *sep*."""
+        """Like ``str.partition``, but preserves styles on each part."""
         idx = self.plain_text.find(sep)
         if idx == -1:
             return (
@@ -1173,7 +1173,7 @@ class ANSIString(str):
         sep: str,
         /,
     ) -> tuple["ANSIString", "ANSIString", "ANSIString"]:
-        """Partition around the last occurrence of *sep*."""
+        """Like ``str.rpartition``, but preserves styles on each part."""
         idx = self.plain_text.rfind(sep)
         if idx == -1:
             return (
@@ -1184,7 +1184,7 @@ class ANSIString(str):
         return (self[:idx], self[idx : idx + len(sep)], self[idx + len(sep) :])
 
     def zfill(self, width: SupportsIndex, /) -> "ANSIString":
-        """Pad a numeric string with zeros on the left."""
+        """Like ``str.zfill``, but shifts styles past the zero padding."""
         w = int(width)
         plain = self.plain_text
         if len(plain) >= w:
@@ -1206,7 +1206,7 @@ class ANSIString(str):
         return type(self)("0" * pad + plain, StyleManager(shifted))
 
     def expandtabs(self, tabsize: SupportsIndex = 8) -> "ANSIString":  # type: ignore[override]
-        """Replace tab characters with spaces, remapping styles."""
+        """Like ``str.expandtabs``, but remaps styles across expanded tabs."""
         ts = int(tabsize)
         plain = self.plain_text
         parts: list[str] = []
@@ -1242,33 +1242,11 @@ class ANSIString(str):
         return type(self)("".join(parts), StyleManager(result_styles))
 
     def encode(self, encoding: str = "utf-8", errors: str = "strict") -> bytes:
-        """Encode the string to bytes, including ANSI escape codes.
-
-        Parameters
-        ----------
-        encoding : str
-            The name of the encoding to use (e.g., 'utf-8').
-        errors : str
-            The error handling scheme to use for encoding errors. Default is 'strict'.
-
-            Possible values include:
-            - ``strict``: Raise a UnicodeEncodeError on encoding errors.
-            - ``ignore``: Ignore characters that cannot be encoded.
-            - ``replace``: Replace characters that cannot be encoded
-                with a replacement character (e.g., '?').
-            - ``xmlcharrefreplace``: Replace characters that cannot be encoded
-                with XML character references.
-            - ``backslashreplace``: Replace characters that cannot be encoded
-                with backslash escapes.
-            - ``namereplace``: Replace characters that cannot be encoded
-                with \\N{...} escape sequences.
-            - ``surrogateescape``: Use Unicode surrogate code points to
-                represent bytes that cannot be decoded (only relevant for decoding).
-        """
+        """Like ``str.encode``, but encodes the styled text including ANSI escape codes."""
         return self.styled_text.encode(encoding, errors)
 
     def casefold(self) -> "ANSIString":
-        """Return a version of the string suitable for caseless comparisons."""
+        """Like ``str.casefold``, but remaps styles across character expansions."""
         actual = super().casefold()
         if actual == self.plain_text:
             return type(self)(actual, self.style_manager.copy())
@@ -1291,27 +1269,7 @@ class ANSIString(str):
         return type(self)(actual, StyleManager(styles))
 
     def translate(self, table: Mapping[int, int | str | None]) -> "ANSIString":  # type: ignore[override]
-        """Replace each character in the string using the given translation table.
-
-        Parameters
-        ----------
-
-        table : Mapping[int, int | str | None]
-            A mapping that defines the translation.
-
-            Each key is the Unicode code point of a character in
-            the original string, and the corresponding value is either:
-            - An integer representing the Unicode code point of
-            the replacement character.
-            - A string representing the replacement character(s).
-            - None, indicating the character should be deleted.
-
-        Notes
-        -----
-        - The table must implement lookup/indexing via __getitem__,
-        for instance a dictionary or list. If this operation raises
-        LookupError, the character is left untouched.
-        """
+        """Like ``str.translate``, but remaps styles across insertions and deletions."""
         actual = super().translate(table)
         if actual == self.plain_text:
             return type(self)(actual, self.style_manager.copy())
