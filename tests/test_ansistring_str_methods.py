@@ -652,3 +652,39 @@ class TestReduce:
         assert isinstance(unpickled, ANSIString)
         assert unpickled.plain_text == "Hello"
         assert str(unpickled) == ansi_wrap("Hello", bold_code)
+
+
+class TestCasefold:
+    def test_casefold_expands(self, bold_code: str):
+        s = ANSIString("Straße").fm(SGR.BOLD)
+        folded = s.casefold()
+        assert folded.plain_text == "strasse"
+        assert str(folded) == ansi_wrap("strasse", bold_code)
+        assert len(folded.style_manager) == len(s.style_manager) + 1
+
+    def test_casefold_no_expansion(self, bold_code: str):
+        s = ANSIString("Hello").fm(SGR.BOLD)
+        folded = s.casefold()
+        assert folded.plain_text == "hello"
+        assert str(folded) == ansi_wrap("hello", bold_code)
+        assert len(folded.style_manager) == len(s.style_manager)
+
+    def test_casefold_multiple_expansions(self, bold_code: str):
+        s = (
+            ANSIString("Hello, ﬃ and ß!!!")
+            .fm(SGR.BOLD, (7, 8), (13, 14))
+            .fm(SGR.ITALIC, (9, 12), (14, 17))
+        )
+        folded = s.casefold()
+        assert folded.plain_text == "hello, ffi and ss!!!"
+        expected = (
+            "hello, "
+            + ansi_wrap("ffi", "\x1b[1m")
+            + " "
+            + ansi_wrap("and", "\x1b[3m")
+            + " "
+            + ansi_wrap("ss", "\x1b[1m")
+            + ansi_wrap("!!!", "\x1b[3m")
+        )
+        assert str(folded) == expected
+        assert len(folded.style_manager) == len(s.style_manager) + 3

@@ -47,6 +47,7 @@ from .constants import (
     Foreground,
     Regex,
     Underline,
+    get_casefold_expansions,
 )
 from .style import Style
 from .style_manager import StyleManager
@@ -94,6 +95,7 @@ class ANSIString(str):
             "strip",
             "zfill",
             "encode",
+            "casefold",
         }
     )
     _STR_DELEGATED: frozenset[str] = frozenset(dir(str)) - _STR_OVERRIDDEN
@@ -1231,3 +1233,25 @@ class ANSIString(str):
 
     def encode(self, encoding: str = "utf-8", errors: str = "strict") -> bytes:
         return self.styled_text.encode(encoding, errors)
+
+    def casefold(self) -> "ANSIString":
+        actual = super().casefold()
+        if actual == self.plain_text:
+            return type(self)(actual, self.style_manager.copy())
+        expansions = get_casefold_expansions()
+        styles: dict[int, Style] = {}
+        dest = 0
+        for src, char in enumerate(self.plain_text):
+            folded = expansions.get(char)
+            if folded is not None:
+                # Expanding char: replicate source style across all output chars
+                if src in self.style_manager:
+                    style = self.style_manager[src]
+                    for j in range(len(folded)):
+                        styles[dest + j] = style
+                dest += len(folded)
+            else:
+                if src in self.style_manager:
+                    styles[dest] = self.style_manager[src]
+                dest += 1
+        return type(self)(actual, StyleManager(styles))
