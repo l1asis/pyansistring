@@ -58,16 +58,52 @@ class ANSIString(str):
     _style_manager: StyleManager
     _styled_text: str
 
-    # str method names to delegate (computed once at class definition time)
-    _STR_DELEGATED: frozenset[str] = frozenset(dir(str)) - {
-        "ljust",
-        "rjust",
-        "center",
-        "split",
-        "rsplit",
-        "join",
-        "splitlines",
-    }
+    # str method names that have explicit overrides and must NOT be
+    # auto-delegated by __getattribute__.
+    _STR_OVERRIDDEN: frozenset[str] = frozenset(
+        {
+            # Dunder methods with custom implementations
+            "__contains__",
+            "__eq__",
+            "__format__",
+            "__getitem__",
+            "__iter__",
+            "__mod__",
+            "__mul__",
+            "__ne__",
+            "__rmul__",
+            # Public methods with custom implementations
+            "center",
+            "expandtabs",
+            "join",
+            "ljust",
+            "lstrip",
+            "partition",
+            "removeprefix",
+            "removesuffix",
+            "replace",
+            "rjust",
+            "rpartition",
+            "rsplit",
+            "rstrip",
+            "split",
+            "splitlines",
+            "strip",
+            "zfill",
+            "encode",
+        }
+    )
+    _STR_DELEGATED: frozenset[str] = frozenset(dir(str)) - _STR_OVERRIDDEN
+
+    # TODO: move this regex to constants.py `Regex` class
+    _MOD_SPEC_RE: re.Pattern[str] = re.compile(
+        r"%(?:\(([^)]*)\))?"
+        r"[#0 +-]*"
+        r"(\*|\d*)"
+        r"(?:\.(\*|\d*))?"
+        r"[hlL]?"
+        r"([diouxXeEfFgGcrsa%])"
+    )
 
     def __new__(
         cls,
@@ -122,6 +158,16 @@ class ANSIString(str):
             f"{self.style_manager if self.style_manager else None})"
         )
 
+    def __iter__(self) -> Iterable[Self]:  # type: ignore[override]
+        """Iterate over characters, yielding styled ANSIStrings."""
+        for index, char in enumerate(self.plain_text):
+            style = self.style_manager.get(index)
+            yield type(self)(char, {0: style} if style is not None else None)
+
+    def __ne__(self, other: object) -> bool:
+        """Check if the styled text is not equal to another string or ANSIString."""
+        return self.styled_text != other
+
     def __eq__(self, other: object) -> bool:
         """Check if the styled text is equal to another string or ANSIString."""
         return self.styled_text == other
@@ -148,6 +194,86 @@ class ANSIString(str):
             styles.update(other.style_manager)
             other = other.plain_text
         return type(self)(other + self.plain_text, styles)
+
+    def __contains__(self, sub: object) -> bool:  # type: ignore[override]
+        """Check if a substring exists in the plain text."""
+        return str.__contains__(self, sub)  # type: ignore[arg-type]
+
+    def __mul__(self, value: SupportsIndex) -> "ANSIString":
+        """Repeat the ANSIString a specified number of times."""
+        n = int(value)
+        if n <= 0:
+            return type(self)("")
+        if n == 1:
+            return type(self)(self.plain_text, self.style_manager.copy())
+        length = len(self)
+        styles: dict[int, Style] = dict(self.style_manager)
+        for i in range(1, n):
+            offset = length * i
+            for index, style in self.style_manager.items():
+                styles[index + offset] = style
+        return type(self)(self.plain_text * n, StyleManager(styles))
+
+    def __rmul__(self, value: SupportsIndex) -> "ANSIString":
+        """Repeat the ANSIString a specified number of times (reflected operand)."""
+        return self.__mul__(value)
+
+    def __mod__(self, args: Any) -> "ANSIString":
+        """Perform ``%``-formatting, remapping styles to match the output."""
+        formatted = str.__mod__(self.plain_text, args)
+        plain = self.plain_text
+        if not self.style_manager:
+            return type(self)(formatted)
+
+        specs = list(self._MOD_SPEC_RE.finditer(plain))
+        if not specs:
+            return type(self)(formatted, self.style_manager.copy())
+
+        result_styles: dict[int, Style] = {}
+        is_mapping = isinstance(args, dict)
+        args_tuple = cast(tuple[Any, ...], args if isinstance(args, tuple) else (args,))
+        arg_idx = 0
+        src = 0
+        dest = 0
+
+        for spec in specs:
+            spec_start, spec_end = spec.span()
+
+            # Copy styles for literal segment before this specifier
+            if spec_start > src:
+                result_styles.update(
+                    self.style_manager.copy_range(src, spec_start, dest)
+                )
+                dest += spec_start - src
+
+            conv = spec.group(4)
+            if conv == "%":
+                # %% → single '%'; preserve style from first '%'
+                if spec_start in self.style_manager:
+                    result_styles[dest] = self.style_manager[spec_start]
+                dest += 1
+            else:
+                # Real specifier: format individually to get output length
+                if is_mapping:
+                    spec_output = str.__mod__(spec.group(), args)
+                else:
+                    n_args = 1
+                    if spec.group(2) == "*":
+                        n_args += 1
+                    if spec.group(3) == "*":
+                        n_args += 1
+                    spec_args = args_tuple[arg_idx : arg_idx + n_args]
+                    arg_idx += n_args
+                    spec_output = str.__mod__(spec.group(), spec_args)
+                dest += len(spec_output)
+
+            src = spec_end
+
+        # Trailing literal segment
+        if src < len(plain):
+            result_styles.update(self.style_manager.copy_range(src, len(plain), dest))
+
+        return type(self)(formatted, StyleManager(result_styles))
 
     def __getitem__(self, key: SupportsIndex | slice) -> "ANSIString":
         """Return a new ANSIString with the specified slice or index."""
@@ -188,7 +314,7 @@ class ANSIString(str):
         if not format_spec:
             return self.styled_text
         formatted = format(self.plain_text, format_spec)
-        styles = self.style_manager.remap_styles(self.plain_text, formatted)
+        styles = self.style_manager.remap(self.plain_text, formatted)
         return str(type(self)(formatted, StyleManager(styles)))
 
     def _render(self) -> str:
@@ -887,11 +1013,7 @@ class ANSIString(str):
                 max_index -= len(next(whitespace, ""))
         for no, string in enumerate(actual[::-1]):
             min_index = max_index - len(string)
-            styles = {
-                index - min_index: self.style_manager[index]
-                for index in range(min_index, max_index)
-                if index in self.style_manager
-            }
+            styles = self.style_manager.copy_range(min_index, max_index, 0)
             actual[len(actual) - 1 - no] = type(self)(string, StyleManager(styles))
             max_index -= len(string) + (len(sep) if sep else len(next(whitespace, "")))
         return actual
@@ -907,11 +1029,7 @@ class ANSIString(str):
                 min_index += len(next(whitespace, ""))
         for no, string in enumerate(actual):
             max_index = min_index + len(string)
-            styles = {
-                index - min_index: self.style_manager[index]
-                for index in range(min_index, max_index)
-                if index in self.style_manager
-            }
+            styles = self.style_manager.copy_range(min_index, max_index, 0)
             actual[no] = type(self)(string, StyleManager(styles))
             min_index += len(string) + (len(sep) if sep else len(next(whitespace, "")))
         return actual
@@ -921,11 +1039,186 @@ class ANSIString(str):
         min_index = 0
         for no, string in enumerate(actual):
             max_index = min_index + len(string)
-            styles = {
-                index - min_index: self.style_manager[index]
-                for index in range(min_index, max_index)
-                if index in self.style_manager
-            }
+            styles = self.style_manager.copy_range(min_index, max_index, 0)
             actual[no] = type(self)(string, StyleManager(styles))
             min_index += len(string) + (0 if keepends else 1)
         return actual
+
+    def strip(self, chars: str | None = None) -> "ANSIString":
+        actual = super().strip(chars)
+        if len(actual) == len(self):
+            return type(self)(actual, self.style_manager.copy())
+        index = len(self.plain_text) - len(super().lstrip(chars))
+        styles = self.style_manager.copy_range(index, index + len(actual), 0)
+        return type(self)(actual, StyleManager(styles))
+
+    def lstrip(self, chars: str | None = None) -> "ANSIString":
+        actual = super().lstrip(chars)
+        if len(actual) == len(self):
+            return type(self)(actual, self.style_manager.copy())
+        index = len(self.plain_text) - len(actual)
+        styles = self.style_manager.copy_range(index, index + len(actual), 0)
+        return type(self)(actual, StyleManager(styles))
+
+    def rstrip(self, chars: str | None = None) -> "ANSIString":
+        actual = super().rstrip(chars)
+        if len(actual) == len(self):
+            return type(self)(actual, self.style_manager.copy())
+        styles = self.style_manager.copy_range(0, len(actual), 0)
+        return type(self)(actual, StyleManager(styles))
+
+    def replace(
+        self,
+        old: str,
+        new: str,
+        count: SupportsIndex = -1,
+    ) -> "ANSIString":
+        """Replace occurrences of *old* with *new*, remapping styles."""
+        max_count = int(count)
+        plain = self.plain_text
+        old_len = len(old)
+        new_len = len(new)
+
+        # Special case: empty separator inserts *new* between every char
+        if not old_len:
+            parts: list[str] = []
+            result_styles: dict[int, Style] = {}
+            dest = 0
+            replacements = 0
+            for i, ch in enumerate(plain):
+                if max_count < 0 or replacements < max_count:
+                    parts.append(new)
+                    dest += new_len
+                    replacements += 1
+                if i in self.style_manager:
+                    result_styles[dest] = self.style_manager[i]
+                parts.append(ch)
+                dest += 1
+            if max_count < 0 or replacements < max_count:
+                parts.append(new)
+            return type(self)("".join(parts), StyleManager(result_styles))
+
+        parts = []
+        result_styles: dict[int, Style] = {}
+        src = 0
+        dest = 0
+        replacements = 0
+        while src <= len(plain):
+            if max_count < 0 or replacements < max_count:
+                pos = plain.find(old, src)
+            else:
+                pos = -1
+            if pos == -1:
+                result_styles.update(
+                    self.style_manager.copy_range(src, len(plain), dest)
+                )
+                parts.append(plain[src:])
+                break
+            result_styles.update(self.style_manager.copy_range(src, pos, dest))
+            parts.append(plain[src:pos])
+            dest += pos - src
+            parts.append(new)
+            dest += new_len
+            src = pos + old_len
+            replacements += 1
+        return type(self)("".join(parts), StyleManager(result_styles))
+
+    def removeprefix(self, prefix: str, /) -> "ANSIString":
+        """Remove *prefix* from the beginning if present, shifting styles."""
+        if self.plain_text.startswith(prefix) and prefix:
+            offset = len(prefix)
+            return self[offset:]
+        return type(self)(self.plain_text, self.style_manager.copy())
+
+    def removesuffix(self, suffix: str, /) -> "ANSIString":
+        """Remove *suffix* from the end if present."""
+        if self.plain_text.endswith(suffix) and suffix:
+            return self[: len(self) - len(suffix)]
+        return type(self)(self.plain_text, self.style_manager.copy())
+
+    def partition(self, sep: str, /) -> tuple["ANSIString", "ANSIString", "ANSIString"]:  # type: ignore[override]
+        """Partition around the first occurrence of *sep*."""
+        idx = self.plain_text.find(sep)
+        if idx == -1:
+            return (
+                type(self)(self.plain_text, self.style_manager.copy()),
+                type(self)(""),
+                type(self)(""),
+            )
+        return (self[:idx], self[idx : idx + len(sep)], self[idx + len(sep) :])
+
+    def rpartition(  # type: ignore[override]
+        self,
+        sep: str,
+        /,
+    ) -> tuple["ANSIString", "ANSIString", "ANSIString"]:
+        """Partition around the last occurrence of *sep*."""
+        idx = self.plain_text.rfind(sep)
+        if idx == -1:
+            return (
+                type(self)(""),
+                type(self)(""),
+                type(self)(self.plain_text, self.style_manager.copy()),
+            )
+        return (self[:idx], self[idx : idx + len(sep)], self[idx + len(sep) :])
+
+    def zfill(self, width: SupportsIndex, /) -> "ANSIString":
+        """Pad a numeric string with zeros on the left."""
+        w = int(width)
+        plain = self.plain_text
+        if len(plain) >= w:
+            return type(self)(plain, self.style_manager.copy())
+        pad = w - len(plain)
+        if plain and plain[0] in ("+", "-"):
+            # Sign char stays at position 0 (unstyled in the padding zone)
+            sign_style = self.style_manager.get(0)
+            new_styles: dict[int, Style] = {}
+            if sign_style is not None:
+                new_styles[0] = sign_style
+            for index, style in self.style_manager.items():
+                if index > 0:
+                    new_styles[index + pad] = style
+            return type(self)(
+                plain[0] + "0" * pad + plain[1:], StyleManager(new_styles)
+            )
+        shifted = {index + pad: style for index, style in self.style_manager.items()}
+        return type(self)("0" * pad + plain, StyleManager(shifted))
+
+    def expandtabs(self, tabsize: SupportsIndex = 8) -> "ANSIString":  # type: ignore[override]
+        """Replace tab characters with spaces, remapping styles."""
+        ts = int(tabsize)
+        plain = self.plain_text
+        parts: list[str] = []
+        result_styles: dict[int, Style] = {}
+        src = 0
+        dest = 0
+        col = 0
+        while src < len(plain):
+            tab_pos = plain.find("\t", src)
+            if tab_pos == -1:
+                result_styles.update(
+                    self.style_manager.copy_range(src, len(plain), dest)
+                )
+                parts.append(plain[src:])
+                break
+            # Segment before tab
+            if tab_pos > src:
+                segment = plain[src:tab_pos]
+                result_styles.update(self.style_manager.copy_range(src, tab_pos, dest))
+                parts.append(segment)
+                last_nl = segment.rfind("\n")
+                if last_nl != -1:
+                    col = len(segment) - last_nl - 1
+                else:
+                    col += len(segment)
+                dest += len(segment)
+            # Expand tab
+            spaces = ts - (col % ts) if ts > 0 else 0
+            parts.append(" " * spaces)
+            dest += spaces
+            col += spaces
+            src = tab_pos + 1
+        return type(self)("".join(parts), StyleManager(result_styles))
+
+    def encode(self, encoding: str = "utf-8", errors: str = "strict") -> bytes:
+        return self.styled_text.encode(encoding, errors)

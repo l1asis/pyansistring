@@ -109,7 +109,14 @@ class StyleManager(dict[int, Style]):
         copied._has_been_modified = self._has_been_modified
         return copied
 
-    def remap_styles(
+    def copy_range(
+        self, src_start: int, src_end: int, dest_start: int
+    ) -> dict[int, Style]:
+        """Copy styles from [src_start, src_end) offset to dest_start."""
+        offset = dest_start - src_start
+        return {i + offset: self[i] for i in range(src_start, src_end) if i in self}
+
+    def remap(
         self, original: str, formatted: str, visible_only: bool = True
     ) -> dict[int, Style]:
         """Remap styles from the original string to the formatted string."""
@@ -121,16 +128,24 @@ class StyleManager(dict[int, Style]):
             raise ValueError("Original string not found inside formatted string.")
 
         if visible_only:
-            # Copy only styles that fall within the visible
-            # range of `original` inside `formatted`
-            styles = {
-                index: self[index - pad_left]
-                for index in range(pad_left, pad_left + len(original))
-                if (index - pad_left)
-                in self  # avoid KeyError if self is missing some indexes
-            }
+            return self.copy_range(0, len(original), pad_left)
         else:
-            # Remap all style indexes, shifted by pad_left
-            styles = {index + pad_left: self[index] for index in self.keys()}
+            return self.shift(pad_left)
 
-        return styles
+    def shift(self, offset: int) -> dict[int, Style]:
+        """Shift all style indexes by a given offset."""
+        return {index + offset: style for index, style in self.items()}
+
+    def shift_in_range(
+        self, offset: int, start: int, end: int, step: int = 1
+    ) -> dict[int, Style]:
+        """Shift styles within a specific range by a given offset."""
+        return {
+            index + offset: self[index]
+            for index in range(start, end, step)
+            if index in self
+        }
+
+    def reverse(self, length: int) -> dict[int, Style]:
+        """Reverse style indexes based on the given length."""
+        return {length - index - 1: style for index, style in self.items()}

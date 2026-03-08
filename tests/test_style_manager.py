@@ -105,7 +105,7 @@ class TestStyleManagerRemapStyles:
     def test_remap_pads(self, red_style: Style, visible_only: bool, expected_key: int):
         sm = StyleManager()
         sm[0] = red_style
-        result = sm.remap_styles("Hello", "  Hello  ", visible_only=visible_only)
+        result = sm.remap("Hello", "  Hello  ", visible_only=visible_only)
         assert expected_key in result, (
             f"Key {expected_key} must be present after"
             f" remap (visible_only={visible_only})"
@@ -114,14 +114,14 @@ class TestStyleManagerRemapStyles:
     def test_remap_same_string(self, red_style: Style):
         sm = StyleManager()
         sm[0] = red_style
-        result = sm.remap_styles("Hi", "Hi")
+        result = sm.remap("Hi", "Hi")
         assert result == {0: red_style}, (
             "Remap with identical strings should be identity"
         )
 
     def test_remap_raises_if_not_found(self, empty_style_manager: StyleManager):
         with pytest.raises(ValueError):
-            empty_style_manager.remap_styles("abc", "xyz")
+            empty_style_manager.remap("abc", "xyz")
 
 
 class TestStyleManagerCaching:

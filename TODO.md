@@ -1,14 +1,14 @@
 ### `str` magic or dunder methods
 - [X] `__add__`
 - [ ] `__class__`
-- [ ] `__contains__`
+- [X] `__contains__`
 - [ ] `__delattr__`
 - [X] `__dir__`
 - [X] `__doc__`
 - [X] `__eq__`
-- [ ] `__format__`
+- [X] `__format__`
 - [ ] `__ge__`
-- [ ] `__getattribute__`
+- [X] `__getattribute__`
 - [X] `__getitem__`
 - [ ] `__getnewargs__`
 - [ ] `__getstate__`
@@ -16,19 +16,20 @@
 - [ ] `__hash__`
 - [X] `__init__`
 - [ ] `__init_subclass__`
-- [ ] `__iter__`
+- [X] `__iter__`
 - [ ] `__le__`
 - [X] `__len__`
 - [ ] `__lt__`
-- [ ] `__mod__`
-- [ ] `__mul__`
+- [X] `__mod__`
+- [X] `__mul__`
 - [X] `__ne__`
-- [ ] `__new__`
+- [X] `__new__`
 - [ ] `__reduce__`
 - [ ] `__reduce_ex__`
 - [X] `__repr__`
+- [X] `__radd__`
 - [ ] `__rmod__`
-- [ ] `__rmul__`
+- [X] `__rmul__`
 - [ ] `__setattr__`
 - [ ] `__sizeof__`
 - [X] `__str__`
@@ -39,9 +40,9 @@
 - [ ] `casefold`
 - [X] `center`
 - [X] `count`
-- [ ] `encode`
+- [X] `encode`
 - [X] `endswith`
-- [ ] `expandtabs`
+- [X] `expandtabs`
 - [X] `find`
 - [ ] `format`
 - [ ] `format_map`
@@ -61,42 +62,41 @@
 - [X] `join`
 - [X] `ljust`
 - [X] `lower`
-- [ ] `lstrip`
+- [X] `lstrip`
 - [ ] `maketrans`
-- [ ] `partition`
-- [ ] `removeprefix`
-- [ ] `removesuffix`
-- [ ] `replace`
+- [X] `partition`
+- [X] `removeprefix`
+- [X] `removesuffix`
+- [X] `replace`
 - [X] `rfind`
 - [X] `rindex`
 - [X] `rjust`
-- [ ] `rpartition`
+- [X] `rpartition`
 - [X] `rsplit`
   - [X] whitespace
   - [X] one char
   - [X] two or more chars
-- [ ] `rstrip`
+- [X] `rstrip`
 - [X] `split`
   - [X] whitespace
   - [X] one char
   - [X] two or more chars
 - [X] `splitlines`
 - [X] `startswith`
-- [ ] `strip`
+- [X] `strip`
 - [X] `swapcase`
 - [X] `title`
 - [ ] `translate`
 - [X] `upper`
-- [ ] `zfill`
+- [X] `zfill`
 
 ### `ANSIString` featured methods (magic, private and public)
-- [X] `__radd__`
+
 - [ ] `__copy__`
 - [ ] `__deepcopy__`
 
-- [X] `_render` (apply current styles to the plain string)
-- [X] `_get_indices` (...)
-- [X] `_search_spans` (...)
+> [!NOTE]
+> The following should probably be renamed to more intuitive names.
 
 - [X] `fm` (set SGR styling parameters)
 - [X] `fm_w` (`fm` per word)
@@ -128,9 +128,8 @@
 - [X] `ul_24b` (set underline color using RGB color model, a.k.a. true color)
 - [X] `ul_24b_w` (`ul_24b` per word)
 
-
-- [X] `multicolor` (apply a specific custom coloring using the provided coloring system)
-- [X] `multicolor_c` (`multicolor` using coordinates, it's useful for multiline strings)
+- [ ] `multicolor` (apply a specific custom coloring using the provided coloring system)
+- [ ] `multicolor_c` (`multicolor` using coordinates, it's useful for multiline strings)
 - [ ] `colormap` (apply a specific predefined coloring)
 - [X] `rainbow` (apply rainbow coloring (using a separate algorithm))
 - [ ] `random_art` (return random color art)
@@ -140,11 +139,13 @@
   - [X] plain conversion
   - [X] colored conversion
   - [X] automatic height and width calculation
-  - [X] bold weight support <!-- "Bold": "font-weight: bold;" -->
-  - [X] italic style support <!-- "Italic": "font-style: italic;" -->
+  - [X] bold weight support
+  - [X] italic style support
+  - [X] dim style support
   - [X] transparent background support
-  - [ ] outline (or vectorize) functionality
-  - [ ] background color support (depending on the bbox, rectangles)
-  - [ ] add viewBox attribute (min-x, min-y, width, height)
-- [ ] `to_png` (create png image from `ANSIString`)
-- [ ] (?) `to_img` (create image (with format specified) from `ANSIString`)
+  - [X] to-path-elements functionality
+  - [X] background color support (depending on the bbox, rectangles)
+  - [ ] ~~add viewBox attribute (min-x, min-y, width, height)~~
+- [ ] `to_png`
+- [ ] `to_jpeg`
+- [ ] `to_img` (create image (with format specified) from `ANSIString`)

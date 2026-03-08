@@ -331,3 +331,313 @@ class TestJoin:
             + ansi_wrap("World!", yellow_code)
         )
         assert str(result) == expected, "join should interleave styled separator"
+
+
+class TestContains:
+    def test_contains_plain(self):
+        s = ANSIString("Hello, World!").fm(SGR.BOLD)
+        assert "World" in s
+        assert "world" not in s
+
+    def test_contains_empty(self):
+        s = ANSIString("abc")
+        assert "" in s
+
+
+class TestMul:
+    def test_mul_repeats_text_and_styles(self, bold_code: str):
+        s = ANSIString("ab").fm(SGR.BOLD)
+        result = s * 3
+        assert result.plain_text == "ababab"
+        assert str(result) == ansi_wrap("ababab", bold_code)
+
+    def test_mul_zero(self):
+        s = ANSIString("abc").fm(SGR.BOLD)
+        assert (s * 0).plain_text == ""
+
+    def test_mul_negative(self):
+        s = ANSIString("abc").fm(SGR.BOLD)
+        assert (s * -1).plain_text == ""
+
+    def test_mul_one(self, bold_code: str):
+        s = ANSIString("Hi").fm(SGR.BOLD)
+        result = s * 1
+        assert str(result) == ansi_wrap("Hi", bold_code)
+
+    def test_rmul(self, bold_code: str):
+        s = ANSIString("ab").fm(SGR.BOLD)
+        result = 2 * s
+        assert result.plain_text == "abab"
+        assert str(result) == ansi_wrap("abab", bold_code)
+
+    def test_mul_mixed_styles(self, bold_code: str, italic_code: str):
+        s = ANSIString("ab").fm(SGR.BOLD, (0, 1)).fm(SGR.ITALIC, (1, 2))
+        result = s * 2
+        assert result.plain_text == "abab"
+        expected = (
+            ansi_wrap("a", bold_code)
+            + ansi_wrap("b", italic_code)
+            + ansi_wrap("a", bold_code)
+            + ansi_wrap("b", italic_code)
+        )
+        assert str(result) == expected
+
+
+class TestMod:
+    def test_mod_basic(self, bold_code: str):
+        s = ANSIString("Hello %s!").fm(SGR.BOLD)
+        result = s % "World"
+        assert result.plain_text == "Hello World!"
+        expected = ansi_wrap("Hello ", bold_code) + "World" + ansi_wrap("!", bold_code)
+        assert str(result) == expected
+
+    def test_mod_returns_ansistring(self):
+        s = ANSIString("x=%d") % 42
+        assert isinstance(s, ANSIString)
+        assert s.plain_text == "x=42"
+
+    def test_mod_tuple_args(self, bold_code: str):
+        s = ANSIString("(%s, %d)").fm(SGR.BOLD)
+        result = s % ("hello", 42)
+        assert result.plain_text == "(hello, 42)"
+        expected = (
+            ansi_wrap("(", bold_code)
+            + "hello"
+            + ansi_wrap(", ", bold_code)
+            + "42"
+            + ansi_wrap(")", bold_code)
+        )
+        assert str(result) == expected
+
+    def test_mod_percent_escape(self, bold_code: str):
+        s = ANSIString("100%%").fm(SGR.BOLD)
+        result = s % ()
+        assert result.plain_text == "100%"
+        assert str(result) == ansi_wrap("100%", bold_code)
+
+    def test_mod_mapping_args(self, bold_code: str):
+        s = ANSIString("Hi %(name)s!").fm(SGR.BOLD)
+        result = s % {"name": "Alice"}
+        assert result.plain_text == "Hi Alice!"
+        expected = ansi_wrap("Hi ", bold_code) + "Alice" + ansi_wrap("!", bold_code)
+        assert str(result) == expected
+
+    def test_mod_no_specifiers(self, bold_code: str):
+        s = ANSIString("Hello").fm(SGR.BOLD)
+        result = s % ()
+        assert result.plain_text == "Hello"
+        assert str(result) == ansi_wrap("Hello", bold_code)
+
+
+class TestNe:
+    def test_ne_different(self, bold_code: str):
+        a = ANSIString("Hello").fm(SGR.BOLD)
+        b = ANSIString("Hello").fm(SGR.ITALIC)
+        assert a != b
+
+    def test_ne_same(self, bold_code: str):
+        a = ANSIString("Hello").fm(SGR.BOLD)
+        b = ANSIString("Hello").fm(SGR.BOLD)
+        assert not (a != b)
+
+    def test_ne_consistent_with_eq(self, bold_code: str):
+        a = ANSIString("Hello").fm(SGR.BOLD)
+        b = ANSIString("Hello").fm(SGR.BOLD)
+        assert (a == b) == (not (a != b))
+
+
+class TestIter:
+    def test_iter_yields_ansistring(self, bold_code: str):
+        s = ANSIString("abc").fm(SGR.BOLD)
+        chars: list[ANSIString] = list(s)  # type: ignore
+        assert len(chars) == 3
+        for c in chars:
+            assert isinstance(c, ANSIString)
+        assert chars[0].plain_text == "a"
+
+    def test_iter_preserves_styles(self, bold_code: str, italic_code: str):
+        s = ANSIString("ab").fm(SGR.BOLD, (0, 1)).fm(SGR.ITALIC, (1, 2))
+        chars: list[ANSIString] = list(s)  # type: ignore
+        assert str(chars[0]) == ansi_wrap("a", bold_code)
+        assert str(chars[1]) == ansi_wrap("b", italic_code)
+
+    def test_iter_unstyled_char(self, bold_code: str):
+        s = ANSIString("ab").fm(SGR.BOLD, (0, 1))
+        chars: list[ANSIString] = list(s)  # type: ignore
+        assert str(chars[0]) == ansi_wrap("a", bold_code)
+        assert str(chars[1]) == "b"
+
+
+class TestStrip:
+    def test_strip_basic(self, bold_code: str):
+        s = ANSIString("  Hello  ").fm(SGR.BOLD, (2, 7))
+        result = s.strip()
+        assert result.plain_text == "Hello"
+        assert str(result) == ansi_wrap("Hello", bold_code)
+
+    def test_lstrip(self, bold_code: str):
+        s = ANSIString("  Hello").fm(SGR.BOLD, (2, 7))
+        result = s.lstrip()
+        assert result.plain_text == "Hello"
+        assert str(result) == ansi_wrap("Hello", bold_code)
+
+    def test_rstrip(self, bold_code: str):
+        s = ANSIString("Hello  ").fm(SGR.BOLD, (0, 5))
+        result = s.rstrip()
+        assert result.plain_text == "Hello"
+        assert str(result) == ansi_wrap("Hello", bold_code)
+
+    def test_strip_chars(self, bold_code: str):
+        s = ANSIString("xxHelloxx").fm(SGR.BOLD, (2, 7))
+        result = s.strip("x")
+        assert result.plain_text == "Hello"
+        assert str(result) == ansi_wrap("Hello", bold_code)
+
+    def test_strip_no_change(self, bold_code: str):
+        s = ANSIString("Hello").fm(SGR.BOLD)
+        assert s.strip().plain_text == "Hello"
+
+
+class TestReplace:
+    def test_replace_basic(self, bold_code: str):
+        s = ANSIString("Hello, World!").fm(SGR.BOLD, (0, 5))
+        result = s.replace("World", "Python")
+        assert result.plain_text == "Hello, Python!"
+        # Bold on "Hello" (indices 0-4) should be preserved
+        assert str(result) == ansi_wrap("Hello", bold_code) + ", Python!"
+
+    def test_replace_with_count(self):
+        s = ANSIString("aaa").fm(SGR.BOLD)
+        result = s.replace("a", "bb", 2)
+        assert result.plain_text == "bbbba"
+
+    def test_replace_shorter(self, bold_code: str):
+        s = ANSIString("Hello World").fm(SGR.BOLD, (6, 11))
+        result = s.replace("Hello", "Hi")
+        assert result.plain_text == "Hi World"
+        assert str(result) == "Hi " + ansi_wrap("World", bold_code)
+
+    def test_replace_no_match(self, bold_code: str):
+        s = ANSIString("Hello").fm(SGR.BOLD)
+        result = s.replace("xyz", "abc")
+        assert str(result) == ansi_wrap("Hello", bold_code)
+
+    def test_replace_empty_old(self):
+        # str("ab").replace("", "-") == "-a-b-"
+        s = ANSIString("ab").fm(SGR.BOLD)
+        result = s.replace("", "-")
+        assert result.plain_text == "-a-b-"
+
+
+class TestRemovefix:
+    def test_removeprefix(self, bold_code: str):
+        s = ANSIString("Hello, World!").fm(SGR.BOLD, (7, 12))
+        result = s.removeprefix("Hello, ")
+        assert result.plain_text == "World!"
+        assert str(result) == ansi_wrap("World", bold_code) + "!"
+
+    def test_removeprefix_no_match(self, bold_code: str):
+        s = ANSIString("Hello").fm(SGR.BOLD)
+        result = s.removeprefix("xyz")
+        assert str(result) == ansi_wrap("Hello", bold_code)
+
+    def test_removesuffix(self, bold_code: str):
+        s = ANSIString("Hello, World!").fm(SGR.BOLD, (0, 5))
+        result = s.removesuffix(", World!")
+        assert result.plain_text == "Hello"
+        assert str(result) == ansi_wrap("Hello", bold_code)
+
+    def test_removesuffix_no_match(self, bold_code: str):
+        s = ANSIString("Hello").fm(SGR.BOLD)
+        result = s.removesuffix("xyz")
+        assert str(result) == ansi_wrap("Hello", bold_code)
+
+    def test_removeprefix_empty(self, bold_code: str):
+        s = ANSIString("Hello").fm(SGR.BOLD)
+        result = s.removeprefix("")
+        assert str(result) == ansi_wrap("Hello", bold_code)
+
+
+class TestPartition:
+    def test_partition_found(self, bold_code: str, italic_code: str):
+        s = ANSIString("Hello, World!").fm(SGR.BOLD, (0, 5)).fm(SGR.ITALIC, (7, 12))
+        before, sep, after = s.partition(", ")
+        assert before.plain_text == "Hello"
+        assert sep.plain_text == ", "
+        assert after.plain_text == "World!"
+        assert str(before) == ansi_wrap("Hello", bold_code)
+        assert str(after) == ansi_wrap("World", italic_code) + "!"
+
+    def test_partition_not_found(self, bold_code: str):
+        s = ANSIString("Hello").fm(SGR.BOLD)
+        before, sep, after = s.partition("xyz")
+        assert str(before) == ansi_wrap("Hello", bold_code)
+        assert sep.plain_text == ""
+        assert after.plain_text == ""
+
+    def test_rpartition_found(self, bold_code: str):
+        s = ANSIString("a.b.c").fm(SGR.BOLD, (4, 5))
+        before, sep, after = s.rpartition(".")
+        assert before.plain_text == "a.b"
+        assert sep.plain_text == "."
+        assert after.plain_text == "c"
+        assert str(after) == ansi_wrap("c", bold_code)
+
+    def test_rpartition_not_found(self, bold_code: str):
+        s = ANSIString("Hello").fm(SGR.BOLD)
+        before, sep, after = s.rpartition("xyz")
+        assert before.plain_text == ""
+        assert sep.plain_text == ""
+        assert str(after) == ansi_wrap("Hello", bold_code)
+
+
+class TestZfill:
+    def test_zfill_basic(self, bold_code: str):
+        s = ANSIString("42").fm(SGR.BOLD)
+        result = s.zfill(5)
+        assert result.plain_text == "00042"
+        assert str(result) == "000" + ansi_wrap("42", bold_code)
+
+    def test_zfill_with_sign(self, bold_code: str):
+        s = ANSIString("-42").fm(SGR.BOLD, (1, 3))
+        result = s.zfill(6)
+        assert result.plain_text == "-00042"
+        assert str(result) == "-000" + ansi_wrap("42", bold_code)
+
+    def test_zfill_no_pad(self, bold_code: str):
+        s = ANSIString("12345").fm(SGR.BOLD)
+        result = s.zfill(3)
+        assert str(result) == ansi_wrap("12345", bold_code)
+
+    def test_zfill_sign_styled(self, bold_code: str):
+        s = ANSIString("+5").fm(SGR.BOLD)
+        result = s.zfill(4)
+        assert result.plain_text == "+005"
+        expected = ansi_wrap("+", bold_code) + "00" + ansi_wrap("5", bold_code)
+        assert str(result) == expected
+
+
+class TestExpandtabs:
+    def test_expandtabs_basic(self, bold_code: str):
+        s = ANSIString("a\tb").fm(SGR.BOLD)
+        result = s.expandtabs(4)
+        assert result.plain_text == "a   b"
+        expected = ansi_wrap("a", bold_code) + "   " + ansi_wrap("b", bold_code)
+        assert str(result) == expected
+
+    def test_expandtabs_default(self):
+        s = ANSIString("\tx")
+        result = s.expandtabs()
+        assert result.plain_text == "        x"
+
+    def test_expandtabs_no_tabs(self, bold_code: str):
+        s = ANSIString("Hello").fm(SGR.BOLD)
+        assert str(s.expandtabs()) == ansi_wrap("Hello", bold_code)
+
+
+class TestEncode:
+    def test_encode(self, bold_code: str):
+        s = ANSIString("Hello").fm(SGR.BOLD)
+        encoded = s.encode("utf-8")
+        assert isinstance(encoded, bytes)
+        assert encoded == ansi_wrap("Hello", bold_code).encode("utf-8")
