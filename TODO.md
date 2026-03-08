@@ -1,39 +1,39 @@
 ### `str` magic or dunder methods
 - [X] `__add__`
-- [ ] `__class__`
+- [*] `__class__` <!-- Should not be implemented -->
 - [X] `__contains__`
-- [ ] `__delattr__`
+- [*] `__delattr__` <!-- Should not be implemented -->
 - [X] `__dir__`
 - [X] `__doc__`
 - [X] `__eq__`
 - [X] `__format__`
-- [ ] `__ge__`
+- [*] `__ge__` <!-- Should not be implemented -->
 - [X] `__getattribute__`
 - [X] `__getitem__`
-- [ ] `__getnewargs__`
-- [ ] `__getstate__`
-- [ ] `__gt__`
-- [ ] `__hash__`
-- [X] `__init__`
-- [ ] `__init_subclass__`
+- [X] `__getnewargs__`
+- [*] `__getstate__` <!-- Should not be implemented because the class is mutable -->
+- [*] `__gt__` <!-- Should not be implemented -->
+- [*] `__hash__` <!-- Should not be implemented because the class is mutable -->
+- [*] `__init__` <!-- Should not be implemented -->
+- [*] `__init_subclass__` <!-- Should not be implemented -->
 - [X] `__iter__`
-- [ ] `__le__`
+- [*] `__le__` <!-- Should not be implemented -->
 - [X] `__len__`
-- [ ] `__lt__`
+- [*] `__lt__` <!-- Should not be implemented -->
 - [X] `__mod__`
 - [X] `__mul__`
 - [X] `__ne__`
 - [X] `__new__`
-- [ ] `__reduce__`
-- [ ] `__reduce_ex__`
+- [X] `__reduce__`
+- [*] `__reduce_ex__` <!-- Should not be implemented --> 
 - [X] `__repr__`
 - [X] `__radd__`
-- [ ] `__rmod__`
+- [*] `__rmod__` <!-- Should not be implemented -->
 - [X] `__rmul__`
-- [ ] `__setattr__`
-- [ ] `__sizeof__`
+- [*] `__setattr__` <!-- Should not be implemented -->
+- [X] `__sizeof__`
 - [X] `__str__`
-- [ ] `__subclasshook__`
+- [*] `__subclasshook__` <!-- Should not be implemented -->
 
 ### `str` public methods
 - [X] `capitalize`
