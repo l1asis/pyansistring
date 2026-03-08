@@ -1099,7 +1099,6 @@ class ANSIString(str):
         new: str,
         count: SupportsIndex = -1,
     ) -> "ANSIString":
-        """Like ``str.replace``, but remaps styles around replaced segments."""
         max_count = int(count)
         plain = self.plain_text
         old_len = len(old)
@@ -1150,20 +1149,17 @@ class ANSIString(str):
         return type(self)("".join(parts), StyleManager(result_styles))
 
     def removeprefix(self, prefix: str, /) -> "ANSIString":
-        """Like ``str.removeprefix``, but shifts styles past the removed prefix."""
         if self.plain_text.startswith(prefix) and prefix:
             offset = len(prefix)
             return self[offset:]
         return type(self)(self.plain_text, self.style_manager.copy())
 
     def removesuffix(self, suffix: str, /) -> "ANSIString":
-        """Like ``str.removesuffix``, but preserves styles on the remaining text."""
         if self.plain_text.endswith(suffix) and suffix:
             return self[: len(self) - len(suffix)]
         return type(self)(self.plain_text, self.style_manager.copy())
 
     def partition(self, sep: str, /) -> tuple["ANSIString", "ANSIString", "ANSIString"]:  # type: ignore[override]
-        """Like ``str.partition``, but preserves styles on each part."""
         idx = self.plain_text.find(sep)
         if idx == -1:
             return (
@@ -1178,7 +1174,6 @@ class ANSIString(str):
         sep: str,
         /,
     ) -> tuple["ANSIString", "ANSIString", "ANSIString"]:
-        """Like ``str.rpartition``, but preserves styles on each part."""
         idx = self.plain_text.rfind(sep)
         if idx == -1:
             return (
@@ -1189,7 +1184,6 @@ class ANSIString(str):
         return (self[:idx], self[idx : idx + len(sep)], self[idx + len(sep) :])
 
     def zfill(self, width: SupportsIndex, /) -> "ANSIString":
-        """Like ``str.zfill``, but shifts styles past the zero padding."""
         w = int(width)
         plain = self.plain_text
         if len(plain) >= w:
@@ -1211,7 +1205,6 @@ class ANSIString(str):
         return type(self)("0" * pad + plain, StyleManager(shifted))
 
     def expandtabs(self, tabsize: SupportsIndex = 8) -> "ANSIString":  # type: ignore[override]
-        """Like ``str.expandtabs``, but remaps styles across expanded tabs."""
         ts = int(tabsize)
         plain = self.plain_text
         parts: list[str] = []
@@ -1247,11 +1240,9 @@ class ANSIString(str):
         return type(self)("".join(parts), StyleManager(result_styles))
 
     def encode(self, encoding: str = "utf-8", errors: str = "strict") -> bytes:
-        """Encode the styled text (with ANSI escapes) to bytes."""
         return self.styled_text.encode(encoding, errors)
 
     def casefold(self) -> "ANSIString":
-        """Like ``str.casefold``, but remaps styles across character expansions."""
         actual = super().casefold()
         if actual == self.plain_text:
             return type(self)(actual, self.style_manager.copy())
@@ -1274,7 +1265,6 @@ class ANSIString(str):
         return type(self)(actual, StyleManager(styles))
 
     def translate(self, table: Mapping[int, int | str | None]) -> "ANSIString":  # type: ignore[override]
-        """Like ``str.translate``, but remaps styles across insertions and deletions."""
         actual = super().translate(table)
         if actual == self.plain_text:
             return type(self)(actual, self.style_manager.copy())
@@ -1302,7 +1292,6 @@ class ANSIString(str):
         return type(self)(actual, StyleManager(styles))
 
     def format(self, /, *args: Any, **kwargs: Any) -> "ANSIString":
-        """Format the string, remapping template styles to the output."""
         formatted = str.format(self.plain_text, *args, **kwargs)
         if not self.style_manager:
             return type(self)(formatted)
@@ -1310,7 +1299,6 @@ class ANSIString(str):
         return type(self)(formatted, StyleManager(styles))
 
     def format_map(self, mapping: Mapping[str, Any], /) -> "ANSIString":  # type: ignore[override]
-        """Format the string using a mapping, remapping template styles."""
         formatted = str.format_map(self.plain_text, mapping)
         if not self.style_manager:
             return type(self)(formatted)
