@@ -1,75 +1,62 @@
+> [!NOTE]
+> - [X] — Overridden (custom implementation)
+> - [D] — Delegated (wrapped via `__getattribute__`)
+> - [\*] — Skipped (should not be implemented)
+> - [ ] — Planned
+> - ~~text~~ — Cancelled
+
 ### `str` magic or dunder methods
 - [X] `__add__`
-- [*] `__class__` <!-- Should not be implemented -->
+- [\*] `__class__`
 - [X] `__contains__`
-- [*] `__delattr__` <!-- Should not be implemented -->
-- [X] `__dir__`
-- [X] `__doc__`
+- [\*] `__delattr__`
+- [D] `__dir__`
+- [D] `__doc__`
 - [X] `__eq__`
 - [X] `__format__`
-- [*] `__ge__` <!-- Should not be implemented -->
+- [\*] `__ge__`
 - [X] `__getattribute__`
 - [X] `__getitem__`
 - [X] `__getnewargs__`
-- [*] `__getstate__` <!-- Should not be implemented because the class is mutable -->
-- [*] `__gt__` <!-- Should not be implemented -->
-- [*] `__hash__` <!-- Should not be implemented because the class is mutable -->
-- [*] `__init__` <!-- Should not be implemented -->
-- [*] `__init_subclass__` <!-- Should not be implemented -->
+- [\*] `__getstate__` (mutable class)
+- [\*] `__gt__`
+- [\*] `__hash__` (mutable class)
+- [\*] `__init__`
+- [\*] `__init_subclass__`
 - [X] `__iter__`
-- [*] `__le__` <!-- Should not be implemented -->
-- [X] `__len__`
-- [*] `__lt__` <!-- Should not be implemented -->
+- [\*] `__le__`
+- [D] `__len__`
+- [\*] `__lt__`
 - [X] `__mod__`
 - [X] `__mul__`
 - [X] `__ne__`
 - [X] `__new__`
 - [X] `__reduce__`
-- [*] `__reduce_ex__` <!-- Should not be implemented --> 
+- [\*] `__reduce_ex__`
 - [X] `__repr__`
 - [X] `__radd__`
-- [*] `__rmod__` <!-- Should not be implemented -->
+- [\*] `__rmod__`
 - [X] `__rmul__`
-- [*] `__setattr__` <!-- Should not be implemented -->
+- [\*] `__setattr__`
 - [X] `__sizeof__`
 - [X] `__str__`
-- [*] `__subclasshook__` <!-- Should not be implemented -->
+- [\*] `__subclasshook__`
 
-### `str` public methods
-- [X] `capitalize`
+### `str` public methods (overridden)
 - [X] `casefold`
 - [X] `center`
-- [X] `count`
 - [X] `encode`
-- [X] `endswith`
 - [X] `expandtabs`
-- [X] `find`
 - [X] `format`
 - [X] `format_map`
-- [X] `index`
-- [X] `isalnum`
-- [X] `isalpha`
-- [X] `isascii`
-- [X] `isdecimal`
-- [X] `isdigit`
-- [X] `isidentifier`
-- [X] `islower`
-- [X] `isnumeric`
-- [X] `isprintable`
-- [X] `isspace`
-- [X] `istitle`
-- [X] `isupper`
 - [X] `join`
 - [X] `ljust`
-- [X] `lower`
 - [X] `lstrip`
-- [*] `maketrans` <!-- Should not be implemented because it is a static method -->
+- [\*] `maketrans` (static method)
 - [X] `partition`
 - [X] `removeprefix`
 - [X] `removesuffix`
 - [X] `replace`
-- [X] `rfind`
-- [X] `rindex`
 - [X] `rjust`
 - [X] `rpartition`
 - [X] `rsplit`
@@ -82,13 +69,35 @@
   - [X] one char
   - [X] two or more chars
 - [X] `splitlines`
-- [X] `startswith`
 - [X] `strip`
-- [X] `swapcase`
-- [X] `title`
 - [X] `translate`
-- [X] `upper`
 - [X] `zfill`
+
+### `str` public methods (delegated)
+- [D] `capitalize`
+- [D] `count`
+- [D] `endswith`
+- [D] `find`
+- [D] `index`
+- [D] `isalnum`
+- [D] `isalpha`
+- [D] `isascii`
+- [D] `isdecimal`
+- [D] `isdigit`
+- [D] `isidentifier`
+- [D] `islower`
+- [D] `isnumeric`
+- [D] `isprintable`
+- [D] `isspace`
+- [D] `istitle`
+- [D] `isupper`
+- [D] `lower`
+- [D] `rfind`
+- [D] `rindex`
+- [D] `startswith`
+- [D] `swapcase`
+- [D] `title`
+- [D] `upper`
 
 ### `ANSIString` featured methods (magic, private and public)
 
