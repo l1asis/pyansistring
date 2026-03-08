@@ -8,7 +8,16 @@ __all__ = [
 import re
 from collections.abc import Iterable, Sequence
 from pathlib import Path
-from typing import TYPE_CHECKING, Annotated, Any, Self, SupportsIndex, Union, cast
+from typing import (
+    TYPE_CHECKING,
+    Annotated,
+    Any,
+    Mapping,
+    Self,
+    SupportsIndex,
+    Union,
+    cast,
+)
 
 if not TYPE_CHECKING:
     try:
@@ -96,6 +105,7 @@ class ANSIString(str):
             "zfill",
             "encode",
             "casefold",
+            "translate",
         }
     )
     _STR_DELEGATED: frozenset[str] = frozenset(dir(str)) - _STR_OVERRIDDEN
@@ -1278,4 +1288,31 @@ class ANSIString(str):
                 if src in self.style_manager:
                     styles[dest] = self.style_manager[src]
                 dest += 1
+        return type(self)(actual, StyleManager(styles))
+
+    def translate(self, table: Mapping[int, int | str | None]) -> "ANSIString":  # type: ignore[override]
+        actual = super().translate(table)
+        if actual == self.plain_text:
+            return type(self)(actual, self.style_manager.copy())
+        styles: dict[int, Style] = {}
+        dest = 0
+        for src, char in enumerate(self.plain_text):
+            mapped = table.get(ord(char))
+            if mapped is None and ord(char) in table:
+                # Deletion: skip this character entirely
+                continue
+            if src in self.style_manager:
+                style = self.style_manager[src]
+                if isinstance(mapped, str):
+                    for j in range(len(mapped)):
+                        styles[dest + j] = style
+                    dest += len(mapped)
+                else:
+                    styles[dest] = style
+                    dest += 1
+            else:
+                if isinstance(mapped, str):
+                    dest += len(mapped)
+                else:
+                    dest += 1
         return type(self)(actual, StyleManager(styles))

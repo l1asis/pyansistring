@@ -669,7 +669,7 @@ class TestCasefold:
         assert str(folded) == ansi_wrap("hello", bold_code)
         assert len(folded.style_manager) == len(s.style_manager)
 
-    def test_casefold_multiple_expansions(self, bold_code: str):
+    def test_casefold_multiple_expansions(self, bold_code: str, italic_code: str):
         s = (
             ANSIString("Hello, ﬃ and ß!!!")
             .fm(SGR.BOLD, (7, 8), (13, 14))
@@ -679,12 +679,62 @@ class TestCasefold:
         assert folded.plain_text == "hello, ffi and ss!!!"
         expected = (
             "hello, "
-            + ansi_wrap("ffi", "\x1b[1m")
+            + ansi_wrap("ffi", bold_code)
             + " "
-            + ansi_wrap("and", "\x1b[3m")
+            + ansi_wrap("and", italic_code)
             + " "
-            + ansi_wrap("ss", "\x1b[1m")
-            + ansi_wrap("!!!", "\x1b[3m")
+            + ansi_wrap("ss", bold_code)
+            + ansi_wrap("!!!", italic_code)
         )
         assert str(folded) == expected
         assert len(folded.style_manager) == len(s.style_manager) + 3
+
+
+class TestTranslate:
+    def test_translate_one_to_one(self, bold_code: str):
+        """Int mapping: replace char with another, style preserved."""
+        s = ANSIString("abc").fm(SGR.BOLD)
+        result = s.translate({ord("a"): ord("x")})
+        assert result.plain_text == "xbc"
+        assert str(result) == ansi_wrap("xbc", bold_code)
+
+    def test_translate_deletion(self, bold_code: str):
+        """None mapping: delete char, styles shift correctly."""
+        s = ANSIString("abc").fm(SGR.BOLD)
+        result = s.translate({ord("b"): None})
+        assert result.plain_text == "ac"
+        assert str(result) == ansi_wrap("ac", bold_code)
+
+    def test_translate_expansion(self, bold_code: str):
+        """Str mapping: expand char, source style replicated."""
+        s = ANSIString("abc").fm(SGR.BOLD)
+        result = s.translate({ord("b"): "XYZ"})
+        assert result.plain_text == "aXYZc"
+        assert str(result) == ansi_wrap("aXYZc", bold_code)
+
+    def test_translate_no_change(self, bold_code: str):
+        """Table has no matching keys: styles copied as-is."""
+        s = ANSIString("abc").fm(SGR.BOLD)
+        result = s.translate({ord("z"): ord("x")})
+        assert result.plain_text == "abc"
+        assert str(result) == ansi_wrap("abc", bold_code)
+
+    def test_translate_mixed(self, bold_code: str, italic_code: str):
+        """Mix of deletion, expansion, and 1:1 in one call."""
+        s = ANSIString("abcd").fm(SGR.BOLD, (0, 2)).fm(SGR.ITALIC, (2, 4))
+        table: dict[int, int | str | None] = {
+            ord("a"): ord("X"),
+            ord("b"): None,
+            ord("c"): "MN",
+        }
+        result = s.translate(table)
+        assert result.plain_text == "XMNd"
+        expected = ansi_wrap("X", bold_code) + ansi_wrap("MNd", italic_code)
+        assert str(result) == expected
+
+    def test_translate_empty_string_mapping(self, bold_code: str):
+        """Str mapping to empty string acts as deletion."""
+        s = ANSIString("abc").fm(SGR.BOLD)
+        result = s.translate({ord("b"): ""})
+        assert result.plain_text == "ac"
+        assert str(result) == ansi_wrap("ac", bold_code)

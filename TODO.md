@@ -63,7 +63,7 @@
 - [X] `ljust`
 - [X] `lower`
 - [X] `lstrip`
-- [ ] `maketrans`
+- [*] `maketrans` <!-- Should not be implemented because it is a static method -->
 - [X] `partition`
 - [X] `removeprefix`
 - [X] `removesuffix`
@@ -86,7 +86,7 @@
 - [X] `strip`
 - [X] `swapcase`
 - [X] `title`
-- [ ] `translate`
+- [X] `translate`
 - [X] `upper`
 - [X] `zfill`
 
