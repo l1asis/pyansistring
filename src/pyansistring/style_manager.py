@@ -1,22 +1,18 @@
 from functools import wraps
-from types import MethodType
 from typing import Any, Callable
 
 from .style import Style
 
 
 def _detect_style_change(
-    method: Callable[..., Any], is_method_bound: bool = False
+    method: Callable[..., Any],
 ) -> Callable[..., Any]:
     """Detect changes in the StyleManager and set the modified flag."""
 
     @wraps(method)
     def wrapped(self: "StyleManager", *args: Any, **kwargs: Any) -> Any:
         previous_length = len(self)
-        if not is_method_bound:
-            result = method(self, *args, **kwargs)
-        else:
-            result = method(*args, **kwargs)
+        result = method(self, *args, **kwargs)
         self.notify_if_changed(previous_length)
         return result
 
@@ -49,13 +45,6 @@ class StyleManager(dict[int, Style]):
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
         self._has_been_modified = False
-        # TODO: wrap methods manually, with @is_method_bound
-        for name in {"clear", "pop", "popitem", "setdefault", "update"}:
-            method = getattr(self, name)
-            wrapped = _detect_style_change(method, is_method_bound=True)
-            setattr(
-                self, name, MethodType(wrapped, self)
-            )  # NOTE: wrapped.__get__(self, self.__class__)
 
     @property
     def has_been_modified(self) -> bool:
@@ -93,6 +82,26 @@ class StyleManager(dict[int, Style]):
     def __delitem__(self, key: Any) -> None:
         """Delete a style from the dictionary."""
         return super().__delitem__(key)
+
+    @_detect_style_change  # type: ignore[override]
+    def clear(self) -> None:
+        return super().clear()
+
+    @_detect_style_change  # type: ignore[override]
+    def pop(self, *args: Any) -> Any:
+        return super().pop(*args)
+
+    @_detect_style_change  # type: ignore[override]
+    def popitem(self) -> tuple[int, Style]:
+        return super().popitem()
+
+    @_detect_style_change  # type: ignore[override]
+    def setdefault(self, *args: Any, **kwargs: Any) -> Any:
+        return super().setdefault(*args, **kwargs)
+
+    @_detect_style_change  # type: ignore[override]
+    def update(self, *args: Any, **kwargs: Any) -> None:
+        return super().update(*args, **kwargs)
 
     def copy(self) -> "StyleManager":
         """Create a shallow copy of the StyleManager."""

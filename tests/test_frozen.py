@@ -22,7 +22,7 @@ class TestFrozenMeta:
 
     def test_cannot_set_existing_attribute(self, frozen_instance: object):
         """Existing attributes must not be overwritable."""
-        attr = next(iter(vars(frozen_instance)))  # pick the first real attr
+        attr = next(a for a in type(frozen_instance).__slots__ if not a.startswith("_"))
         with pytest.raises(AttributeError, match="read-only"):
             setattr(frozen_instance, attr, "new_value")
 
@@ -33,6 +33,6 @@ class TestFrozenMeta:
 
     def test_cannot_delete_attribute(self, frozen_instance: object):
         """Deleting an existing attribute must be rejected."""
-        attr = next(iter(vars(frozen_instance)))
+        attr = next(a for a in type(frozen_instance).__slots__ if not a.startswith("_"))
         with pytest.raises(AttributeError, match="read-only"):
             delattr(frozen_instance, attr)

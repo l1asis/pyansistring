@@ -27,7 +27,6 @@ from .constants import (
     Background,
     ColorMode,
     Foreground,
-    MulticolorSequences,
     Regex,
     Underline,
     UnderlineMode,
@@ -55,5 +54,4 @@ __all__ = [
     "PUNCTUATION",
     "PUNCTUATION_AND_WHITESPACE",
     "Regex",
-    "MulticolorSequences",
 ]

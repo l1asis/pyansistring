@@ -20,8 +20,8 @@ RESET = "\x1b[0m"
 
 
 def ansi_wrap(chars: str, code: str) -> str:
-    """Wrap each character in *chars* with `code` + RESET."""
-    return "".join(f"{code}{c}{RESET}" for c in chars)
+    """Wrap *chars* with ``code`` + RESET as a single run."""
+    return f"{code}{chars}{RESET}"
 
 
 def style_ansi(style_enum: Any, *args: int) -> str:

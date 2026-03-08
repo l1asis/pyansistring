@@ -286,14 +286,14 @@ class TestUnderlineModes:
             Style().with_style(Underline.SET, 0, 128, 255).with_style(mode).to_ansi()
         )
         s = ANSIString("Hello, World!").ul_24b(0, 128, 255).fm(mode)
-        expected = "".join(f"{ul_ansi}{c}{RESET}" for c in "Hello, World!")
+        expected = f"{ul_ansi}Hello, World!{RESET}"
         assert str(s) == expected, f"Mode {mode.name} with color mismatch"
 
     def test_word_targeted_mode(self):
         mode = UnderlineMode.DOUBLE
         ul_ansi = Style().with_style(Underline.SET, 135).with_style(mode).to_ansi()
         s = ANSIString("Hello, World!").ul_8b_w(135, "World").fm_w(mode, "World")
-        expected = "Hello, " + "".join(f"{ul_ansi}{c}{RESET}" for c in "World") + "!"
+        expected = "Hello, " + f"{ul_ansi}World{RESET}" + "!"
         assert str(s) == expected, "Word-targeted underline mode mismatch"
 
 

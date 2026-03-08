@@ -1,5 +1,4 @@
 import re
-from functools import cached_property
 from typing import Any, Literal
 
 from .constants import (
@@ -35,6 +34,8 @@ class Color(metaclass=FrozenMeta):
     value : int | tuple[int, int, int] | None
         The normalized color value.
     """
+
+    __slots__ = ("mode", "value", "_is_frozen")
 
     def __init__(
         self,
@@ -153,6 +154,15 @@ class Style(metaclass=FrozenMeta):
         The set of SGR attributes.
     """
 
+    __slots__ = (
+        "foreground",
+        "background",
+        "underline",
+        "attributes",
+        "_ansi",
+        "_is_frozen",
+    )
+
     def __init__(
         self,
         foreground: Color | tuple[str, Any] = Color(),
@@ -182,10 +192,11 @@ class Style(metaclass=FrozenMeta):
         else:
             self.underline = (underline[0], underline_mode)
         self.attributes = attributes
+        self._ansi = self.to_ansi()
 
-    @cached_property
+    @property
     def ansi(self) -> str:
-        return self.to_ansi()
+        return self._ansi
 
     def __bool__(self) -> bool:
         return (

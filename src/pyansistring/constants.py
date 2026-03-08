@@ -25,7 +25,6 @@ __all__ = [
     "DEFAULT_THEME",
     "ThemeName",
     "Regex",
-    "MulticolorSequences",
 ]
 
 import os
@@ -2445,93 +2444,3 @@ class Regex:
     ANSI_SEQ = compile(
         r"(?:\x1b[@-Z\\-_]|[\x80-\x9a\x9c-\x9f]|(?:\x1b\[|\x9b)[0-?]*[ -/]*[@-~])"
     )
-    ARGUMENTS = r"\((?:\s*{}\s*(?:,\s*{}\s*){quantifier}\s*)\)"
-    INT_OR_FLOAT = r"\-?\d+(?:\.\d+)?"
-    INT_OR_FLOAT_OR_INF = rf"(?:{INT_OR_FLOAT}|\-?inf)"
-    _MINMAX_ARGS = ARGUMENTS.format(
-        INT_OR_FLOAT_OR_INF,
-        INT_OR_FLOAT_OR_INF,
-        quantifier=r"{1}",
-    )
-    _RANDOM_ARGS = ARGUMENTS.format(
-        INT_OR_FLOAT,
-        INT_OR_FLOAT,
-        quantifier=r"{1}",
-    )
-    MULTICOLOR_INSTRUCTION = compile(
-        r"(?P<color>[rgb])"
-        r"(?P<operator>[\+\-\=\>])"
-        r"(?P<value>"
-        r"(?:\d+(?:\.\d+)?)|"
-        rf"(?:random{_RANDOM_ARGS})|"
-        r"(?:(?:fg|bg|ul)_[rgb])"
-        r")\:"
-        r"(?P<mode>fg|bg|ul)?"
-        rf"(?P<minmax>minmax{_MINMAX_ARGS})?"
-    )
-    MULTICOLOR_COMMAND = compile(r"(?P<reset>\?|\?\?)?(?P<repeat>repeat\(\d+\))?$")
-
-
-class MulticolorSequences:
-    """
-    MulticolorSequence specification:
-    - start command is separated by "$"
-    - commands are separated by "#"
-    - instructions are concatenated with "|"
-
-    SEQUENCE START:
-        identical to INSTRUCTION BODY
-
-    INSTRUCTION BODY:
-        - [important] color:
-            - "r": red
-            - "g": green
-            - "b": blue
-        - [important] operator:
-            - ">": goto, automatically expands to the given value
-            - "=": equal, assigns a value
-            - "+": add, adds a value
-            - "-": sub, subtracts a value
-        - [important] value:
-            - int
-            - float
-            - random [format: "random(x,y)"]
-            - special var ("fg" or "bg" or "ul") + "_" + ("r" or "g" or "b")
-        - [important] options ":"
-            - [optional] mode: [default: "fg"]
-                - "fg": foreground
-                - "bg": background
-                - "ul": underline
-            - [optional] min, max values:
-              [format: "minmax(x,y)"]
-              [default: "minmax(0,255)"]
-                - int
-                - float
-                - inf
-
-    COMMAND END:
-        - [optional] reset:
-            - "?": to the previous RGB values
-            - "??": to the start RGB values
-        - [optional] repeat:
-            - int
-            - "auto": calculates the repeat by itself
-
-    SEQUENCE END:
-        - [optional] flag:
-            - "@": reverse
-            - "!": mirror
-            - "&": cycle
-            - "*": skipfirst, start with the given r, g, b
-    """
-
-    RAINBOW = (
-        "r=255:|g=0:|b=0:  $"
-        "g>255:repeat(auto)#"
-        "r>0:repeat(auto)  #"
-        "b>255:repeat(auto)#"
-        "g>0:repeat(auto)  #"
-        "r>255:repeat(auto)#"
-        "b>0:repeat(auto)  &*"
-    )
-    REVERSED_RAINBOW = f"{RAINBOW[:-2]} @&*"

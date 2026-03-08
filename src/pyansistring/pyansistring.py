@@ -6,11 +6,8 @@ __all__ = [
 ]
 
 import re
-from collections.abc import Generator, Iterable, Sequence
-from copy import copy, deepcopy
-from itertools import cycle
+from collections.abc import Iterable, Sequence
 from pathlib import Path
-from random import randint
 from typing import TYPE_CHECKING, Annotated, Any, Self, SupportsIndex, Union, cast
 
 if not TYPE_CHECKING:
@@ -30,7 +27,6 @@ from ._helpers import (
     UNDERLINE_CSS,
     Length,
     ValueRange,
-    clamp,
     get_style_key,
     hsl_to_rgb,
     load_font,
@@ -56,120 +52,22 @@ from .style import Style
 from .style_manager import StyleManager
 
 
-class MulticolorInstruction:
-    """A single instruction in a multicolor command for a color channel.
-
-    Parameters
-    ----------
-    rgb : dict[str, dict[str, int | float]]
-        The current RGB state dictionary, keyed by mode and channel.
-    color : str
-        The color channel to modify (``"r"``, ``"g"``, or ``"b"``).
-    operator : str
-        The operator to apply (``"="``, ``"+"``, or ``"-"``).
-    value : str
-        The value to use for the operation, which can be a number, a random
-        range, or a reference to another color channel.
-    mode : str
-        The mode of the color channel (``"fg"``, ``"bg"``, or ``"ul"``).
-    minmax : tuple[float, float] | str | None
-        The min/max bounds for the color channel, as a tuple, a string in
-        the format ``"minmax(min, max)"``, or ``None`` for default (0, 255).
-    repeat : int
-        The number of times to repeat this instruction.
-
-    Attributes
-    ----------
-    processed_value : int | float
-        The processed numeric value after evaluating *value*, used for
-        calculations in the multicolor command.
-    """
-
-    def __init__(
-        self,
-        rgb: dict[str, dict[str, int | float]],
-        /,
-        color: str,
-        operator: str,
-        value: str,
-        mode: str | None,
-        minmax: tuple[float, float] | str | None,
-        repeat: int,
-    ) -> None:
-        self.rgb = rgb
-        self.color = color
-        self.operator = operator
-        self.value = value
-        self.repeat = repeat
-
-        if isinstance(minmax, str):
-            parts = minmax[7:-1].split(",")
-            self.minmax = (float(parts[0]), float(parts[1]))
-        else:
-            self.minmax = (0.0, 255.0)
-
-        self.mode = mode or "fg"
-        self.processed_value = self.process_value(self.value)
-
-        if self.operator == ">":
-            base_value = rgb[self.mode][self.color]
-            if base_value <= self.processed_value:
-                self.operator = "+"
-                self.processed_value = (self.processed_value - base_value) / self.repeat
-            elif base_value > self.processed_value:
-                self.operator = "-"
-                self.processed_value = (base_value - self.processed_value) / self.repeat
-
-    def process_value(self, value: str, save: bool = False) -> int | float:
-        result: int | float
-        if value.startswith("random"):
-            from_value, to_value = map(int, value[7:-1].split(","))
-            result = randint(from_value, to_value)
-        elif value.endswith(("r", "g", "b")):
-            mode, color = value.split("_")
-            result = self.rgb[mode][color]
-        else:
-            result = float(value)
-        if save:
-            self.processed_value = result
-        return result
-
-
-class MulticolorCommand:
-    """A multicolor command with instructions and optional reset/repeat.
-
-    Parameters
-    ----------
-    instructions : list[MulticolorInstruction] | None
-        List of instructions to be applied in this command.
-    reset : str | None
-        Reset mode for the command. ``"?"`` resets to the current RGB values at
-        the time of command execution, ``"??"`` resets to the RGB values at the
-        time of command creation, or ``None`` for no reset.
-    repeat : int | str | None
-        Number of times to repeat the command. Can be an integer or ``"auto"``
-        for automatic distribution across slices.
-    """
-
-    def __init__(
-        self,
-        instructions: list[MulticolorInstruction] | None = None,
-        reset: str | None = None,
-        repeat: int | str | None = None,
-    ) -> None:
-        self.instructions = instructions if instructions else []
-        self.reset = reset
-        if isinstance(repeat, str):
-            self.repeat = int(repeat[7:-1])
-        else:
-            self.repeat = 1 if repeat is None else repeat
-
-
 class ANSIString(str):
     """Subclass of ``str`` that supports ANSI styling via a :class:`StyleManager`."""
 
     _style_manager: StyleManager
     _styled_text: str
+
+    # str method names to delegate (computed once at class definition time)
+    _STR_DELEGATED: frozenset[str] = frozenset(dir(str)) - {
+        "ljust",
+        "rjust",
+        "center",
+        "split",
+        "rsplit",
+        "join",
+        "splitlines",
+    }
 
     def __new__(
         cls,
@@ -264,18 +162,7 @@ class ANSIString(str):
 
     def __getattribute__(self, name: str) -> Any:
         """Handle attribute access, delegating str methods to return ANSIString."""
-        # TODO: Replace it with a more elegant solution like
-        # explicit overrides or dynamic class decorator.
-        allowed_passthrough = {
-            "ljust",
-            "rjust",
-            "center",
-            "split",
-            "rsplit",
-            "join",
-            "splitlines",
-        }
-        if name in dir(str) and name not in allowed_passthrough:
+        if name in type(self)._STR_DELEGATED:
 
             def method(self: Self, *args: Any, **kwargs: Any) -> Any:
                 result = getattr(str, name)(self.plain_text, *args, **kwargs)
@@ -306,43 +193,47 @@ class ANSIString(str):
 
     def _render(self) -> str:
         """Render the ANSIString to its final output form."""
-        return "".join(
-            (
-                f"{self.style_manager[index].ansi}{char}\x1b[0m"
-                if index in self.style_manager
-                else char
-            )
-            for index, char in enumerate(self.plain_text)
-        )
+        sm = self._style_manager
+        if not sm:
+            return self.plain_text
 
-    def _coord_to_slice(self, coord: tuple[int, int]) -> slice:
-        """Convert an (x, y) coordinate pair to a slice object."""
-        index = 0
-        lengths = tuple(len(line) for line in self.plain_text.splitlines())
-        if not lengths:
-            raise IndexError("wrong y coordinate (empty string)")
-        elif not (0 <= coord[1] < len(lengths)):
-            raise IndexError(f"wrong y coordinate (0<=y<{len(lengths)})")
-        for y, length in enumerate(lengths):
-            if y == coord[1]:
-                if not length:
-                    raise IndexError(f"wrong x coordinate ({y=}: empty line)")
-                elif not (0 <= coord[0] < length):
-                    raise IndexError(f"wrong x coordinate ({y=}: 0<=x<{length})")
-                index += coord[0] + y
-                break
-            index += length
-        return slice(index, index + 1)
+        plain = self.plain_text
+        n = len(plain)
+        sorted_keys = sorted(sm)
+        parts: list[str] = []
 
-    def _get_all_coords(self) -> tuple[tuple[int, int], ...]:
-        """Return all (x, y) coordinates of the characters in the plain text."""
+        # Unstyled prefix before first styled index
+        run_start = sorted_keys[0]
+        if run_start > 0:
+            parts.append(plain[:run_start])
+        run_ansi = sm[run_start].ansi
 
-        def transform(lengths: Iterable[int]) -> Generator[tuple[int, int], None, None]:
-            for y, length in enumerate(lengths):
-                for x in range(length):
-                    yield (x, y)
+        for k in range(1, len(sorted_keys)):
+            idx = sorted_keys[k]
+            prev_idx = sorted_keys[k - 1]
+            if idx == prev_idx + 1 and sm[idx].ansi == run_ansi:
+                continue
 
-        return tuple(transform(len(line) for line in self.plain_text.splitlines()))
+            # Flush current styled run
+            run_end = prev_idx + 1
+            parts.append(f"{run_ansi}{plain[run_start:run_end]}\x1b[0m")
+
+            # Unstyled gap
+            if idx > run_end:
+                parts.append(plain[run_end:idx])
+
+            run_start = idx
+            run_ansi = sm[idx].ansi
+
+        # Flush last styled run
+        last_end = sorted_keys[-1] + 1
+        parts.append(f"{run_ansi}{plain[run_start:last_end]}\x1b[0m")
+
+        # Unstyled suffix
+        if last_end < n:
+            parts.append(plain[last_end:])
+
+        return "".join(parts)
 
     def _get_indices(
         self, slice_: Annotated[Sequence[int], Length(3)] | slice
@@ -365,66 +256,6 @@ class ANSIString(str):
             for match in re.finditer(joined_words, self.plain_text, flags=flags)
         )
         return tuple(spans)
-
-    def _process_multicolor_command(
-        self,
-        command: MulticolorCommand,
-        rgb: dict[str, dict[str, dict[str, int | float]]],
-        *slices: Annotated[Sequence[int], Length(3)] | slice,
-    ) -> dict[str, bool]:
-        """Process a multicolor command and apply it to the ANSIString."""
-        reset_rgb: dict[str, dict[str, int | float]] | None = None
-        if command.reset:
-            if command.reset == "?":
-                reset_rgb = deepcopy(rgb["actual"])
-            elif command.reset == "??":
-                reset_rgb = deepcopy(rgb["start"])
-
-        modes = {"fg": False, "bg": False, "ul": False}
-        for instruction in command.instructions:
-            if not modes[instruction.mode]:
-                modes[instruction.mode] = True
-            if instruction.operator == "=":
-                rgb["actual"][instruction.mode][instruction.color] = (
-                    instruction.processed_value
-                )
-            elif instruction.operator == "+":
-                rgb["actual"][instruction.mode][instruction.color] += (
-                    instruction.processed_value
-                )
-            elif instruction.operator == "-":
-                rgb["actual"][instruction.mode][instruction.color] -= (
-                    instruction.processed_value
-                )
-
-            rgb["actual"][instruction.mode][instruction.color] = clamp(
-                rgb["actual"][instruction.mode][instruction.color], *instruction.minmax
-            )
-
-        if slices:
-            self._apply_multicolor_command(rgb["actual"], modes, *slices)
-
-        if reset_rgb:
-            rgb["actual"] = reset_rgb
-
-        return modes
-
-    def _apply_multicolor_command(
-        self,
-        rgb: dict[str, dict[str, int | float]],
-        modes: dict[str, bool],
-        *slices: Annotated[Sequence[int], Length(3)] | slice,
-    ) -> None:
-        """Apply the current RGB values to the specified slices."""
-        if modes["fg"]:
-            r, g, b = (int(clamp(rgb["fg"][key], 0, 255)) for key in "rgb")
-            self.fg_24b(r, g, b, *slices)
-        if modes["bg"]:
-            r, g, b = (int(clamp(rgb["bg"][key], 0, 255)) for key in "rgb")
-            self.bg_24b(r, g, b, *slices)
-        if modes["ul"]:
-            r, g, b = (int(clamp(rgb["ul"][key], 0, 255)) for key in "rgb")
-            self.ul_24b(r, g, b, *slices)
 
     @staticmethod
     def from_ansi(plain: str) -> "ANSIString":
@@ -727,210 +558,6 @@ class ANSIString(str):
                 self.ul_24b(*hsl_to_rgb(hue), slice_)
         return self
 
-    def multicolor(
-        self,
-        sequence: str,
-        *slices: Annotated[Sequence[int], Length(3)] | slice,
-        skip_whitespace: bool = False,
-    ) -> Self:
-        """Apply a multicolor sequence to the string in a specified range."""
-        if not slices:
-            if skip_whitespace:
-                slices = tuple(
-                    (index, index + 1)
-                    for index, char in enumerate(self.plain_text)
-                    if char not in WHITESPACE
-                )
-            else:
-                slices = tuple((index, index + 1) for index in range(0, len(self)))
-
-        flags = {flag: 0 for flag in ("skipfirst", "cycle", "reverse", "mirror")}
-        char_to_flag = {
-            "*": "skipfirst",
-            "&": "cycle",
-            "@": "reverse",
-            "!": "mirror",
-        }
-        offset = 0
-        for char in reversed(sequence):
-            if char in char_to_flag:
-                flags[char_to_flag[char]] = 1
-                offset -= 1
-            elif char == " ":
-                offset -= 1
-            else:
-                break
-        if offset:
-            sequence = sequence[:offset]
-
-        rgb: dict[str, dict[str, dict[str, int | float]]] = {
-            key: {
-                key: {key: 0.0 for key in ("r", "g", "b")} for key in ("fg", "bg", "ul")
-            }
-            for key in ("actual", "start")
-        }
-
-        start_modes: dict[str, bool] = {"fg": False, "bg": False, "ul": False}
-        if "$" in sequence:
-            start_command, sequence = map(str.strip, sequence.split("$"))
-            object_start_command = MulticolorCommand()
-            for start_instruction in map(str.strip, start_command.split("|")):
-                match_start_instruction = re.match(
-                    Regex.MULTICOLOR_INSTRUCTION, start_instruction
-                )
-                if not match_start_instruction:
-                    continue
-                object_start_instruction = MulticolorInstruction(
-                    rgb["actual"],
-                    **match_start_instruction.groupdict(),
-                    repeat=object_start_command.repeat,
-                )
-                object_start_command.instructions.append(object_start_instruction)
-            start_modes = self._process_multicolor_command(object_start_command, rgb)
-            rgb["start"] = deepcopy(rgb["actual"])
-
-        slices_length = len(slices) - (1 if flags["skipfirst"] else 0)
-        auto_length = slices_length
-        auto_count = 0
-        span_decrement = 0
-        list_repeats: list[int | str] = []
-        for match_repeat in re.finditer(r"repeat\((?P<value>\d+|auto)\)", sequence):
-            start, stop = match_repeat.span()
-            if match_repeat["value"] == "auto":
-                auto_count += 1
-                list_repeats.append("auto")
-            else:
-                value = int(match_repeat["value"])
-                if value < auto_length:
-                    value = auto_length
-                auto_length -= value
-                list_repeats.append(value)
-            start -= span_decrement
-            stop -= span_decrement
-            sequence = f"{sequence[:start]}{'{}'}{sequence[stop:]}"
-            span_decrement += len(match_repeat.group()) - len(r"{}")
-        for index, repeat in enumerate(list_repeats):
-            if repeat == "auto":
-                value = -(auto_length // -auto_count)
-                auto_length -= value
-                auto_count -= 1
-                list_repeats[index] = value
-        sequence = sequence.format(*(f"repeat({value})" for value in list_repeats))
-
-        commands: list[MulticolorCommand] = []
-        for command in map(str.strip, sequence.split("#")):
-            match_command = re.search(Regex.MULTICOLOR_COMMAND, command)
-            if not match_command:
-                continue
-            object_command = MulticolorCommand(None, **match_command.groupdict())
-            if object_command.repeat == 0:
-                continue
-            for instruction in map(str.strip, command.split("|")):
-                match_instruction = re.match(Regex.MULTICOLOR_INSTRUCTION, instruction)
-                if match_instruction:
-                    object_instruction = MulticolorInstruction(
-                        rgb["actual"],
-                        **match_instruction.groupdict(),
-                        repeat=object_command.repeat,
-                    )
-                    object_command.instructions.append(object_instruction)
-            for _ in range(object_command.repeat):
-                commands.append(deepcopy(object_command))
-                self._process_multicolor_command(object_command, rgb)
-
-        rgb["actual"] = deepcopy(rgb["start"])
-
-        if flags["mirror"] and len(commands) > 1:
-            mirrored_commands: list[MulticolorCommand] = []
-            for command in reversed(commands):
-                mirrored_commands.append(
-                    MulticolorCommand(None, command.reset, command.repeat)
-                )
-                for instruction in command.instructions:
-                    copied_instruction = copy(instruction)
-                    if copied_instruction.operator == "+":
-                        copied_instruction.operator = "-"
-                    elif copied_instruction.operator == "-":
-                        copied_instruction.operator = "+"
-                    mirrored_commands[-1].instructions.append(copied_instruction)
-            commands.extend(mirrored_commands)
-        elif flags["reverse"]:
-            if flags["cycle"] and len(commands) < slices_length:
-                for command in cycle(commands):
-                    if len(commands) == slices_length:
-                        break
-                    copied_command = deepcopy(command)
-                    for instruction in copied_command.instructions:
-                        instruction.process_value(instruction.value, save=True)
-                    commands.append(copied_command)
-            for command in commands:
-                self._process_multicolor_command(command, rgb)
-                for instruction in command.instructions:
-                    if instruction.operator == "+":
-                        instruction.operator = "-"
-                    elif instruction.operator == "-":
-                        instruction.operator = "+"
-            commands.reverse()
-        if flags["cycle"] and not flags["reverse"]:
-            if len(commands) < slices_length:
-                for command in cycle(commands):
-                    if len(commands) == slices_length:
-                        break
-                    copied_command = deepcopy(command)
-                    for instruction in copied_command.instructions:
-                        instruction.process_value(instruction.value, save=True)
-                    commands.append(copied_command)
-
-        if flags["skipfirst"]:
-            if (
-                slices[0]
-                and isinstance(slices[0], Sequence)
-                and isinstance(slices[0][0], (Sequence, slice))
-            ):
-                self._apply_multicolor_command(rgb["actual"], start_modes, *slices[0])  # type: ignore[arg-type]
-            else:
-                self._apply_multicolor_command(rgb["actual"], start_modes, slices[0])
-            slices = slices[1:]
-
-        for obj, command in zip(slices, commands):
-            if (
-                obj
-                and isinstance(obj, Sequence)
-                and isinstance(obj[0], (Sequence, slice))
-            ):
-                self._process_multicolor_command(command, rgb, *obj)  # type: ignore[arg-type]
-            else:
-                self._process_multicolor_command(command, rgb, obj)
-
-        return self
-
-    def multicolor_c(
-        self,
-        sequence: str,
-        *coordinates: tuple[int, int] | tuple[tuple[int, int], ...],
-    ) -> Self:
-        """Apply a multicolor sequence to the string at (x, y) coordinates."""
-
-        def transform(
-            coordinates: tuple[tuple[int, int], ...]
-            | tuple[tuple[tuple[int, int], ...], ...],
-        ) -> Generator[tuple[slice, ...] | slice, None, None]:
-            for obj in coordinates:
-                if isinstance(obj[0], tuple):
-                    yield tuple(
-                        self._coord_to_slice(cast(tuple[int, int], coord))
-                        for coord in obj
-                    )
-                else:
-                    yield self._coord_to_slice(cast(tuple[int, int], obj))
-
-        if not coordinates:
-            coordinates = self._get_all_coords()
-        return self.multicolor(
-            sequence,
-            *transform(coordinates),  # type: ignore[arg-type]
-        )
-
     def to_svg(
         self,
         font: TTFont | Path | str,
@@ -1219,26 +846,24 @@ class ANSIString(str):
         return svg_content
 
     def join(self, iterable: Iterable[str], /) -> "ANSIString":
+        strings = list(iterable)
         styles: dict[int, Style] = {}
-        increment = 0
-        for i, string in enumerate(iterable):
-            increment += len(string)
+        pos = 0
+        for i, string in enumerate(strings):
             if i:
-                increment += len(self)
-            styles.update(
-                {
-                    increment + index: style
-                    for index, style in self.style_manager.items()
-                }
-            )
+                styles.update(
+                    {pos + index: style for index, style in self.style_manager.items()}
+                )
+                pos += len(self)
             if type(string) is ANSIString:
                 styles.update(
                     {
-                        increment + index - len(string): style
+                        pos + index: style
                         for index, style in string.style_manager.items()
                     }
                 )
-        return type(self)(super().join(iterable), StyleManager(styles))
+            pos += len(string)
+        return type(self)(super().join(strings), StyleManager(styles))
 
     def ljust(self, width: SupportsIndex, fillchar: str = " ") -> "ANSIString":
         return self + fillchar * (int(width) - len(self))
