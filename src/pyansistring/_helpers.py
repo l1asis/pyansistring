@@ -18,12 +18,16 @@ __all__ = [
     "svg_weight_stroke_attrs",
     "svg_resolve_underline",
     "svg_build_underline_elements",
+    "FMT",
+    "MAP_FMT",
+    "remap_format",
 ]
 
 import math
 from collections.abc import Generator
 from dataclasses import dataclass
 from pathlib import Path
+from string import Formatter as _Formatter
 from typing import Any, NamedTuple
 
 from fontTools.pens.svgPathPen import SVGPathPen  # type: ignore[import-untyped]
@@ -32,6 +36,7 @@ from fontTools.ttLib import TTFont  # type: ignore[import-untyped]
 
 from pyansistring.constants import SGR, WHITESPACE, UnderlineMode
 from pyansistring.style import Style
+from pyansistring.style_manager import StyleManager
 
 SVG_ESCAPE: dict[str, str] = {
     "&": "&amp;",
@@ -607,3 +612,96 @@ def svg_build_underline_elements(
         max_bot = cy + ul_h / 2
 
     return elems, max_bot
+
+
+FMT = _Formatter()
+
+
+class _MapFmt(_Formatter):
+    """Formatter that resolves all field names through *kwargs* (the mapping)."""
+
+    def get_value(
+        self, key: int | str, args: Any, kwargs: Any
+    ) -> Any:  # pragma: no cover
+        return kwargs[key]
+
+
+MAP_FMT = _MapFmt()
+
+
+def _resolve_format_spec(
+    spec: str,
+    fmt: _Formatter,
+    args: tuple[Any, ...],
+    kwargs: Any,
+    auto_idx: int,
+) -> tuple[str, int]:
+    """Resolve nested replacement fields inside a format spec."""
+    if "{" not in spec:
+        return spec, auto_idx
+    parts: list[str] = []
+    for literal, field_name, sub_spec, conv in fmt.parse(spec):
+        parts.append(literal)
+        if field_name is not None:
+            if field_name == "":
+                field_name = str(auto_idx)
+                auto_idx += 1
+            obj, _ = fmt.get_field(field_name, args, kwargs)
+            if conv:
+                obj = fmt.convert_field(obj, conv)
+            resolved_sub, auto_idx = _resolve_format_spec(
+                sub_spec or "", fmt, args, kwargs, auto_idx
+            )
+            parts.append(format(obj, resolved_sub))
+    return "".join(parts), auto_idx
+
+
+def remap_format(
+    template: str,
+    sm: StyleManager,
+    fmt: _Formatter,
+    args: tuple[Any, ...],
+    kwargs: Any,
+) -> dict[int, Style]:
+    """Map styles from a format template onto the formatted output positions."""
+    styles: dict[int, Style] = {}
+    src = 0
+    dest = 0
+    auto_idx = 0
+
+    for literal, field_name, spec, conv in fmt.parse(template):
+        # Literal chars, {{ and }}, each occupy 2 source chars
+        for ch in literal:
+            if src in sm:
+                styles[dest] = sm[src]
+            src += 2 if ch in "{}" else 1
+            dest += 1
+
+        if field_name is not None:
+            # Resolve auto-numbering
+            if field_name == "":
+                resolved = str(auto_idx)
+                auto_idx += 1
+            else:
+                resolved = field_name
+
+            obj, _ = fmt.get_field(resolved, args, kwargs)
+            if conv:
+                obj = fmt.convert_field(obj, conv)
+
+            resolved_spec, auto_idx = _resolve_format_spec(
+                spec or "", fmt, args, kwargs, auto_idx
+            )
+            dest += len(format(obj, resolved_spec))
+
+            # Advance src past the {…} replacement field
+            depth = 1
+            src += 1  # skip opening '{'
+            while depth:
+                if template[src] == "{":
+                    depth += 1
+                elif template[src] == "}":
+                    depth -= 1
+                src += 1
+
+    return styles

@@ -44,8 +44,8 @@
 - [X] `endswith`
 - [X] `expandtabs`
 - [X] `find`
-- [ ] `format`
-- [ ] `format_map`
+- [X] `format`
+- [X] `format_map`
 - [X] `index`
 - [X] `isalnum`
 - [X] `isalpha`

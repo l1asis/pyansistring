@@ -738,3 +738,92 @@ class TestTranslate:
         result = s.translate({ord("b"): ""})
         assert result.plain_text == "ac"
         assert str(result) == ansi_wrap("ac", bold_code)
+
+
+class TestFormat:
+    def test_format_keyword(self, bold_code: str):
+        """Keyword arg: literal template styles preserved."""
+        s = ANSIString("Hello, {name}!").fm(SGR.BOLD)
+        result = s.format(name="Alice")
+        assert result.plain_text == "Hello, Alice!"
+        expected = ansi_wrap("Hello, ", bold_code) + "Alice" + ansi_wrap("!", bold_code)
+        assert str(result) == expected
+
+    def test_format_positional(self, bold_code: str):
+        """Positional arg with partial styling."""
+        s = ANSIString("{0} + {1} = {2}").fm(SGR.BOLD, (3, 6))
+        result = s.format(1, 2, 3)
+        assert result.plain_text == "1 + 2 = 3"
+        expected = "1" + ansi_wrap(" + ", bold_code) + "2 = 3"
+        assert str(result) == expected
+
+    def test_format_auto_numbered(self, bold_code: str):
+        """Auto-numbered {}: styles on surrounding literal text kept."""
+        s = ANSIString("({})").fm(SGR.BOLD)
+        result = s.format("hi")
+        assert result.plain_text == "(hi)"
+        expected = ansi_wrap("(", bold_code) + "hi" + ansi_wrap(")", bold_code)
+        assert str(result) == expected
+
+    def test_format_escaped_braces(self, bold_code: str):
+        """{{ and }} produce literal braces with styles."""
+        s = ANSIString("a{{b}}c").fm(SGR.BOLD)
+        result = s.format()
+        assert result.plain_text == "a{b}c"
+        assert str(result) == ansi_wrap("a{b}c", bold_code)
+
+    def test_format_with_spec(self, bold_code: str):
+        """Format spec on field: literal styles kept, field output unstyled."""
+        s = ANSIString("=[{:>5}]=").fm(SGR.BOLD)
+        result = s.format("hi")
+        assert result.plain_text == "=[   hi]="
+        expected = ansi_wrap("=[", bold_code) + "   hi" + ansi_wrap("]=", bold_code)
+        assert str(result) == expected
+
+    def test_format_no_styles(self):
+        """No styles: plain ANSIString returned."""
+        s = ANSIString("Hello, {name}!")
+        result = s.format(name="World")
+        assert result.plain_text == "Hello, World!"
+        assert not result.style_manager
+
+    def test_format_nested_spec(self, bold_code: str):
+        """Nested format spec {:{}} resolves correctly."""
+        s = ANSIString("[{:{}}]").fm(SGR.BOLD)
+        result = s.format("hi", ">6")
+        assert result.plain_text == "[    hi]"
+        expected = ansi_wrap("[", bold_code) + "    hi" + ansi_wrap("]", bold_code)
+        assert str(result) == expected
+
+
+class TestFormatMap:
+    def test_format_map_keyword(self, bold_code: str):
+        """Mapping lookup: literal template styles preserved."""
+        s = ANSIString("Hello, {name}!").fm(SGR.BOLD)
+        result = s.format_map({"name": "Bob"})
+        assert result.plain_text == "Hello, Bob!"
+        expected = ansi_wrap("Hello, ", bold_code) + "Bob" + ansi_wrap("!", bold_code)
+        assert str(result) == expected
+
+    def test_format_map_escaped_braces(self, bold_code: str):
+        """{{ and }} with format_map."""
+        s = ANSIString("{{x}}={val}").fm(SGR.BOLD)
+        result = s.format_map({"val": 42})
+        assert result.plain_text == "{x}=42"
+        expected = ansi_wrap("{x}=", bold_code) + "42"
+        assert str(result) == expected
+
+    def test_format_map_no_styles(self):
+        """No styles: plain ANSIString returned."""
+        s = ANSIString("{a}+{b}")
+        result = s.format_map({"a": 1, "b": 2})
+        assert result.plain_text == "1+2"
+        assert not result.style_manager
+
+    def test_format_map_with_spec(self, bold_code: str):
+        """Format spec with mapping."""
+        s = ANSIString("[{val:>5}]").fm(SGR.BOLD)
+        result = s.format_map({"val": "hi"})
+        assert result.plain_text == "[   hi]"
+        expected = ansi_wrap("[", bold_code) + "   hi" + ansi_wrap("]", bold_code)
+        assert str(result) == expected

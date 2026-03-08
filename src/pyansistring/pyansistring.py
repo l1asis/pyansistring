@@ -32,6 +32,8 @@ else:
     is_fonttools_available = True
 
 from ._helpers import (
+    FMT,
+    MAP_FMT,
     SVG_ESCAPE,
     UNDERLINE_CSS,
     Length,
@@ -40,6 +42,7 @@ from ._helpers import (
     hsl_to_rgb,
     load_font,
     prepare_font_variants,
+    remap_format,
     resolve_skew,
     rsearch_separators,
     search_separators,
@@ -106,6 +109,8 @@ class ANSIString(str):
             "encode",
             "casefold",
             "translate",
+            "format",
+            "format_map",
         }
     )
     _STR_DELEGATED: frozenset[str] = frozenset(dir(str)) - _STR_OVERRIDDEN
@@ -1242,7 +1247,7 @@ class ANSIString(str):
         return type(self)("".join(parts), StyleManager(result_styles))
 
     def encode(self, encoding: str = "utf-8", errors: str = "strict") -> bytes:
-        """Like ``str.encode``, but encodes the styled text including ANSI escape codes."""
+        """Encode the styled text (with ANSI escapes) to bytes."""
         return self.styled_text.encode(encoding, errors)
 
     def casefold(self) -> "ANSIString":
@@ -1295,3 +1300,19 @@ class ANSIString(str):
                 else:
                     dest += 1
         return type(self)(actual, StyleManager(styles))
+
+    def format(self, /, *args: Any, **kwargs: Any) -> "ANSIString":
+        """Format the string, remapping template styles to the output."""
+        formatted = str.format(self.plain_text, *args, **kwargs)
+        if not self.style_manager:
+            return type(self)(formatted)
+        styles = remap_format(self.plain_text, self.style_manager, FMT, args, kwargs)
+        return type(self)(formatted, StyleManager(styles))
+
+    def format_map(self, mapping: Mapping[str, Any], /) -> "ANSIString":  # type: ignore[override]
+        """Format the string using a mapping, remapping template styles."""
+        formatted = str.format_map(self.plain_text, mapping)
+        if not self.style_manager:
+            return type(self)(formatted)
+        styles = remap_format(self.plain_text, self.style_manager, MAP_FMT, (), mapping)
+        return type(self)(formatted, StyleManager(styles))
