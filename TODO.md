@@ -37,7 +37,7 @@
 
 ### `str` public methods
 - [X] `capitalize`
-- [ ] `casefold`
+- [X] `casefold`
 - [X] `center`
 - [X] `count`
 - [X] `encode`
