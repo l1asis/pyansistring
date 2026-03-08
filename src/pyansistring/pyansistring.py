@@ -1291,6 +1291,27 @@ class ANSIString(str):
         return type(self)(actual, StyleManager(styles))
 
     def translate(self, table: Mapping[int, int | str | None]) -> "ANSIString":  # type: ignore[override]
+        """Replace each character in the string using the given translation table.
+
+        Parameters
+        ----------
+
+        table : Mapping[int, int | str | None]
+            A mapping that defines the translation.
+
+            Each key is the Unicode code point of a character in
+            the original string, and the corresponding value is either:
+            - An integer representing the Unicode code point of
+            the replacement character.
+            - A string representing the replacement character(s).
+            - None, indicating the character should be deleted.
+
+        Notes
+        -----
+        - The table must implement lookup/indexing via __getitem__,
+        for instance a dictionary or list. If this operation raises
+        LookupError, the character is left untouched.
+        """
         actual = super().translate(table)
         if actual == self.plain_text:
             return type(self)(actual, self.style_manager.copy())
