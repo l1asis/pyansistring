@@ -1,6 +1,7 @@
 """Tests for ANSIString str-method overrides (__getitem__, __add__, split, etc.)."""
 
 from collections.abc import Callable
+from pickle import dumps, loads
 
 import pytest
 
@@ -641,3 +642,13 @@ class TestEncode:
         encoded = s.encode("utf-8")
         assert isinstance(encoded, bytes)
         assert encoded == ansi_wrap("Hello", bold_code).encode("utf-8")
+
+
+class TestReduce:
+    def test_reduce(self, bold_code: str):
+        s = ANSIString("Hello").fm(SGR.BOLD)
+        pickled = dumps(s)
+        unpickled = loads(pickled)
+        assert isinstance(unpickled, ANSIString)
+        assert unpickled.plain_text == "Hello"
+        assert str(unpickled) == ansi_wrap("Hello", bold_code)

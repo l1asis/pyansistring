@@ -71,6 +71,9 @@ class ANSIString(str):
             "__mod__",
             "__mul__",
             "__ne__",
+            "__reduce__",
+            "__reduce_ex__",
+            "__getnewargs__",
             "__rmul__",
             # Public methods with custom implementations
             "center",
@@ -306,6 +309,22 @@ class ANSIString(str):
         formatted = format(self.plain_text, format_spec)
         styles = self.style_manager.remap(self.plain_text, formatted)
         return str(type(self)(formatted, StyleManager(styles)))
+
+    def __sizeof__(self) -> int:
+        """Return the size of the ANSIString in bytes."""
+        return (
+            str.__sizeof__(self)
+            + self.styled_text.__sizeof__()
+            + self.style_manager.__sizeof__()
+        )
+
+    def __reduce__(self) -> tuple[Any, tuple[str, dict[int, Style]]]:
+        """Return a tuple for pickling the ANSIString."""
+        return (ANSIString, (self.plain_text, dict(self.style_manager)))
+
+    def __getnewargs__(self) -> tuple[str, dict[int, Style]]:  # type: ignore[override]
+        """Return arguments for creating a new ANSIString during unpickling."""
+        return (self.plain_text, dict(self.style_manager))
 
     def _render(self) -> str:
         """Render the ANSIString to its final output form."""
