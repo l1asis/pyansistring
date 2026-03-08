@@ -2444,3 +2444,11 @@ class Regex:
     ANSI_SEQ = compile(
         r"(?:\x1b[@-Z\\-_]|[\x80-\x9a\x9c-\x9f]|(?:\x1b\[|\x9b)[0-?]*[ -/]*[@-~])"
     )
+    MOD_SPEC = compile(
+        r"%(?:\(([^)]*)\))?"
+        r"[#0 +-]*"
+        r"(\*|\d*)"
+        r"(?:\.(\*|\d*))?"
+        r"[hlL]?"
+        r"([diouxXeEfFgGcrsa%])"
+    )

@@ -95,16 +95,6 @@ class ANSIString(str):
     )
     _STR_DELEGATED: frozenset[str] = frozenset(dir(str)) - _STR_OVERRIDDEN
 
-    # TODO: move this regex to constants.py `Regex` class
-    _MOD_SPEC_RE: re.Pattern[str] = re.compile(
-        r"%(?:\(([^)]*)\))?"
-        r"[#0 +-]*"
-        r"(\*|\d*)"
-        r"(?:\.(\*|\d*))?"
-        r"[hlL]?"
-        r"([diouxXeEfFgGcrsa%])"
-    )
-
     def __new__(
         cls,
         plain_text: str = "",
@@ -225,7 +215,7 @@ class ANSIString(str):
         if not self.style_manager:
             return type(self)(formatted)
 
-        specs = list(self._MOD_SPEC_RE.finditer(plain))
+        specs = list(Regex.MOD_SPEC.finditer(plain))
         if not specs:
             return type(self)(formatted, self.style_manager.copy())
 
