@@ -2,6 +2,8 @@ from typing import Any
 
 
 class FrozenMeta(type):
+    """Metaclass that freezes instances after initialization."""
+
     def __new__(
         mcs,
         name: str,
@@ -59,6 +61,8 @@ class FrozenMeta(type):
 
 
 class FrozenMixin:
+    """Mixin that prevents attribute mutation once frozen."""
+
     _is_frozen: bool = False
 
     # def __init__(self, *args: Any, **kwargs: Any) -> None:
