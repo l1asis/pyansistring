@@ -31,7 +31,7 @@ from .constants import (
     Underline,
     UnderlineMode,
 )
-from .pyansistring import ANSIString
+from .core import ANSIString
 from .style import Color, Style
 from .style_manager import StyleManager
 

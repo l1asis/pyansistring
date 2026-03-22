@@ -3,7 +3,7 @@ __all__ = [
     "COLORED_ARTS",
 ]
 
-from pyansistring.pyansistring import ANSIString
+from pyansistring.core import ANSIString
 
 PLAIN_ARTS = {
     "BANNER": (

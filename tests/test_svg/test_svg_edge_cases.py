@@ -2,7 +2,7 @@
 
 import pytest
 
-import pyansistring.pyansistring as pas
+import pyansistring.core as pas
 from pyansistring import ANSIString
 from pyansistring.constants import SGR
 from tests.test_svg.conftest import FakeTTFont

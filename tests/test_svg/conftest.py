@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING
 import pytest
 from fontTools.pens.svgPathPen import SVGPathPen  # type: ignore[import-untyped]
 
-import pyansistring.pyansistring as pas
+import pyansistring.core as pas
 from pyansistring import ANSIString
 
 if TYPE_CHECKING:

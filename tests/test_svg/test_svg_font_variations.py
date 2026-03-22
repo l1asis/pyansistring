@@ -12,7 +12,7 @@ import re
 
 import pytest
 
-import pyansistring.pyansistring as pas
+import pyansistring.core as pas
 from pyansistring import ANSIString
 from pyansistring._helpers import (
     get_style_key,
