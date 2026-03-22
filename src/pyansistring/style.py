@@ -275,7 +275,7 @@ class Style(metaclass=FrozenMeta):
                 elif len(args) == 3:
                     ul = (Color.from_24bit(*args), ul[1])
             else:
-                ul = (Color.from_4bit(style), ul[1])
+                ul = (Color.from_4bit(Underline.DEFAULT), ul[1])
         elif isinstance(style, UnderlineMode):
             ul = (ul[0], style)
         elif isinstance(style, SGR):
@@ -369,11 +369,8 @@ class Style(metaclass=FrozenMeta):
                             foreground = Color.from_4bit(Foreground(sgr_param))
                         elif sgr_param in Background:
                             background = Color.from_4bit(Background(sgr_param))
-                        elif sgr_param in Underline:
-                            underline = (
-                                Color.from_4bit(Underline(sgr_param)),
-                                underline[1],
-                            )
+                        elif sgr_param == Underline.DEFAULT:
+                            underline = (Color.from_4bit(Underline.DEFAULT), underline[1])
                         elif sgr_param in SGR:
                             attributes.add(SGR(sgr_param))
 
@@ -455,10 +452,10 @@ class Style(metaclass=FrozenMeta):
         return cls(background=Color.from_4bit(color))
 
     @classmethod
-    def ul_4bit(
-        cls, color: Underline, mode: UnderlineMode = UnderlineMode.SINGLE
+    def ul_default(
+        cls, mode: UnderlineMode = UnderlineMode.SINGLE
     ) -> "Style":
-        return cls(underline=(Color.from_4bit(color), mode))
+        return cls(underline=(Color.from_4bit(Underline.DEFAULT), mode))
 
     @classmethod
     def fg_8bit(cls, n: int) -> "Style":
