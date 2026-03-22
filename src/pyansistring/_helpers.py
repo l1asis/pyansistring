@@ -36,8 +36,7 @@ from fontTools.pens.transformPen import TransformPen  # type: ignore[import-unty
 from fontTools.ttLib import TTFont  # type: ignore[import-untyped]
 
 from pyansistring.constants import SGR, WHITESPACE, UnderlineMode
-from pyansistring.style import Style
-from pyansistring.style_manager import StyleManager
+from pyansistring.style import Style, StyleManager
 
 SVG_ESCAPE: dict[str, str] = {
     "&": "&amp;",

@@ -1,131 +1,38 @@
+__all__ = [
+    "Style",
+    "StyleManager",
+]
+
 import re
-from typing import Any, Literal
+from functools import wraps
+from typing import Any, Callable, Literal
 
 from ._frozen import FrozenMeta
+from .color import Color
 from .constants import (
-    COLOR_THEMES,
-    COLORS_8BIT,
-    DEFAULT_THEME,
     SGR,
     Background,
     ColorMode,
     Foreground,
     Regex,
-    ThemeName,
     Underline,
     UnderlineMode,
 )
 
 
-class Color(metaclass=FrozenMeta):
-    """Unified color representation.
+def _detect_style_change(
+    method: Callable[..., Any],
+) -> Callable[..., Any]:
+    """Detect changes in the StyleManager and set the modified flag."""
 
-    Parameters
-    ----------
-    mode : Literal["4bit", "8bit", "24bit"] | None
-        The color mode or ``None`` for unset.
-    value : Foreground | Background | Underline | int | tuple[int, int, int] | None
-        The color value.
+    @wraps(method)
+    def wrapped(self: "StyleManager", *args: Any, **kwargs: Any) -> Any:
+        previous_length = len(self)
+        result = method(self, *args, **kwargs)
+        self._update_modified(previous_length)  # type: ignore
+        return result
 
-    Attributes
-    ----------
-    mode : Literal["4bit", "8bit", "24bit"] | None
-        The color mode or ``None`` for unset.
-    value : int | tuple[int, int, int] | None
-        The normalized color value.
-    """
-
-    __slots__ = ("mode", "value", "_is_frozen")
-
-    def __init__(
-        self,
-        mode: str | None = None,
-        value: Foreground
-        | Background
-        | Underline
-        | tuple[int, int, int]
-        | int
-        | None = None,
-    ) -> None:
-        if mode in {"4bit", "8bit", "24bit"}:
-            self.mode = mode
-        else:
-            self.mode = None
-        if isinstance(value, (Foreground, Background, Underline)):
-            self.value = value.value
-        elif isinstance(value, (int, tuple)):
-            self.value = value
-        else:
-            self.value = None
-
-    def __bool__(self) -> bool:
-        return True if (self.mode and self.value) else False
-
-    def __repr__(self) -> str:
-        return f"Color(mode={self.mode!r}, value={self.value!r})"
-
-    def __hash__(self) -> int:
-        return hash((self.mode, self.value))
-
-    def __eq__(self, other: Any) -> bool:
-        if not isinstance(other, Color):
-            return NotImplemented
-        return (self.mode, self.value) == (other.mode, other.value)
-
-    @classmethod
-    def unset(cls) -> "Color":
-        # TODO: Make it a constant?
-        return cls(None, None)
-
-    @classmethod
-    def from_4bit(cls, color: Foreground | Background | Underline) -> "Color":
-        return cls("4bit", color.value)
-
-    @classmethod
-    def from_8bit(cls, n: int) -> "Color":
-        return cls("8bit", n)
-
-    @classmethod
-    def from_24bit(cls, r: int, g: int, b: int) -> "Color":
-        return cls("24bit", (r, g, b))
-
-    def to_sgr_param(
-        self,
-        prefix: Literal[Foreground.SET, Background.SET, Underline.SET] | str = "",
-        format_mode: Literal["standard", "compatible"] = "standard",
-    ) -> str:
-        if format_mode == "standard" or prefix == Underline.SET:
-            separator = ":"
-        else:
-            separator = ";"
-        if prefix:
-            prefix = str(prefix) + separator
-        if self.mode == "24bit" and isinstance(self.value, tuple):
-            r, g, b = self.value
-            sep = separator * 2 if separator == ":" else ";"
-            return f"{prefix}2{sep}{r}{separator}{g}{separator}{b}"
-        elif self.mode == "8bit" and isinstance(self.value, int):
-            return f"{prefix}5{separator}{self.value}"
-        elif self.mode == "4bit" and isinstance(self.value, int):
-            return f"{self.value}"
-        return ""
-
-    def to_rgb(
-        self,
-        theme: ThemeName = DEFAULT_THEME,
-    ) -> tuple[int, int, int]:
-        """Return the RGB tuple for this color based on the theme."""
-        if self.mode == "24bit":
-            assert isinstance(self.value, tuple)
-            return self.value
-        elif self.mode == "8bit":
-            assert isinstance(self.value, int)
-            return COLORS_8BIT[self.value]
-        elif self.mode == "4bit":
-            assert isinstance(self.value, int)
-            return COLOR_THEMES[theme][self.value]
-        else:
-            return (0, 0, 0)  # Default
+    return wrapped
 
 
 class Style(metaclass=FrozenMeta):
@@ -483,3 +390,140 @@ class Style(metaclass=FrozenMeta):
         cls, r: int, g: int, b: int, mode: UnderlineMode = UnderlineMode.SINGLE
     ) -> "Style":
         return cls(underline=(Color.from_24bit(r, g, b), mode))
+
+
+class StyleManager(dict[int, Style]):
+    """A dict subclass for managing :class:`Style` instances with change tracking.
+
+    Attributes
+    ----------
+    has_changes : bool
+        Modification state of the StyleManager.
+
+    Methods
+    -------
+    pop_modified() -> bool
+        Consume the ``has_changes`` flag and reset it.
+
+    Examples
+    --------
+    >>> style_manager = StyleManager()
+    >>> style_manager[key] = value
+    >>> style_manager.pop_modified()
+    True
+    >>> style_manager.pop_modified()
+    False
+    """
+
+    _style_cache: dict[int, Style] = {}
+
+    def __init__(self, *args: Any, **kwargs: Any) -> None:
+        super().__init__(*args, **kwargs)
+        self._has_changes = False
+
+    @property
+    def has_changes(self) -> bool:
+        return self._has_changes
+
+    def pop_modified(self) -> bool:
+        """Consume the ``has_changes`` flag and reset it."""
+        result = self._has_changes
+        if self._has_changes:
+            self._has_changes = False
+        return result
+
+    def _update_modified(self, previous_length: int) -> None:
+        """Update the ``has_changes`` flag if the collection length changed."""
+        if not self._has_changes and previous_length != len(self):
+            self._has_changes = True
+
+    def __repr__(self) -> str:
+        """Return a string representation of the StyleManager."""
+        # TODO: it is too verbose, but it is useful for debugging
+        return f"StyleManager({super().__repr__()})"
+
+    def __setitem__(self, key: Any, value: Any) -> None:
+        """Set a `Style` instance in the dictionary."""
+        if not isinstance(value, Style):
+            raise TypeError("StyleManager values must be Style instances")
+        # NOTE: Cache identical Style objects by their hash
+        style_hash = hash(value)
+        cached = self._style_cache.get(style_hash)
+        if cached is not None and cached == value:
+            value = cached
+        else:
+            self._style_cache[style_hash] = value
+        self._has_changes = True
+        return super().__setitem__(key, value)
+
+    @_detect_style_change
+    def __delitem__(self, key: Any) -> None:
+        """Delete a style from the dictionary."""
+        return super().__delitem__(key)
+
+    @_detect_style_change  # type: ignore[override]
+    def clear(self) -> None:
+        return super().clear()
+
+    @_detect_style_change  # type: ignore[override]
+    def pop(self, *args: Any) -> Any:
+        return super().pop(*args)
+
+    @_detect_style_change  # type: ignore[override]
+    def popitem(self) -> tuple[int, Style]:
+        return super().popitem()
+
+    @_detect_style_change  # type: ignore[override]
+    def setdefault(self, *args: Any, **kwargs: Any) -> Any:
+        return super().setdefault(*args, **kwargs)
+
+    @_detect_style_change  # type: ignore[override]
+    def update(self, *args: Any, **kwargs: Any) -> None:
+        return super().update(*args, **kwargs)
+
+    def copy(self) -> "StyleManager":
+        """Create a shallow copy of the StyleManager."""
+        copied = StyleManager(dict[Any, Any].copy(self))
+        copied._has_changes = self._has_changes
+        return copied
+
+    def copy_range(
+        self, src_start: int, src_end: int, dest_start: int
+    ) -> dict[int, Style]:
+        """Copy styles from [src_start, src_end) offset to dest_start."""
+        offset = dest_start - src_start
+        return {i + offset: self[i] for i in range(src_start, src_end) if i in self}
+
+    def remap(
+        self, original: str, formatted: str, visible_only: bool = True
+    ) -> dict[int, Style]:
+        """Remap styles from the original string to the formatted string."""
+        if formatted == original:
+            return dict(self)
+
+        pad_left = formatted.find(original)
+        if pad_left == -1:
+            raise ValueError("Original string not found inside formatted string.")
+
+        if visible_only:
+            return self.copy_range(0, len(original), pad_left)
+        else:
+            return self.shift(pad_left)
+
+    def shift(self, offset: int) -> dict[int, Style]:
+        """Shift all style indexes by a given offset."""
+        return {index + offset: style for index, style in self.items()}
+
+    def shift_in_range(
+        self, offset: int, start: int, end: int, step: int = 1
+    ) -> dict[int, Style]:
+        """Shift styles within a specific range by a given offset."""
+        return {
+            index + offset: self[index]
+            for index in range(start, end, step)
+            if index in self
+        }
+
+    def reverse(self, length: int) -> dict[int, Style]:
+        """Reverse style indexes based on the given length."""
+        return {length - index - 1: style for index, style in self.items()}

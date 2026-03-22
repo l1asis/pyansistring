@@ -61,8 +61,7 @@ from .constants import (
     Underline,
     get_casefold_expansions,
 )
-from .style import Style
-from .style_manager import StyleManager
+from .style import Style, StyleManager
 
 
 class ANSIString(str):

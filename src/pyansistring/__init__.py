@@ -15,6 +15,7 @@ try:
 except PackageNotFoundError:
     __version__ = "unknown"
 
+from .color import Color
 from .constants import (
     COLOR_THEMES,
     COLORS_8BIT,
@@ -32,8 +33,7 @@ from .constants import (
     UnderlineMode,
 )
 from .core import ANSIString
-from .style import Color, Style
-from .style_manager import StyleManager
+from .style import Style, StyleManager
 
 __all__ = [
     "ANSIString",
