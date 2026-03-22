@@ -46,7 +46,7 @@ class TestStyleManagerBasics:
 
 
 class TestStyleManagerModificationTracking:
-    """has_been_modified property."""
+    """has_changes property."""
 
     def test_initially_unmodified(self, empty_style_manager: StyleManager):
         assert empty_style_manager.pop_modified() is False, (
