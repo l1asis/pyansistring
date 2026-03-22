@@ -6,17 +6,17 @@ __all__ = [
 ]
 
 import re as _re
+from collections.abc import Iterable as _Iterable, Sequence as _Sequence
 from pathlib import Path as _Path
-from typing import TYPE_CHECKING, Any as _Any, cast as _cast
-
-if TYPE_CHECKING:
-    from collections.abc import Iterable as _Iterable, Sequence as _Sequence
-    from typing import (
-        Mapping as _Mapping,
-        Self as _Self,
-        SupportsIndex as _SupportsIndex,
-        Union as _Union,
-    )
+from typing import (
+    TYPE_CHECKING,
+    Any as _Any,
+    Mapping as _Mapping,
+    Self as _Self,
+    SupportsIndex as _SupportsIndex,
+    Union as _Union,
+    cast as _cast,
+)
 
 if not TYPE_CHECKING:
     try:

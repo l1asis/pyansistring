@@ -5,10 +5,7 @@ __all__ = [
 
 import re as _re
 from functools import wraps as _wraps
-from typing import TYPE_CHECKING, Any as _Any
-
-if TYPE_CHECKING:
-    from typing import Callable as _Callable, Literal as _Literal
+from typing import Any as _Any, Callable as _Callable, Literal as _Literal
 
 from ._frozen import FrozenMeta as _FrozenMeta
 from .color import Color as _Color
