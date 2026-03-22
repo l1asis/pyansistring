@@ -14,7 +14,7 @@ from .constants import (
     Underline,
     UnderlineMode,
 )
-from .frozen import FrozenMeta
+from ._frozen import FrozenMeta
 
 
 class Color(metaclass=FrozenMeta):
