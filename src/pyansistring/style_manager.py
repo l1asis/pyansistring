@@ -13,7 +13,7 @@ def _detect_style_change(
     def wrapped(self: "StyleManager", *args: Any, **kwargs: Any) -> Any:
         previous_length = len(self)
         result = method(self, *args, **kwargs)
-        self.notify_if_changed(previous_length)
+        self._update_modified(previous_length)  # type: ignore
         return result
 
     return wrapped
@@ -59,8 +59,8 @@ class StyleManager(dict[int, Style]):
             self._has_changes = False
         return result
 
-    def notify_if_changed(self, previous_length: int) -> None:
-        """Update the modified flag if the collection length changed."""
+    def _update_modified(self, previous_length: int) -> None:
+        """Update the ``has_changes`` flag if the collection length changed."""
         if not self._has_changes and previous_length != len(self):
             self._has_changes = True
 
