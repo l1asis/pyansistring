@@ -143,7 +143,7 @@ def main() -> None:
     )
     show(
         ".fm_w(BOLD, 'World')",
-        ANSIString("Hello, World!").style_w(SGR.BOLD, "World"),
+        ANSIString("Hello, World!").style_words(SGR.BOLD, "World"),
     )
     show(
         ".fg_4b_words(CYAN) + .bg_4b_words(YELLOW)",
@@ -176,7 +176,7 @@ def main() -> None:
         )
 
     # ── 10. Removing styles ───────────────────────────────────────────────
-    section("Removing styles (unfm / unfm_w)")
+    section("Removing styles (unfm / unstyle_words)")
     show(
         ".fm(BOLD).unfm()",
         ANSIString("Hello, World!").style(SGR.BOLD).unstyle(),
@@ -186,8 +186,8 @@ def main() -> None:
         ANSIString("Hello, World!").style(SGR.BOLD).unstyle((0, 5)),
     )
     show(
-        ".fm_w(BOLD,'Hello').unfm_w('Hello')",
-        ANSIString("Hello, World!").style_w(SGR.BOLD, "Hello").unfm_w("Hello"),
+        ".fm_w(BOLD,'Hello').unstyle_words('Hello')",
+        ANSIString("Hello, World!").style_words(SGR.BOLD, "Hello").unstyle_words("Hello"),
     )
 
     # ── 11. Rainbow ───────────────────────────────────────────────────────

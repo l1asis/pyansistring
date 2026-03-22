@@ -77,7 +77,7 @@ add(
     ANSIString("Hello, World!")
     .fg_4b_words(Foreground.YELLOW, "Hello", "World")
     .bg_4b_words(Background.BLUE, "World")
-    .style_w(SGR.BOLD, "Hello", "World"),
+    .style_words(SGR.BOLD, "Hello", "World"),
 )
 
 # ── SGR formatting (bold + underline) ─────────────────────────────────────

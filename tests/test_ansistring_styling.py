@@ -1,4 +1,4 @@
-"""Tests for ANSIString styling methods (fm, unfm, fg_*, bg_*, ul_*, rainbow)."""
+"""Tests for ANSIString styling methods (style, unstyle, fg_*, bg_*, ul_*, rainbow)."""
 
 from typing import Any
 
@@ -16,12 +16,12 @@ from pyansistring.style import Style
 from tests.conftest import RESET, ansi_wrap, style_ansi
 
 
-class TestFm:
-    """ANSIString.fm() — apply a style to ranges."""
+class TestStyle:
+    """ANSIString.style() — apply a style to ranges."""
 
     def test_whole_string(self, hello_world: ANSIString, bold_code: str):
         s = hello_world.style(SGR.BOLD)
-        assert str(s) == ansi_wrap("Hello, World!", bold_code), "fm(BOLD) whole string"
+        assert str(s) == ansi_wrap("Hello, World!", bold_code), "style(BOLD) whole string"
 
     def test_slice_range(self, hello_world: ANSIString, bold_code: str):
         s = hello_world.style(SGR.BOLD, (0, 5))
@@ -30,7 +30,7 @@ class TestFm:
     def test_multiple_ranges(self, hello_world: ANSIString, bold_code: str):
         s = hello_world.style(SGR.BOLD, (0, 5), slice(7, 12))
         expected = f"{ansi_wrap('Hello', bold_code)}, {ansi_wrap('World', bold_code)}!"
-        assert str(s) == expected, "fm with multiple ranges should style each"
+        assert str(s) == expected, "style with multiple ranges should style each"
 
     def test_stacking_styles(
         self, hello_world: ANSIString, bold_code: str, italic_code: str
@@ -42,24 +42,24 @@ class TestFm:
         )
 
 
-class TestFmW:
-    """ANSIString.fm_w() — word-targeted formatting."""
+class TestStyleWords:
+    """ANSIString.style_words() — word-targeted formatting."""
 
     def test_by_word(self, hello_world: ANSIString, bold_code: str):
-        s = hello_world.style_w(SGR.BOLD, "Hello")
+        s = hello_world.style_words(SGR.BOLD, "Hello")
         assert str(s) == ansi_wrap("Hello", bold_code) + ", World!"
 
     def test_case_insensitive(self, hello_world: ANSIString, italic_code: str):
-        s = hello_world.style_w(SGR.ITALIC, "world", case_sensitive=False)
+        s = hello_world.style_words(SGR.ITALIC, "world", case_sensitive=False)
         assert str(s) == "Hello, " + ansi_wrap("World", italic_code) + "!"
 
 
-class TestUnfm:
-    """ANSIString.unfm() — remove formatting."""
+class TestUnstyle:
+    """ANSIString.unstyle() — remove formatting."""
 
-    def test_unfm_whole_string(self, hello_world: ANSIString):
+    def test_unstyle_whole_string(self, hello_world: ANSIString):
         s = hello_world.style(SGR.BOLD).unstyle()
-        assert str(s) == "Hello, World!", "unfm() should strip all formatting"
+        assert str(s) == "Hello, World!", "unstyle() should strip all formatting"
 
     @pytest.mark.parametrize(
         "ranges",
@@ -68,20 +68,20 @@ class TestUnfm:
             pytest.param(((0, 5), slice(7, 12)), id="multiple-ranges"),
         ],
     )
-    def test_unfm_ranges(self, hello_world: ANSIString, ranges: Any):
+    def test_unstyle_ranges(self, hello_world: ANSIString, ranges: Any):
         s = hello_world.style(SGR.BOLD, *ranges).unstyle(*ranges)
-        assert str(s) == "Hello, World!", f"unfm{ranges} should clear those ranges"
+        assert str(s) == "Hello, World!", f"unstyle{ranges} should clear those ranges"
 
 
-class TestUnfmW:
-    """ANSIString.unfm_w() — remove formatting by word."""
+class TestUnstyleWords:
+    """ANSIString.unstyle_words() — remove formatting by word."""
 
-    def test_unfm_word(self, hello_world: ANSIString):
-        s = hello_world.style_w(SGR.BOLD, "Hello").unfm_w("Hello")
+    def test_unstyle_words(self, hello_world: ANSIString):
+        s = hello_world.style_words(SGR.BOLD, "Hello").unstyle_words("Hello")
         assert str(s) == "Hello, World!"
 
-    def test_unfm_word_case_insensitive(self, hello_world: ANSIString):
-        s = hello_world.style_w(SGR.ITALIC, "world", case_sensitive=False).unfm_w(
+    def test_unstyle_words_case_insensitive(self, hello_world: ANSIString):
+        s = hello_world.style_words(SGR.ITALIC, "world", case_sensitive=False).unstyle_words(
             "world", case_sensitive=False
         )
         assert str(s) == "Hello, World!"
@@ -249,7 +249,7 @@ class TestWholeStringColor:
 
 
 class TestUlAttr:
-    """SGR.UNDERLINE attribute via fm()."""
+    """SGR.UNDERLINE attribute via style()."""
 
     def test_whole(self, hello_world: ANSIString):
         ul = style_ansi(SGR.UNDERLINE)
@@ -292,7 +292,7 @@ class TestUnderlineModes:
     def test_word_targeted_mode(self):
         mode = UnderlineMode.DOUBLE
         ul_ansi = Style().with_style(Underline.SET, 135).with_style(mode).to_ansi()
-        s = ANSIString("Hello, World!").ul_8b_words(135, "World").style_w(mode, "World")
+        s = ANSIString("Hello, World!").ul_8b_words(135, "World").style_words(mode, "World")
         expected = "Hello, " + f"{ul_ansi}World{RESET}" + "!"
         assert str(s) == expected, "Word-targeted underline mode mismatch"
 

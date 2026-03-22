@@ -107,10 +107,14 @@
 > [!NOTE]
 > The following should probably be renamed to more intuitive names.
 
-- [X] `fm` (set SGR styling parameters)
-- [X] `fm_w` (`fm` per word)
-- [X] `unfm` (remove styles from the string)
-- [X] `unfm_w` (`unfm` per word)
+- [ ] ~~`fm` (set SGR styling parameters)~~
+- [ ] ~~`fm_w` (`fm` per word)~~
+- [ ] ~~`unfm` (remove styles from the string)~~
+
+- [X] `style` (set SGR styling parameters)
+- [X] `style_words` (`style` per word)
+- [X] `unstyle` (remove styles from the string)
+- [X] `unstyle_words` (`unstyle` per word)
 
 - [ ] ~~`fg` (shortcut to `fg_24b`)~~
 - [ ] ~~`fg_w` (shortcut to `fg_24b_words`)~~

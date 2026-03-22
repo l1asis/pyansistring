@@ -472,7 +472,7 @@ class ANSIString(str):
                     self.style_manager[index] = self.style_manager[index].merge(style)
         return self
 
-    def style_w(
+    def style_words(
         self, style_code: int | str, *words: str, case_sensitive: bool = True
     ) -> Self:
         """Apply a style to matched words of the string."""
@@ -493,7 +493,7 @@ class ANSIString(str):
                     del self.style_manager[index]
         return self
 
-    def unfm_w(self, *words: str, case_sensitive: bool = True) -> Self:
+    def unstyle_words(self, *words: str, case_sensitive: bool = True) -> Self:
         """Remove styling from matched words of the string."""
         return self.unstyle(*self._search_spans(*words, case_sensitive=case_sensitive))
 
@@ -630,7 +630,7 @@ class ANSIString(str):
         """Apply the default underline style to the string in a specified range."""
         return self.style(Underline.DEFAULT, *slices)
 
-    def ul_default_w(
+    def ul_default_words(
         self,
         *words: str,
         case_sensitive: bool = True,
