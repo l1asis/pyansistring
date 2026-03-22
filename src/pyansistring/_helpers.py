@@ -21,16 +21,20 @@ __all__ = [
     "remap_format",
 ]
 
-import math
-from collections.abc import Generator
-from colorsys import hls_to_rgb
-from pathlib import Path
+import math as _math
+from collections.abc import Generator as _Generator
+from colorsys import hls_to_rgb as _hls_to_rgb
+from pathlib import Path as _Path
 from string import Formatter as _Formatter
-from typing import Any, NamedTuple
+from typing import Any as _Any, NamedTuple as _NamedTuple
 
-from fontTools.pens.svgPathPen import SVGPathPen  # type: ignore[import-untyped]
-from fontTools.pens.transformPen import TransformPen  # type: ignore[import-untyped]
-from fontTools.ttLib import TTFont  # type: ignore[import-untyped]
+from fontTools.pens.svgPathPen import (  # type: ignore[import-untyped]
+    SVGPathPen as _SVGPathPen,
+)
+from fontTools.pens.transformPen import (  # type: ignore[import-untyped]
+    TransformPen as _TransformPen,
+)
+from fontTools.ttLib import TTFont as _TTFont  # type: ignore[import-untyped]
 
 from pyansistring.constants import SGR, WHITESPACE, UnderlineMode
 from pyansistring.style import Style, StyleManager
@@ -52,16 +56,16 @@ UNDERLINE_CSS: dict[int, str] = {
 }
 
 
-class FontVariant(NamedTuple):
+class FontVariant(_NamedTuple):
     """Pre-computed font data for a single style variant (bold, italic, …)."""
 
-    glyph_set: Any
+    glyph_set: _Any
     cmap: dict[int, str]
     needs_faux_bold: bool
     needs_faux_italic: bool
 
 
-def find_spans(string: str, substring: str) -> Generator[tuple[int, int], None, None]:
+def find_spans(string: str, substring: str) -> _Generator[tuple[int, int], None, None]:
     """Find all non-overlapping occurrences of `substring` in `string`."""
     i = j = 0
     while i < len(string):
@@ -74,7 +78,7 @@ def find_spans(string: str, substring: str) -> Generator[tuple[int, int], None, 
 
 def search_separators(
     string: str, allowed: set[str] = WHITESPACE
-) -> Generator[str, None, None]:
+) -> _Generator[str, None, None]:
     """Search for allowed separators in a string."""
     separator = ""
     for char in string:
@@ -89,7 +93,7 @@ def search_separators(
 
 def rsearch_separators(
     string: str, allowed: set[str] = WHITESPACE
-) -> Generator[str, None, None]:
+) -> _Generator[str, None, None]:
     """Search for allowed separators in a string, starting from the end."""
     return search_separators(string[::-1], allowed)
 
@@ -107,14 +111,14 @@ def hsl_to_rgb(
     hue: int | float, saturation: int | float = 100, lightness: int | float = 50
 ) -> tuple[int, int, int]:
     """Convert HSL color values to RGB."""
-    r, g, b = hls_to_rgb(hue / 360, lightness / 100, saturation / 100)
+    r, g, b = _hls_to_rgb(hue / 360, lightness / 100, saturation / 100)
     return int(round(r * 255)), int(round(g * 255)), int(round(b * 255))
 
 
-def load_font(font: "TTFont | Path | str") -> "TTFont":
+def load_font(font: "_TTFont | _Path | str") -> "_TTFont":
     """Normalize a font argument to a `TTFont` instance."""
-    if isinstance(font, (Path, str)):
-        return TTFont(font)
+    if isinstance(font, (_Path, str)):
+        return _TTFont(font)
     return font
 
 
@@ -148,11 +152,11 @@ def get_style_key(style: "Style | None") -> str:
 
 
 def prepare_font_variants(
-    font: "TTFont",
-    font_bold: "TTFont | None",
-    font_italic: "TTFont | None",
-    font_bold_italic: "TTFont | None",
-    font_thin: "TTFont | None",
+    font: "_TTFont",
+    font_bold: "_TTFont | None",
+    font_italic: "_TTFont | None",
+    font_bold_italic: "_TTFont | None",
+    font_thin: "_TTFont | None",
 ) -> dict[str, FontVariant]:
     """Build a mapping from style keys to :class:`FontVariant` tuples.
 
@@ -179,13 +183,13 @@ def prepare_font_variants(
     """
 
     # -- fontTools helper wrappers (no stubs available) --
-    def _cmap(f: TTFont) -> dict[int, str]:
+    def _cmap(f: _TTFont) -> dict[int, str]:
         return f.getBestCmap()  # type: ignore[no-any-return]
 
-    def _gs(f: TTFont, **kw: Any) -> Any:
+    def _gs(f: _TTFont, **kw: _Any) -> _Any:
         return f.getGlyphSet(**kw)  # type: ignore[no-any-return]
 
-    def _fvar_axes(f: TTFont) -> dict[str, Any]:
+    def _fvar_axes(f: _TTFont) -> dict[str, _Any]:
         return {a.axTag: a for a in f["fvar"].axes}  # type: ignore[union-attr]
 
     main_cmap = _cmap(font)
@@ -197,7 +201,7 @@ def prepare_font_variants(
 
     # Detect variable-font axes
     has_fvar = "fvar" in font
-    var_axes: dict[str, Any] = {}
+    var_axes: dict[str, _Any] = {}
     if has_fvar:
         var_axes = _fvar_axes(font)
 
@@ -361,14 +365,14 @@ def resolve_skew(
 
 
 def svg_create_transform_pen(
-    glyph_set: Any,
+    glyph_set: _Any,
     scale: float,
     x_px: float,
     y_px: float,
     ascent: int,
     descent: int,
     effective_skew: float | None,
-) -> tuple[Any, Any, float, float]:
+) -> tuple[_Any, _Any, float, float]:
     """Create an SVGPathPen + TransformPen with optional italic skew.
 
     Parameters
@@ -401,13 +405,13 @@ def svg_create_transform_pen(
     right_overflow : float
         The amount of overflow to the right of the glyph's bounding box.
     """
-    pen = SVGPathPen(glyph_set)
+    pen = _SVGPathPen(glyph_set)
     left_ov = 0.0
     right_ov = 0.0
 
     if effective_skew is not None and effective_skew != 0:
-        tan = math.tan(math.radians(effective_skew))
-        t_pen = TransformPen(
+        tan = _math.tan(_math.radians(effective_skew))
+        t_pen = _TransformPen(
             pen,
             (scale, 0, -scale * tan, -scale, x_px, y_px),
         )
@@ -418,7 +422,7 @@ def svg_create_transform_pen(
             right_ov = abs(tan) * ascent * scale
             left_ov = abs(tan) * abs(descent) * scale - x_px
     else:
-        t_pen = TransformPen(pen, (scale, 0, 0, -scale, x_px, y_px))
+        t_pen = _TransformPen(pen, (scale, 0, 0, -scale, x_px, y_px))
 
     return t_pen, pen, left_ov, right_ov
 
@@ -567,7 +571,7 @@ def svg_build_underline_elements(
         cy = ul_y + ul_h / 2
         r = ul_h / 2
         spacing = ul_h * 3
-        pos = r + math.ceil((ul_x - r) / spacing) * spacing if ul_x > r else r
+        pos = r + _math.ceil((ul_x - r) / spacing) * spacing if ul_x > r else r
         while pos < ul_x + ul_w:
             elems.append(f'  <circle cx="{pos}" cy="{cy}" r="{r}" fill="{ul_color}"/>')
             pos += spacing
@@ -593,8 +597,8 @@ class _MapFmt(_Formatter):
     """Formatter that resolves all field names through *kwargs* (the mapping)."""
 
     def get_value(
-        self, key: int | str, args: Any, kwargs: Any
-    ) -> Any:  # pragma: no cover
+        self, key: int | str, args: _Any, kwargs: _Any
+    ) -> _Any:  # pragma: no cover
         return kwargs[key]
 
 
@@ -604,8 +608,8 @@ MAP_FMT = _MapFmt()
 def _resolve_format_spec(
     spec: str,
     fmt: _Formatter,
-    args: tuple[Any, ...],
-    kwargs: Any,
+    args: tuple[_Any, ...],
+    kwargs: _Any,
     auto_idx: int,
 ) -> tuple[str, int]:
     """Resolve nested replacement fields inside a format spec."""
@@ -632,8 +636,8 @@ def remap_format(
     template: str,
     sm: StyleManager,
     fmt: _Formatter,
-    args: tuple[Any, ...],
-    kwargs: Any,
+    args: tuple[_Any, ...],
+    kwargs: _Any,
 ) -> dict[int, Style]:
     """Map styles from a format template onto the formatted output positions."""
     styles: dict[int, Style] = {}
