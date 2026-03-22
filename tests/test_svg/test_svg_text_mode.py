@@ -82,12 +82,12 @@ class TestSvgTextModeBackground:
 
 class TestSvgTextModeAttributes:
     def test_bold_font_weight(self, fake_font: FakeTTFont):
-        s = ANSIString("Hi").fm(SGR.BOLD).fg_24b(0, 0, 0)
+        s = ANSIString("Hi").style(SGR.BOLD).fg_24b(0, 0, 0)
         svg = s.to_svg(fake_font, font_size_px=16)
         assert "font-weight" in svg
 
     def test_italic_font_style(self, fake_font: FakeTTFont):
-        s = ANSIString("Hi").fm(SGR.ITALIC).fg_24b(0, 0, 0)
+        s = ANSIString("Hi").style(SGR.ITALIC).fg_24b(0, 0, 0)
         svg = s.to_svg(fake_font, font_size_px=16)
         assert "font-style" in svg
 

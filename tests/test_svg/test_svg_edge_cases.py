@@ -83,13 +83,13 @@ class TestMultiLine:
 
 class TestNestedStyles:
     def test_bold_and_fg_text_mode(self, fake_font: FakeTTFont):
-        s = ANSIString("Hello").fm(SGR.BOLD).fg_24b(255, 0, 0)
+        s = ANSIString("Hello").style(SGR.BOLD).fg_24b(255, 0, 0)
         svg = s.to_svg(fake_font, font_size_px=16)
         assert 'fill="rgb(255, 0, 0)"' in svg
         assert "font-weight" in svg
 
     def test_bold_and_fg_path_mode(self, fake_font: FakeTTFont):
-        s = ANSIString("Hello").fm(SGR.BOLD).fg_24b(255, 0, 0)
+        s = ANSIString("Hello").style(SGR.BOLD).fg_24b(255, 0, 0)
         svg = s.to_svg(fake_font, font_size_px=16, convert_text_to_path=True)
         assert 'fill="rgb(255, 0, 0)"' in svg
         assert "stroke-width=" in svg
@@ -119,7 +119,7 @@ class TestFonttoolsGuard:
 
 class TestModeParity:
     def test_both_modes_contain_svg_tags(self, fake_font: FakeTTFont):
-        s = ANSIString("Hello").fg_24b(255, 0, 0).fm(SGR.BOLD)
+        s = ANSIString("Hello").fg_24b(255, 0, 0).style(SGR.BOLD)
         for mode in (False, True):
             svg = s.to_svg(fake_font, font_size_px=16, convert_text_to_path=mode)
             assert "<svg " in svg

@@ -41,7 +41,7 @@ def hello_world():
 @pytest.fixture
 def bold_hello_world():
     """`'Hello, World!'` fully formatted with BOLD."""
-    return ANSIString("Hello, World!").fm(SGR.BOLD)
+    return ANSIString("Hello, World!").style(SGR.BOLD)
 
 
 @pytest.fixture

@@ -53,11 +53,11 @@ class TestConstruction:
         assert str(s) == ""
 
     def test_styled_text_renders_correctly(self, bold_code: str):
-        s = ANSIString("Hello, World!").fm(SGR.BOLD)
+        s = ANSIString("Hello, World!").style(SGR.BOLD)
         assert str(s) == ansi_wrap("Hello, World!", bold_code)
 
     def test_actual_length(self):
-        s = ANSIString("Hello, World!").fm(SGR.BOLD)
+        s = ANSIString("Hello, World!").style(SGR.BOLD)
         assert s.styled_length > len("Hello, World!"), (
             "actual_length should exceed plain length due to ANSI codes"
         )
@@ -74,7 +74,7 @@ class TestRepr:
 
 class TestEquality:
     def test_compares_styled_text(self, bold_code: str):
-        s = ANSIString("Hi").fm(SGR.BOLD)
+        s = ANSIString("Hi").style(SGR.BOLD)
         assert s == ansi_wrap("Hi", bold_code), (
             "ANSIString should equal its rendered output"
         )

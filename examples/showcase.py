@@ -54,13 +54,16 @@ def main() -> None:
         "OVERLINED": SGR.OVERLINED,
     }
     for name, sgr in attrs.items():
-        show(f".fm(SGR.{name})", ANSIString("Hello, World!").fm(sgr))
+        show(f".fm(SGR.{name})", ANSIString("Hello, World!").style(sgr))
 
     # ── 3. Stacking attributes ────────────────────────────────────────────
     section("Stacking multiple attributes")
     show(
         ".fm(BOLD).fm(ITALIC).fm(UNDERLINE)",
-        ANSIString("Hello, World!").fm(SGR.BOLD).fm(SGR.ITALIC).fm(SGR.UNDERLINE),
+        ANSIString("Hello, World!")
+        .style(SGR.BOLD)
+        .style(SGR.ITALIC)
+        .style(SGR.UNDERLINE),
     )
 
     # ── 4. 4-bit foreground ───────────────────────────────────────────────
@@ -140,7 +143,7 @@ def main() -> None:
     )
     show(
         ".fm_w(BOLD, 'World')",
-        ANSIString("Hello, World!").fm_w(SGR.BOLD, "World"),
+        ANSIString("Hello, World!").style_w(SGR.BOLD, "World"),
     )
     show(
         ".fg_4b_w(CYAN) + .bg_4b_w(YELLOW)",
@@ -169,22 +172,22 @@ def main() -> None:
     for name, mode in modes:
         show(
             f".ul_24b(255,100,0).fm({name})",
-            ANSIString("Hello, World!").ul_24b(255, 100, 0).fm(mode),
+            ANSIString("Hello, World!").ul_24b(255, 100, 0).style(mode),
         )
 
     # ── 10. Removing styles ───────────────────────────────────────────────
     section("Removing styles (unfm / unfm_w)")
     show(
         ".fm(BOLD).unfm()",
-        ANSIString("Hello, World!").fm(SGR.BOLD).unfm(),
+        ANSIString("Hello, World!").style(SGR.BOLD).unstyle(),
     )
     show(
         ".fm(BOLD).unfm((0,5))",
-        ANSIString("Hello, World!").fm(SGR.BOLD).unfm((0, 5)),
+        ANSIString("Hello, World!").style(SGR.BOLD).unstyle((0, 5)),
     )
     show(
         ".fm_w(BOLD,'Hello').unfm_w('Hello')",
-        ANSIString("Hello, World!").fm_w(SGR.BOLD, "Hello").unfm_w("Hello"),
+        ANSIString("Hello, World!").style_w(SGR.BOLD, "Hello").unfm_w("Hello"),
     )
 
     # ── 11. Rainbow ───────────────────────────────────────────────────────
@@ -259,7 +262,7 @@ def main() -> None:
     show("str + ANSIString", ">>> " + b)
 
     section("Alignment preserves styles")
-    short = ANSIString("Hi").fg_24b(255, 100, 0).fm(SGR.BOLD)
+    short = ANSIString("Hi").fg_24b(255, 100, 0).style(SGR.BOLD)
     show(".ljust(10, '.')", short.ljust(10, "."))
     show(".rjust(10, '.')", short.rjust(10, "."))
     show(".center(10, '.')", short.center(10, "."))
@@ -267,7 +270,7 @@ def main() -> None:
     section("Split / join preserve styles")
     parts = ANSIString("Hello, World!").fg_24b(0, 128, 255).split(", ")
     show(".split(', ')", " | ".join(str(p) for p in parts))
-    joined = ANSIString(" + ").fm(SGR.BOLD).join(parts)
+    joined = ANSIString(" + ").style(SGR.BOLD).join(parts)
     show(".join(parts)", joined)
 
     # ── 14. f-string support ──────────────────────────────────────────────

@@ -302,7 +302,7 @@ class TestFontBoldParam:
         self, regular_font: FakeTTFont, bold_font: FakeTTFont
     ):
         """When font_bold is provided, bold chars should NOT get faux stroke."""
-        s = ANSIString("AB").fm(SGR.BOLD)
+        s = ANSIString("AB").style(SGR.BOLD)
         svg = s.to_svg(
             regular_font,
             font_size_px=16,
@@ -315,7 +315,7 @@ class TestFontBoldParam:
         self, regular_font: FakeTTFont, bold_font: FakeTTFont
     ):
         """Text mode still emits font-weight='bold' CSS attribute."""
-        s = ANSIString("AB").fm(SGR.BOLD).fg_24b(0, 0, 0)
+        s = ANSIString("AB").style(SGR.BOLD).fg_24b(0, 0, 0)
         svg = s.to_svg(regular_font, font_size_px=16, font_bold=bold_font)
         assert 'font-weight="bold"' in svg
 
@@ -338,7 +338,7 @@ class TestFontItalicParam:
         self, regular_font: FakeTTFont, italic_font: FakeTTFont
     ):
         """When font_italic is provided, italic chars should NOT get faux skew."""
-        s = ANSIString("AB").fm(SGR.ITALIC)
+        s = ANSIString("AB").style(SGR.ITALIC)
         svg_with = s.to_svg(
             regular_font,
             font_size_px=16,
@@ -362,7 +362,7 @@ class TestFontBoldItalicParam:
         self, regular_font: FakeTTFont, bold_italic_font: FakeTTFont
     ):
         """Dedicated bold-italic font removes all faux effects."""
-        s = ANSIString("AB").fm(SGR.BOLD).fm(SGR.ITALIC)
+        s = ANSIString("AB").style(SGR.BOLD).style(SGR.ITALIC)
         svg = s.to_svg(
             regular_font,
             font_size_px=16,
@@ -375,7 +375,7 @@ class TestFontBoldItalicParam:
         self, regular_font: FakeTTFont, bold_font: FakeTTFont
     ):
         """Without font_bold_italic, bold font + faux italic is used."""
-        s = ANSIString("AB").fm(SGR.BOLD).fm(SGR.ITALIC)
+        s = ANSIString("AB").style(SGR.BOLD).style(SGR.ITALIC)
         svg = s.to_svg(
             regular_font,
             font_size_px=16,
@@ -389,7 +389,7 @@ class TestFontBoldItalicParam:
 class TestFontThinParam:
     def test_dim_text_mode_emits_lighter(self, regular_font: FakeTTFont):
         """SGR.DIM chars get font-weight='lighter' in text mode."""
-        s = ANSIString("AB").fm(SGR.DIM).fg_24b(0, 0, 0)
+        s = ANSIString("AB").style(SGR.DIM).fg_24b(0, 0, 0)
         svg = s.to_svg(regular_font, font_size_px=16)
         assert 'font-weight="lighter"' in svg
 
@@ -397,7 +397,7 @@ class TestFontThinParam:
         self, regular_font: FakeTTFont, thin_font: FakeTTFont
     ):
         """When font_thin is provided, SGR.DIM chars use it (no faux stroke)."""
-        s = ANSIString("AB").fm(SGR.DIM)
+        s = ANSIString("AB").style(SGR.DIM)
         svg = s.to_svg(
             regular_font,
             font_size_px=16,
@@ -409,12 +409,12 @@ class TestFontThinParam:
 
 class TestVariableFont:
     def test_variable_font_bold_no_faux(self, variable_font: FakeTTFont):
-        s = ANSIString("AB").fm(SGR.BOLD)
+        s = ANSIString("AB").style(SGR.BOLD)
         svg = s.to_svg(variable_font, font_size_px=16, convert_text_to_path=True)
         assert "stroke-width=" not in svg
 
     def test_variable_font_italic_no_faux(self, variable_font: FakeTTFont):
-        s = ANSIString("AB").fm(SGR.ITALIC)
+        s = ANSIString("AB").style(SGR.ITALIC)
         svg_var = s.to_svg(variable_font, font_size_px=16, convert_text_to_path=True)
         svg_reg = s.to_svg(make_font(600), font_size_px=16, convert_text_to_path=True)
         # Both should work; variable font has native italic so no faux skew
@@ -424,7 +424,7 @@ class TestVariableFont:
         assert w_var <= w_reg
 
     def test_variable_bold_italic_no_faux(self, variable_font: FakeTTFont):
-        s = ANSIString("AB").fm(SGR.BOLD).fm(SGR.ITALIC)
+        s = ANSIString("AB").style(SGR.BOLD).style(SGR.ITALIC)
         svg = s.to_svg(variable_font, font_size_px=16, convert_text_to_path=True)
         assert "stroke-width=" not in svg
 
@@ -432,7 +432,7 @@ class TestVariableFont:
         self, variable_font_wght_only: FakeTTFont
     ):
         """Variable font with only wght: italic still needs faux skew."""
-        s = ANSIString("AB").fm(SGR.ITALIC)
+        s = ANSIString("AB").style(SGR.ITALIC)
         svg_var = s.to_svg(
             variable_font_wght_only,
             font_size_px=16,
@@ -450,7 +450,7 @@ class TestVariableFont:
 
     def test_variable_thin_uses_min_weight(self, variable_font: FakeTTFont):
         """SGR.DIM chars on a variable font use the wght axis minimum."""
-        s = ANSIString("AB").fm(SGR.DIM)
+        s = ANSIString("AB").style(SGR.DIM)
         svg = s.to_svg(variable_font, font_size_px=16, convert_text_to_path=True)
         assert "stroke-width=" not in svg
 
@@ -458,14 +458,14 @@ class TestVariableFont:
 class TestFauxFallback:
     def test_faux_bold_default_700(self, regular_font: FakeTTFont):
         """Default faux weight is 700 when weight= is not specified."""
-        s = ANSIString("AB").fm(SGR.BOLD)
+        s = ANSIString("AB").style(SGR.BOLD)
         svg = s.to_svg(regular_font, font_size_px=16, convert_text_to_path=True)
         expected_sw = (700 - 400) / 300 * 16 * 0.03
         assert f'stroke-width="{expected_sw}"' in svg
 
     def test_faux_bold_custom_weight(self, regular_font: FakeTTFont):
         """User can override the faux weight value."""
-        s = ANSIString("AB").fm(SGR.BOLD)
+        s = ANSIString("AB").style(SGR.BOLD)
         svg = s.to_svg(
             regular_font,
             font_size_px=16,
@@ -477,7 +477,7 @@ class TestFauxFallback:
 
     def test_faux_italic_default_skew(self, regular_font: FakeTTFont):
         """Default faux skew is -12 when skew= is not specified."""
-        s = ANSIString("AB").fm(SGR.ITALIC)
+        s = ANSIString("AB").style(SGR.ITALIC)
         svg = s.to_svg(regular_font, font_size_px=16, convert_text_to_path=True)
         # Should produce wider SVG due to italic overflow
         svg_plain = ANSIString("AB").to_svg(
@@ -491,7 +491,7 @@ class TestFauxFallback:
 
     def test_faux_italic_custom_skew(self, regular_font: FakeTTFont):
         """User can override the faux skew angle."""
-        s = ANSIString("AB").fm(SGR.ITALIC)
+        s = ANSIString("AB").style(SGR.ITALIC)
         svg_default = s.to_svg(
             regular_font,
             font_size_px=16,
@@ -510,7 +510,7 @@ class TestFauxFallback:
 
     def test_faux_only_on_styled_chars(self, regular_font: FakeTTFont):
         """Faux effects apply only to bold/italic chars, not all chars."""
-        s = ANSIString("ABCD").fm(SGR.BOLD, (0, 2))  # Only AB is bold
+        s = ANSIString("ABCD").style(SGR.BOLD, (0, 2))  # Only AB is bold
         svg = s.to_svg(
             regular_font,
             font_size_px=16,
@@ -524,7 +524,7 @@ class TestFauxFallback:
 
     def test_weight_400_suppresses_faux_bold(self, regular_font: FakeTTFont):
         """weight=400 means no faux bold even for SGR.BOLD chars."""
-        s = ANSIString("AB").fm(SGR.BOLD)
+        s = ANSIString("AB").style(SGR.BOLD)
         svg = s.to_svg(
             regular_font,
             font_size_px=16,
@@ -535,7 +535,7 @@ class TestFauxFallback:
 
     def test_skew_zero_suppresses_faux_italic(self, regular_font: FakeTTFont):
         """skew=0 means no faux italic even for SGR.ITALIC chars."""
-        s = ANSIString("AB").fm(SGR.ITALIC)
+        s = ANSIString("AB").style(SGR.ITALIC)
         svg = s.to_svg(
             regular_font,
             font_size_px=16,
@@ -557,7 +557,7 @@ class TestMixedStyles:
         self, regular_font: FakeTTFont, bold_font: FakeTTFont
     ):
         """Bold chars use font_bold; regular chars use regular font."""
-        s = ANSIString("ABCD").fm(SGR.BOLD, (0, 2))
+        s = ANSIString("ABCD").style(SGR.BOLD, (0, 2))
         svg = s.to_svg(
             regular_font,
             font_size_px=16,
@@ -571,7 +571,7 @@ class TestMixedStyles:
         self, regular_font: FakeTTFont, bold_font: FakeTTFont, italic_font: FakeTTFont
     ):
         """AB=bold, CD=italic — each uses its variant font."""
-        s = ANSIString("ABCD").fm(SGR.BOLD, (0, 2)).fm(SGR.ITALIC, (2, 4))
+        s = ANSIString("ABCD").style(SGR.BOLD, (0, 2)).style(SGR.ITALIC, (2, 4))
         svg = s.to_svg(
             regular_font,
             font_size_px=16,
@@ -598,7 +598,7 @@ class TestPathDataDistinction:
     def test_bold_chars_use_bold_font_paths(
         self, regular_font: FakeTTFont, bold_font: FakeTTFont
     ):
-        s = ANSIString("AB").fm(SGR.BOLD)
+        s = ANSIString("AB").style(SGR.BOLD)
         svg_variant = s.to_svg(
             regular_font,
             font_size_px=16,
@@ -618,7 +618,7 @@ class TestPathDataDistinction:
     def test_italic_chars_use_italic_font_paths(
         self, regular_font: FakeTTFont, italic_font: FakeTTFont
     ):
-        s = ANSIString("AB").fm(SGR.ITALIC)
+        s = ANSIString("AB").style(SGR.ITALIC)
         svg_variant = s.to_svg(
             regular_font,
             font_size_px=16,
@@ -637,7 +637,7 @@ class TestPathDataDistinction:
     def test_bold_italic_chars_use_bold_italic_font_paths(
         self, regular_font: FakeTTFont, bold_italic_font: FakeTTFont
     ):
-        s = ANSIString("AB").fm(SGR.BOLD).fm(SGR.ITALIC)
+        s = ANSIString("AB").style(SGR.BOLD).style(SGR.ITALIC)
         svg_variant = s.to_svg(
             regular_font,
             font_size_px=16,
@@ -657,7 +657,7 @@ class TestPathDataDistinction:
         self, regular_font: FakeTTFont, bold_font: FakeTTFont, italic_font: FakeTTFont
     ):
         """AB=bold, CD=italic — bold paths differ from italic paths."""
-        s = ANSIString("ABCD").fm(SGR.BOLD, (0, 2)).fm(SGR.ITALIC, (2, 4))
+        s = ANSIString("ABCD").style(SGR.BOLD, (0, 2)).style(SGR.ITALIC, (2, 4))
         svg = s.to_svg(
             regular_font,
             font_size_px=16,
@@ -680,7 +680,7 @@ class TestPathDataDistinction:
         self, regular_font: FakeTTFont, bold_font: FakeTTFont
     ):
         """Non-bold chars still use the regular font's glyph set."""
-        s = ANSIString("ABCD").fm(SGR.BOLD, (0, 2))  # AB bold, CD regular
+        s = ANSIString("ABCD").style(SGR.BOLD, (0, 2))  # AB bold, CD regular
         svg = s.to_svg(
             regular_font,
             font_size_px=16,

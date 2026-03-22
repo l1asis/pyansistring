@@ -443,14 +443,16 @@ class ANSIString(str):
                     start = index
         return ANSIString(plain, styles)
 
-    def fm(
-        self, parameter: int | str, *slices: Annotated[Sequence[int], Length(3)] | slice
+    def style(
+        self,
+        style_code: int | str,
+        *slices: Annotated[Sequence[int], Length(3)] | slice,
     ) -> Self:
-        """Format (apply styling to) the string in a specified range."""
+        """Apply a style to the string in a specified range."""
         # TODO: forbid formatting above the length of the string
-        if parameter == SGR.RESET:
-            return self.unfm(*slices)
-        style = Style().with_style(parameter)
+        if style_code == SGR.RESET:
+            return self.unstyle(*slices)
+        style = Style().with_style(style_code)
         if slices:
             for slice_ in slices:
                 for index in range(*self._get_indices(slice_)):
@@ -468,15 +470,15 @@ class ANSIString(str):
                     self.style_manager[index] = self.style_manager[index].merge(style)
         return self
 
-    def fm_w(
-        self, parameter: int | str, *words: str, case_sensitive: bool = True
+    def style_w(
+        self, style_code: int | str, *words: str, case_sensitive: bool = True
     ) -> Self:
-        """Format (apply styling to) matched words of the string."""
-        return self.fm(
-            parameter, *self._search_spans(*words, case_sensitive=case_sensitive)
+        """Apply a style to matched words of the string."""
+        return self.style(
+            style_code, *self._search_spans(*words, case_sensitive=case_sensitive)
         )
 
-    def unfm(self, *slices: Annotated[Sequence[int], Length(3)] | slice) -> Self:
+    def unstyle(self, *slices: Annotated[Sequence[int], Length(3)] | slice) -> Self:
         """Remove styling from the string in a specified range."""
         if slices:
             for slice_ in slices:
@@ -491,7 +493,7 @@ class ANSIString(str):
 
     def unfm_w(self, *words: str, case_sensitive: bool = True) -> Self:
         """Remove styling from matched words of the string."""
-        return self.unfm(*self._search_spans(*words, case_sensitive=case_sensitive))
+        return self.unstyle(*self._search_spans(*words, case_sensitive=case_sensitive))
 
     def fg_4b(
         self,
@@ -499,7 +501,7 @@ class ANSIString(str):
         *slices: Annotated[Sequence[int], Length(3)] | slice,
     ) -> Self:
         """Apply a 4-bit foreground color to the string in a specified range."""
-        return self.fm(color, *slices)
+        return self.style(color, *slices)
 
     def fg_4b_w(
         self,
@@ -519,7 +521,7 @@ class ANSIString(str):
     ) -> Self:
         """Apply an 8-bit foreground color to the string in a specified range."""
         style = f"\x1b[{Foreground.SET};5;{color_index}m"
-        return self.fm(style, *slices)
+        return self.style(style, *slices)
 
     def fg_8b_w(
         self,
@@ -541,7 +543,7 @@ class ANSIString(str):
     ) -> Self:
         """Apply a 24-bit foreground color to the string in a specified range."""
         style = f"\x1b[{Foreground.SET};2;{r};{g};{b}m"
-        return self.fm(style, *slices)
+        return self.style(style, *slices)
 
     def fg_24b_w(
         self,
@@ -562,7 +564,7 @@ class ANSIString(str):
         *slices: Annotated[Sequence[int], Length(3)] | slice,
     ) -> Self:
         """Apply a 4-bit background color to the string in a specified range."""
-        return self.fm(color, *slices)
+        return self.style(color, *slices)
 
     def bg_4b_w(
         self,
@@ -582,7 +584,7 @@ class ANSIString(str):
     ) -> Self:
         """Apply an 8-bit background color to the string in a specified range."""
         style = f"\x1b[{Background.SET};5;{color_index}m"
-        return self.fm(style, *slices)
+        return self.style(style, *slices)
 
     def bg_8b_w(
         self,
@@ -604,7 +606,7 @@ class ANSIString(str):
     ) -> Self:
         """Apply a 24-bit background color to the string in a specified range."""
         style = f"\x1b[{Background.SET};2;{r};{g};{b}m"
-        return self.fm(style, *slices)
+        return self.style(style, *slices)
 
     def bg_24b_w(
         self,
@@ -624,7 +626,7 @@ class ANSIString(str):
         *slices: Annotated[Sequence[int], Length(3)] | slice,
     ) -> Self:
         """Apply the default underline style to the string in a specified range."""
-        return self.fm(Underline.DEFAULT, *slices)
+        return self.style(Underline.DEFAULT, *slices)
 
     def ul_default_w(
         self,
@@ -643,7 +645,7 @@ class ANSIString(str):
     ) -> Self:
         """Apply an 8-bit underline color to the string in a specified range."""
         style = f"\x1b[{Underline.SET}:5:{color_index}m"
-        return self.fm(style, *slices)
+        return self.style(style, *slices)
 
     def ul_8b_w(
         self,
@@ -665,7 +667,7 @@ class ANSIString(str):
     ) -> Self:
         """Apply a 24-bit underline color to the string in a specified range."""
         style = f"\x1b[{Underline.SET}:2::{r}:{g}:{b}m"
-        return self.fm(style, *slices)
+        return self.style(style, *slices)
 
     def ul_24b_w(
         self,

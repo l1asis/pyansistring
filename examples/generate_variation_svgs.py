@@ -60,42 +60,49 @@ def add(name: str, s: ANSIString, /, **kw: Any) -> None:
 # ── 1. Basic text styles (path mode, faux fallback) ───────────────────────
 add("01_regular.svg", ANSIString("Hello, World!"))
 
-add("02_bold_faux.svg", ANSIString("Hello, World!").fm(SGR.BOLD))
+add("02_bold_faux.svg", ANSIString("Hello, World!").style(SGR.BOLD))
 
-add("03_italic_faux.svg", ANSIString("Hello, World!").fm(SGR.ITALIC))
+add("03_italic_faux.svg", ANSIString("Hello, World!").style(SGR.ITALIC))
 
-add("04_bold_italic_faux.svg", ANSIString("Hello, World!").fm(SGR.BOLD).fm(SGR.ITALIC))
+add(
+    "04_bold_italic_faux.svg",
+    ANSIString("Hello, World!").style(SGR.BOLD).style(SGR.ITALIC),
+)
 
-add("05_dim_faux.svg", ANSIString("Hello, World!").fm(SGR.DIM))
+add("05_dim_faux.svg", ANSIString("Hello, World!").style(SGR.DIM))
 
 
 # ── 2. Dedicated font files ───────────────────────────────────────────────
-add("06_bold_font.svg", ANSIString("Hello, World!").fm(SGR.BOLD), font_bold=bold)
+add("06_bold_font.svg", ANSIString("Hello, World!").style(SGR.BOLD), font_bold=bold)
 
-add("07_italic_font.svg", ANSIString("Hello, World!").fm(SGR.ITALIC), font_italic=ital)
+add(
+    "07_italic_font.svg",
+    ANSIString("Hello, World!").style(SGR.ITALIC),
+    font_italic=ital,
+)
 
 add(
     "08_bold_italic_font.svg",
-    ANSIString("Hello, World!").fm(SGR.BOLD).fm(SGR.ITALIC),
+    ANSIString("Hello, World!").style(SGR.BOLD).style(SGR.ITALIC),
     font_bold=bold,
     font_italic=ital,
     font_bold_italic=bi,
 )
 
-add("09_dim_same_as_regular.svg", ANSIString("Hello, World!").fm(SGR.DIM))
+add("09_dim_same_as_regular.svg", ANSIString("Hello, World!").style(SGR.DIM))
 
 
 # ── 3. Mixed styles in one string ─────────────────────────────────────────
 add(
     "10_mixed_bold_italic.svg",
-    ANSIString("Bold Italic Normal").fm(SGR.BOLD, (0, 4)).fm(SGR.ITALIC, (5, 11)),
+    ANSIString("Bold Italic Normal").style(SGR.BOLD, (0, 4)).style(SGR.ITALIC, (5, 11)),
     font_bold=bold,
     font_italic=ital,
 )
 
 add(
     "11_partial_bold.svg",
-    ANSIString("Hello, World!").fm(SGR.BOLD, (7, 12)),
+    ANSIString("Hello, World!").style(SGR.BOLD, (7, 12)),
     font_bold=bold,
 )
 
@@ -112,7 +119,7 @@ add(
 
 add(
     "14_fg_bold_coloured.svg",
-    ANSIString("Hello, World!").fm(SGR.BOLD).fg_24b(0, 180, 0),
+    ANSIString("Hello, World!").style(SGR.BOLD).fg_24b(0, 180, 0),
     font_bold=bold,
 )
 
@@ -127,54 +134,57 @@ add(
 
 
 # ── 6. Underline styles (path mode) ───────────────────────────────────────
-add("17_underline_single.svg", ANSIString("Underlined text").fm(SGR.UNDERLINE))
+add("17_underline_single.svg", ANSIString("Underlined text").style(SGR.UNDERLINE))
 
 add(
     "18_underline_double.svg",
-    ANSIString("Double underline").fm(SGR.DOUBLE_UNDERLINE).fg_24b(0, 0, 0),
+    ANSIString("Double underline").style(SGR.DOUBLE_UNDERLINE).fg_24b(0, 0, 0),
 )
 
 add(
     "19_underline_coloured_curly.svg",
-    ANSIString("Curly underline").ul_24b(255, 0, 0).fm(UnderlineMode.CURLY),
+    ANSIString("Curly underline").ul_24b(255, 0, 0).style(UnderlineMode.CURLY),
 )
 
 add(
     "20_underline_coloured_dotted.svg",
-    ANSIString("Dotted underline").ul_24b(0, 128, 255).fm(UnderlineMode.DOTTED),
+    ANSIString("Dotted underline").ul_24b(0, 128, 255).style(UnderlineMode.DOTTED),
 )
 
 add(
     "21_underline_coloured_dashed.svg",
-    ANSIString("Dashed underline").ul_24b(200, 100, 0).fm(UnderlineMode.DASHED),
+    ANSIString("Dashed underline").ul_24b(200, 100, 0).style(UnderlineMode.DASHED),
 )
 
 
 # ── 7. Combined attributes ────────────────────────────────────────────────
 add(
     "22_bold_underline.svg",
-    ANSIString("Bold + Underline").fm(SGR.BOLD).fm(SGR.UNDERLINE).fg_24b(0, 100, 200),
+    ANSIString("Bold + Underline")
+    .style(SGR.BOLD)
+    .style(SGR.UNDERLINE)
+    .fg_24b(0, 100, 200),
     font_bold=bold,
 )
 
 add(
     "23_italic_curly_underline.svg",
     ANSIString("Italic + Curly")
-    .fm(SGR.ITALIC)
+    .style(SGR.ITALIC)
     .ul_24b(255, 80, 80)
-    .fm(UnderlineMode.CURLY),
+    .style(UnderlineMode.CURLY),
     font_italic=ital,
 )
 
 add(
     "24_full_combo.svg",
     ANSIString("Full combo!")
-    .fm(SGR.BOLD)
-    .fm(SGR.ITALIC)
+    .style(SGR.BOLD)
+    .style(SGR.ITALIC)
     .fg_24b(255, 200, 0)
     .bg_24b(30, 30, 60)
     .ul_24b(255, 100, 100)
-    .fm(UnderlineMode.DOUBLE),
+    .style(UnderlineMode.DOUBLE),
     font_bold_italic=bi,
 )
 
@@ -189,11 +199,21 @@ add(
 
 
 # ── 9. Faux weight / skew overrides ───────────────────────────────────────
-add("26_faux_weight_900.svg", ANSIString("Extra Bold (900)").fm(SGR.BOLD), weight=900)
+add(
+    "26_faux_weight_900.svg", ANSIString("Extra Bold (900)").style(SGR.BOLD), weight=900
+)
 
-add("27_faux_skew_minus20.svg", ANSIString("Heavy Skew (-20)").fm(SGR.ITALIC), skew=-20)
+add(
+    "27_faux_skew_minus20.svg",
+    ANSIString("Heavy Skew (-20)").style(SGR.ITALIC),
+    skew=-20,
+)
 
-add("28_faux_skew_plus10.svg", ANSIString("Reverse Skew (+10)").fm(SGR.ITALIC), skew=10)
+add(
+    "28_faux_skew_plus10.svg",
+    ANSIString("Reverse Skew (+10)").style(SGR.ITALIC),
+    skew=10,
+)
 
 
 # ── 10. Rainbow & Multicolor ──────────────────────────────────────────────
@@ -217,8 +237,8 @@ add(
 add(
     "31_multiline.svg",
     ANSIString("Line 1: Bold\nLine 2: Italic\nLine 3: Normal")
-    .fm(SGR.BOLD, (0, 12))
-    .fm(SGR.ITALIC, (13, 27))
+    .style(SGR.BOLD, (0, 12))
+    .style(SGR.ITALIC, (13, 27))
     .fg_24b(0, 150, 0, (0, 12))
     .fg_24b(150, 0, 0, (13, 27)),
     font_bold=bold,
@@ -229,43 +249,43 @@ add(
 # ── 12. Text mode equivalents ─────────────────────────────────────────────
 add(
     "32_text_mode_bold.svg",
-    ANSIString("Text-mode bold").fm(SGR.BOLD).fg_24b(0, 0, 0),
+    ANSIString("Text-mode bold").style(SGR.BOLD).fg_24b(0, 0, 0),
     convert_text_to_path=False,
 )
 
 add(
     "33_text_mode_italic.svg",
-    ANSIString("Text-mode italic").fm(SGR.ITALIC).fg_24b(0, 0, 0),
+    ANSIString("Text-mode italic").style(SGR.ITALIC).fg_24b(0, 0, 0),
     convert_text_to_path=False,
 )
 
 add(
     "34_text_mode_dim.svg",
-    ANSIString("Text-mode dim").fm(SGR.DIM).fg_24b(0, 0, 0),
+    ANSIString("Text-mode dim").style(SGR.DIM).fg_24b(0, 0, 0),
     convert_text_to_path=False,
 )
 
 add(
     "35_text_mode_underline.svg",
-    ANSIString("Text-mode underline").fm(SGR.UNDERLINE).fg_24b(0, 0, 0),
+    ANSIString("Text-mode underline").style(SGR.UNDERLINE).fg_24b(0, 0, 0),
     convert_text_to_path=False,
 )
 
 
 # ── 13. Side-by-side comparison: faux vs font ─────────────────────────────
-add("36_comparison_faux_bold.svg", ANSIString("Faux Bold (stroke)").fm(SGR.BOLD))
+add("36_comparison_faux_bold.svg", ANSIString("Faux Bold (stroke)").style(SGR.BOLD))
 
 add(
     "37_comparison_real_bold.svg",
-    ANSIString("Real Bold (font)").fm(SGR.BOLD),
+    ANSIString("Real Bold (font)").style(SGR.BOLD),
     font_bold=bold,
 )
 
-add("38_comparison_faux_italic.svg", ANSIString("Faux Italic (skew)").fm(SGR.ITALIC))
+add("38_comparison_faux_italic.svg", ANSIString("Faux Italic (skew)").style(SGR.ITALIC))
 
 add(
     "39_comparison_real_italic.svg",
-    ANSIString("Real Italic (font)").fm(SGR.ITALIC),
+    ANSIString("Real Italic (font)").style(SGR.ITALIC),
     font_italic=ital,
 )
 

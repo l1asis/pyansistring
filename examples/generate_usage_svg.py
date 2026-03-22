@@ -59,7 +59,7 @@ add(
     ANSIString("Hello, World!")
     .fg_4b(Foreground.YELLOW)
     .bg_4b(Background.BLUE)
-    .fm(SGR.BOLD),
+    .style(SGR.BOLD),
 )
 
 # ── Styling by index slice ────────────────────────────────────────────────
@@ -68,7 +68,7 @@ add(
     ANSIString("Hello, World!")
     .fg_4b(Foreground.YELLOW, (0, 5), (7, 12))  # "Hello" and "World"
     .bg_4b(Background.BLUE, (7, 12))  # "World"
-    .fm(SGR.BOLD, (7, 12)),  # "World"
+    .style(SGR.BOLD, (7, 12)),  # "World"
 )
 
 # ── Styling by word ───────────────────────────────────────────────────────
@@ -77,13 +77,13 @@ add(
     ANSIString("Hello, World!")
     .fg_4b_w(Foreground.YELLOW, "Hello", "World")
     .bg_4b_w(Background.BLUE, "World")
-    .fm_w(SGR.BOLD, "Hello", "World"),
+    .style_w(SGR.BOLD, "Hello", "World"),
 )
 
 # ── SGR formatting (bold + underline) ─────────────────────────────────────
 add(
     "sgr.svg",
-    ANSIString("Hello, World!").fm(SGR.BOLD).fm(SGR.UNDERLINE),
+    ANSIString("Hello, World!").style(SGR.BOLD).style(SGR.UNDERLINE),
 )
 
 # ── 4-bit colour ──────────────────────────────────────────────────────────
@@ -116,7 +116,7 @@ add(
     ANSIString("Hello, World!")
     .bg_24b(255, 255, 255)  # White
     .ul_24b(255, 0, 0)  # Red
-    .fm(UnderlineMode.DOUBLE),
+    .style(UnderlineMode.DOUBLE),
 )
 
 # ── Rainbow ───────────────────────────────────────────────────────────────
