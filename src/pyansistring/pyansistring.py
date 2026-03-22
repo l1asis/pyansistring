@@ -632,7 +632,7 @@ class ANSIString(str):
         case_sensitive: bool = True,
     ) -> Self:
         """Apply the default underline style to matched words of the string."""
-        return self.ul_default( 
+        return self.ul_default(
             *self._search_spans(*words, case_sensitive=case_sensitive)
         )
 

@@ -1,6 +1,7 @@
 import re
 from typing import Any, Literal
 
+from ._frozen import FrozenMeta
 from .constants import (
     COLOR_THEMES,
     COLORS_8BIT,
@@ -14,7 +15,6 @@ from .constants import (
     Underline,
     UnderlineMode,
 )
-from ._frozen import FrozenMeta
 
 
 class Color(metaclass=FrozenMeta):
@@ -370,7 +370,10 @@ class Style(metaclass=FrozenMeta):
                         elif sgr_param in Background:
                             background = Color.from_4bit(Background(sgr_param))
                         elif sgr_param == Underline.DEFAULT:
-                            underline = (Color.from_4bit(Underline.DEFAULT), underline[1])
+                            underline = (
+                                Color.from_4bit(Underline.DEFAULT),
+                                underline[1],
+                            )
                         elif sgr_param in SGR:
                             attributes.add(SGR(sgr_param))
 
@@ -452,9 +455,7 @@ class Style(metaclass=FrozenMeta):
         return cls(background=Color.from_4bit(color))
 
     @classmethod
-    def ul_default(
-        cls, mode: UnderlineMode = UnderlineMode.SINGLE
-    ) -> "Style":
+    def ul_default(cls, mode: UnderlineMode = UnderlineMode.SINGLE) -> "Style":
         return cls(underline=(Color.from_4bit(Underline.DEFAULT), mode))
 
     @classmethod

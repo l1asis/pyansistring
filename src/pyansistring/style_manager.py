@@ -51,7 +51,7 @@ class StyleManager(dict[int, Style]):
     @property
     def has_changes(self) -> bool:
         return self._has_changes
-    
+
     def pop_modified(self) -> bool:
         """Consume the ``has_changes`` flag and reset it."""
         result = self._has_changes
