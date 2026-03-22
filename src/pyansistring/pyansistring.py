@@ -73,7 +73,7 @@ class ANSIString(str):
 
     # str method names that have explicit overrides and must NOT be
     # auto-delegated by __getattribute__.
-    _STR_OVERRIDDEN: frozenset[str] = frozenset(
+    _OVERRIDDEN_STR_METHODS: frozenset[str] = frozenset(
         {
             # Dunder methods with custom implementations
             "__contains__",
@@ -113,7 +113,9 @@ class ANSIString(str):
             "format_map",
         }
     )
-    _STR_DELEGATED: frozenset[str] = frozenset(dir(str)) - _STR_OVERRIDDEN
+    _DELEGATED_STR_METHODS: frozenset[str] = (
+        frozenset(dir(str)) - _OVERRIDDEN_STR_METHODS
+    )
 
     def __new__(
         cls,
@@ -298,7 +300,7 @@ class ANSIString(str):
 
     def __getattribute__(self, name: str) -> Any:
         """Handle attribute access, delegating str methods to return ANSIString."""
-        if name in type(self)._STR_DELEGATED:
+        if name in type(self)._DELEGATED_STR_METHODS:
 
             def method(self: Self, *args: Any, **kwargs: Any) -> Any:
                 result = getattr(str, name)(self.plain_text, *args, **kwargs)
