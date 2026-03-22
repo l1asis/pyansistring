@@ -21,7 +21,9 @@ class TestStyle:
 
     def test_whole_string(self, hello_world: ANSIString, bold_code: str):
         s = hello_world.style(SGR.BOLD)
-        assert str(s) == ansi_wrap("Hello, World!", bold_code), "style(BOLD) whole string"
+        assert str(s) == ansi_wrap("Hello, World!", bold_code), (
+            "style(BOLD) whole string"
+        )
 
     def test_slice_range(self, hello_world: ANSIString, bold_code: str):
         s = hello_world.style(SGR.BOLD, (0, 5))
@@ -81,9 +83,9 @@ class TestUnstyleWords:
         assert str(s) == "Hello, World!"
 
     def test_unstyle_words_case_insensitive(self, hello_world: ANSIString):
-        s = hello_world.style_words(SGR.ITALIC, "world", case_sensitive=False).unstyle_words(
-            "world", case_sensitive=False
-        )
+        s = hello_world.style_words(
+            SGR.ITALIC, "world", case_sensitive=False
+        ).unstyle_words("world", case_sensitive=False)
         assert str(s) == "Hello, World!"
 
 
@@ -292,7 +294,11 @@ class TestUnderlineModes:
     def test_word_targeted_mode(self):
         mode = UnderlineMode.DOUBLE
         ul_ansi = Style().with_style(Underline.SET, 135).with_style(mode).to_ansi()
-        s = ANSIString("Hello, World!").ul_8b_words(135, "World").style_words(mode, "World")
+        s = (
+            ANSIString("Hello, World!")
+            .ul_8b_words(135, "World")
+            .style_words(mode, "World")
+        )
         expected = "Hello, " + f"{ul_ansi}World{RESET}" + "!"
         assert str(s) == expected, "Word-targeted underline mode mismatch"
 

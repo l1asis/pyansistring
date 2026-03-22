@@ -187,7 +187,9 @@ def main() -> None:
     )
     show(
         ".fm_w(BOLD,'Hello').unstyle_words('Hello')",
-        ANSIString("Hello, World!").style_words(SGR.BOLD, "Hello").unstyle_words("Hello"),
+        ANSIString("Hello, World!")
+        .style_words(SGR.BOLD, "Hello")
+        .unstyle_words("Hello"),
     )
 
     # ── 11. Rainbow ───────────────────────────────────────────────────────
