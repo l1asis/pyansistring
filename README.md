@@ -120,8 +120,8 @@ print(
 ```python
 print(
     ANSIString("Hello, World!")
-        .fg_4b_w(Foreground.YELLOW, "Hello", "World")
-        .bg_4b_w(Background.BLUE, "World")
+        .fg_4b_words(Foreground.YELLOW, "Hello", "World")
+        .bg_4b_words(Background.BLUE, "World")
         .fm_w(SGR.BOLD, "Hello", "World")
 )
 ```

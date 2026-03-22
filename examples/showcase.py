@@ -138,18 +138,18 @@ def main() -> None:
 
     section("Per-word styling (_w methods)")
     show(
-        ".fg_4b_w(BLUE, 'Hello')",
-        ANSIString("Hello, World!").fg_4b_w(Foreground.BRIGHT_BLUE, "Hello"),
+        ".fg_4b_words(BLUE, 'Hello')",
+        ANSIString("Hello, World!").fg_4b_words(Foreground.BRIGHT_BLUE, "Hello"),
     )
     show(
         ".fm_w(BOLD, 'World')",
         ANSIString("Hello, World!").style_w(SGR.BOLD, "World"),
     )
     show(
-        ".fg_4b_w(CYAN) + .bg_4b_w(YELLOW)",
+        ".fg_4b_words(CYAN) + .bg_4b_words(YELLOW)",
         ANSIString("Hello, World!")
-        .fg_4b_w(Foreground.BRIGHT_CYAN, "Hello")
-        .bg_4b_w(Background.BRIGHT_YELLOW, "World"),
+        .fg_4b_words(Foreground.BRIGHT_CYAN, "Hello")
+        .bg_4b_words(Background.BRIGHT_YELLOW, "World"),
     )
 
     # ── 9. Underline colours & modes ──────────────────────────────────────

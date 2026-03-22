@@ -113,29 +113,29 @@
 - [X] `unfm_w` (`unfm` per word)
 
 - [ ] ~~`fg` (shortcut to `fg_24b`)~~
-- [ ] ~~`fg_w` (shortcut to `fg_24b_w`)~~
+- [ ] ~~`fg_w` (shortcut to `fg_24b_words`)~~
 
 - [X] `fg_4b` (set foreground color using 4-bit color code)
-- [X] `fg_4b_w` (`fg_4b` per word)
+- [X] `fg_4b_words` (`fg_4b` per word)
 - [X] `fg_8b` (set foreground color using a pre-defined set of 256 colors)
-- [X] `fg_8b_w` (`fg_8b` per word)
+- [X] `fg_8b_words` (`fg_8b` per word)
 - [X] `fg_24b` (set foreground color using RGB color model, a.k.a. true color)
-- [X] `fg_24b_w` (`fg_24b` per word)
+- [X] `fg_24b_words` (`fg_24b` per word)
 
 - [ ] ~~`bg` (shortcut to `bg_24b`)~~
-- [ ] ~~`bg_w` (shortcut to `bg_24b_w`)~~
+- [ ] ~~`bg_w` (shortcut to `bg_24b_words`)~~
 
 - [X] `bg_4b` (set background color using 4-bit color code)
-- [X] `bg_4b_w` (`bg_4b` per word)
+- [X] `bg_4b_words` (`bg_4b` per word)
 - [X] `bg_8b` (set background color using a pre-defined set of 256 colors)
-- [X] `bg_8b_w` (`bg_8b` per word)
+- [X] `bg_8b_words` (`bg_8b` per word)
 - [X] `bg_24b` (set background color using RGB color model, a.k.a. true color)
-- [X] `bg_24b_w` (`bg_24b` per word)
+- [X] `bg_24b_words` (`bg_24b` per word)
 
 - [X] `ul_8b` (set underline color using a pre-defined set of 256 colors)
-- [X] `ul_8b_w` (`ul_8b` per word)
+- [X] `ul_8b_words` (`ul_8b` per word)
 - [X] `ul_24b` (set underline color using RGB color model, a.k.a. true color)
-- [X] `ul_24b_w` (`ul_24b` per word)
+- [X] `ul_24b_words` (`ul_24b` per word)
 
 - [ ] `multicolor` (apply a specific custom coloring using the provided coloring system)
 - [ ] `multicolor_c` (`multicolor` using coordinates, it's useful for multiline strings)

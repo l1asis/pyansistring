@@ -91,35 +91,35 @@ class TestUnfmW:
 _COLOR_METHOD_CASES = [
     pytest.param(
         "fg_4b",
-        "fg_4b_w",
+        "fg_4b_words",
         (Foreground.BRIGHT_BLUE,),
         (Foreground.BRIGHT_BLUE,),
         id="fg-4b",
     ),
     pytest.param(
         "fg_8b",
-        "fg_8b_w",
+        "fg_8b_words",
         (135,),
         (Foreground.SET, 135),
         id="fg-8b",
     ),
     pytest.param(
         "bg_4b",
-        "bg_4b_w",
+        "bg_4b_words",
         (Background.BRIGHT_BLUE,),
         (Background.BRIGHT_BLUE,),
         id="bg-4b",
     ),
     pytest.param(
         "bg_8b",
-        "bg_8b_w",
+        "bg_8b_words",
         (135,),
         (Background.SET, 135),
         id="bg-8b",
     ),
     pytest.param(
         "ul_8b",
-        "ul_8b_w",
+        "ul_8b_words",
         (135,),
         (Underline.SET, 135),
         id="ul-8b",
@@ -169,9 +169,9 @@ class TestColorMethods24bit:
     @pytest.mark.parametrize(
         "range_method, word_method, style_enum",
         [
-            pytest.param("fg_24b", "fg_24b_w", Foreground.SET, id="fg-24b"),
-            pytest.param("bg_24b", "bg_24b_w", Background.SET, id="bg-24b"),
-            pytest.param("ul_24b", "ul_24b_w", Underline.SET, id="ul-24b"),
+            pytest.param("fg_24b", "fg_24b_words", Foreground.SET, id="fg-24b"),
+            pytest.param("bg_24b", "bg_24b_words", Background.SET, id="bg-24b"),
+            pytest.param("ul_24b", "ul_24b_words", Underline.SET, id="ul-24b"),
         ],
     )
     def test_range_two_colors(
@@ -187,9 +187,9 @@ class TestColorMethods24bit:
     @pytest.mark.parametrize(
         "range_method, word_method, style_enum",
         [
-            pytest.param("fg_24b", "fg_24b_w", Foreground.SET, id="fg-24b"),
-            pytest.param("bg_24b", "bg_24b_w", Background.SET, id="bg-24b"),
-            pytest.param("ul_24b", "ul_24b_w", Underline.SET, id="ul-24b"),
+            pytest.param("fg_24b", "fg_24b_words", Foreground.SET, id="fg-24b"),
+            pytest.param("bg_24b", "bg_24b_words", Background.SET, id="bg-24b"),
+            pytest.param("ul_24b", "ul_24b_words", Underline.SET, id="ul-24b"),
         ],
     )
     def test_by_word_two_colors(
@@ -225,13 +225,13 @@ class TestWholeStringColor:
         "method, method_args, style_args",
         [
             pytest.param(
-                "fg_8b_w",
+                "fg_8b_words",
                 (135, "Hello, ", "World!"),
                 (Foreground.SET, 135),
                 id="fg-8b-w-all",
             ),
             pytest.param(
-                "bg_8b_w",
+                "bg_8b_words",
                 (135, "Hello, ", "World!"),
                 (Background.SET, 135),
                 id="bg-8b-w-all",
@@ -292,7 +292,7 @@ class TestUnderlineModes:
     def test_word_targeted_mode(self):
         mode = UnderlineMode.DOUBLE
         ul_ansi = Style().with_style(Underline.SET, 135).with_style(mode).to_ansi()
-        s = ANSIString("Hello, World!").ul_8b_w(135, "World").style_w(mode, "World")
+        s = ANSIString("Hello, World!").ul_8b_words(135, "World").style_w(mode, "World")
         expected = "Hello, " + f"{ul_ansi}World{RESET}" + "!"
         assert str(s) == expected, "Word-targeted underline mode mismatch"
 

@@ -505,7 +505,7 @@ class ANSIString(str):
         """Apply a 4-bit foreground color to the string in a specified range."""
         return self.style(color, *slices)
 
-    def fg_4b_w(
+    def fg_4b_words(
         self,
         color: Foreground,
         *words: str,
@@ -525,7 +525,7 @@ class ANSIString(str):
         style = f"\x1b[{Foreground.SET};5;{color_index}m"
         return self.style(style, *slices)
 
-    def fg_8b_w(
+    def fg_8b_words(
         self,
         color_index: Annotated[int, ValueRange(0, 255)],
         *words: str,
@@ -547,7 +547,7 @@ class ANSIString(str):
         style = f"\x1b[{Foreground.SET};2;{r};{g};{b}m"
         return self.style(style, *slices)
 
-    def fg_24b_w(
+    def fg_24b_words(
         self,
         r: Annotated[int, ValueRange(0, 255)],
         g: Annotated[int, ValueRange(0, 255)],
@@ -568,7 +568,7 @@ class ANSIString(str):
         """Apply a 4-bit background color to the string in a specified range."""
         return self.style(color, *slices)
 
-    def bg_4b_w(
+    def bg_4b_words(
         self,
         color: Background,
         *words: str,
@@ -588,7 +588,7 @@ class ANSIString(str):
         style = f"\x1b[{Background.SET};5;{color_index}m"
         return self.style(style, *slices)
 
-    def bg_8b_w(
+    def bg_8b_words(
         self,
         color_index: Annotated[int, ValueRange(0, 255)],
         *words: str,
@@ -610,7 +610,7 @@ class ANSIString(str):
         style = f"\x1b[{Background.SET};2;{r};{g};{b}m"
         return self.style(style, *slices)
 
-    def bg_24b_w(
+    def bg_24b_words(
         self,
         r: Annotated[int, ValueRange(0, 255)],
         g: Annotated[int, ValueRange(0, 255)],
@@ -649,7 +649,7 @@ class ANSIString(str):
         style = f"\x1b[{Underline.SET}:5:{color_index}m"
         return self.style(style, *slices)
 
-    def ul_8b_w(
+    def ul_8b_words(
         self,
         color_index: Annotated[int, ValueRange(0, 255)],
         *words: str,
@@ -671,7 +671,7 @@ class ANSIString(str):
         style = f"\x1b[{Underline.SET}:2::{r}:{g}:{b}m"
         return self.style(style, *slices)
 
-    def ul_24b_w(
+    def ul_24b_words(
         self,
         r: Annotated[int, ValueRange(0, 255)],
         g: Annotated[int, ValueRange(0, 255)],
