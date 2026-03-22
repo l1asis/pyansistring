@@ -495,41 +495,41 @@ class ANSIString(str):
 
     def fg_4b(
         self,
-        parameter: Foreground,
+        color: Foreground,
         *slices: Annotated[Sequence[int], Length(3)] | slice,
     ) -> Self:
         """Apply a 4-bit foreground color to the string in a specified range."""
-        return self.fm(parameter, *slices)
+        return self.fm(color, *slices)
 
     def fg_4b_w(
         self,
-        parameter: Foreground,
+        color: Foreground,
         *words: str,
         case_sensitive: bool = True,
     ) -> Self:
         """Apply a 4-bit foreground color to matched words of the string."""
         return self.fg_4b(
-            parameter, *self._search_spans(*words, case_sensitive=case_sensitive)
+            color, *self._search_spans(*words, case_sensitive=case_sensitive)
         )
 
     def fg_8b(
         self,
-        parameter: Annotated[int, ValueRange(0, 255)],
+        color_index: Annotated[int, ValueRange(0, 255)],
         *slices: Annotated[Sequence[int], Length(3)] | slice,
     ) -> Self:
         """Apply an 8-bit foreground color to the string in a specified range."""
-        style = f"\x1b[{Foreground.SET};5;{parameter}m"
+        style = f"\x1b[{Foreground.SET};5;{color_index}m"
         return self.fm(style, *slices)
 
     def fg_8b_w(
         self,
-        parameter: Annotated[int, ValueRange(0, 255)],
+        color_index: Annotated[int, ValueRange(0, 255)],
         *words: str,
         case_sensitive: bool = True,
     ) -> Self:
         """Apply an 8-bit foreground color to matched words of the string."""
         return self.fg_8b(
-            parameter, *self._search_spans(*words, case_sensitive=case_sensitive)
+            color_index, *self._search_spans(*words, case_sensitive=case_sensitive)
         )
 
     def fg_24b(
@@ -558,41 +558,41 @@ class ANSIString(str):
 
     def bg_4b(
         self,
-        parameter: Background,
+        color: Background,
         *slices: Annotated[Sequence[int], Length(3)] | slice,
     ) -> Self:
         """Apply a 4-bit background color to the string in a specified range."""
-        return self.fm(parameter, *slices)
+        return self.fm(color, *slices)
 
     def bg_4b_w(
         self,
-        parameter: Background,
+        color: Background,
         *words: str,
         case_sensitive: bool = True,
     ) -> Self:
         """Apply a 4-bit background color to matched words of the string."""
         return self.bg_4b(
-            parameter, *self._search_spans(*words, case_sensitive=case_sensitive)
+            color, *self._search_spans(*words, case_sensitive=case_sensitive)
         )
 
     def bg_8b(
         self,
-        parameter: Annotated[int, ValueRange(0, 255)],
+        color_index: Annotated[int, ValueRange(0, 255)],
         *slices: Annotated[Sequence[int], Length(3)] | slice,
     ) -> Self:
         """Apply an 8-bit background color to the string in a specified range."""
-        style = f"\x1b[{Background.SET};5;{parameter}m"
+        style = f"\x1b[{Background.SET};5;{color_index}m"
         return self.fm(style, *slices)
 
     def bg_8b_w(
         self,
-        parameter: Annotated[int, ValueRange(0, 255)],
+        color_index: Annotated[int, ValueRange(0, 255)],
         *words: str,
         case_sensitive: bool = True,
     ) -> Self:
         """Apply an 8-bit background color to matched words of the string."""
         return self.bg_8b(
-            parameter, *self._search_spans(*words, case_sensitive=case_sensitive)
+            color_index, *self._search_spans(*words, case_sensitive=case_sensitive)
         )
 
     def bg_24b(
@@ -619,43 +619,41 @@ class ANSIString(str):
             r, g, b, *self._search_spans(*words, case_sensitive=case_sensitive)
         )
 
-    def ul_4b(
+    def ul_default(
         self,
-        parameter: Underline,
         *slices: Annotated[Sequence[int], Length(3)] | slice,
     ) -> Self:
-        """Apply a 4-bit underline color to the string in a specified range."""
-        return self.fm(parameter, *slices)
+        """Apply the default underline style to the string in a specified range."""
+        return self.fm(Underline.DEFAULT, *slices)
 
-    def ul_4b_w(
+    def ul_default_w(
         self,
-        parameter: Underline,
         *words: str,
         case_sensitive: bool = True,
     ) -> Self:
-        """Apply a 4-bit underline color to matched words of the string."""
-        return self.ul_4b(
-            parameter, *self._search_spans(*words, case_sensitive=case_sensitive)
+        """Apply the default underline style to matched words of the string."""
+        return self.ul_default( 
+            *self._search_spans(*words, case_sensitive=case_sensitive)
         )
 
     def ul_8b(
         self,
-        parameter: Annotated[int, ValueRange(0, 255)],
+        color_index: Annotated[int, ValueRange(0, 255)],
         *slices: Annotated[Sequence[int], Length(3)] | slice,
     ) -> Self:
         """Apply an 8-bit underline color to the string in a specified range."""
-        style = f"\x1b[{Underline.SET}:5:{parameter}m"
+        style = f"\x1b[{Underline.SET}:5:{color_index}m"
         return self.fm(style, *slices)
 
     def ul_8b_w(
         self,
-        parameter: Annotated[int, ValueRange(0, 255)],
+        color_index: Annotated[int, ValueRange(0, 255)],
         *words: str,
         case_sensitive: bool = True,
     ) -> Self:
         """Apply an 8-bit underline color to matched words of the string."""
         return self.ul_8b(
-            parameter, *self._search_spans(*words, case_sensitive=case_sensitive)
+            color_index, *self._search_spans(*words, case_sensitive=case_sensitive)
         )
 
     def ul_24b(
