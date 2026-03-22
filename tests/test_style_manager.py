@@ -18,7 +18,7 @@ def populated_manager(red_style: Style):
     """A StyleManager with one entry at index 0, modification flag reset."""
     sm = StyleManager()
     sm[0] = red_style
-    _ = sm.has_been_modified  # consume the flag
+    sm.pop_modified()  # consume the flag
     return sm
 
 
@@ -49,7 +49,7 @@ class TestStyleManagerModificationTracking:
     """has_been_modified property."""
 
     def test_initially_unmodified(self, empty_style_manager: StyleManager):
-        assert empty_style_manager.has_been_modified is False, (
+        assert empty_style_manager.pop_modified() is False, (
             "New StyleManager should not be marked modified"
         )
 
@@ -70,14 +70,14 @@ class TestStyleManagerModificationTracking:
             del populated_manager[0]
         elif operation == "clear":
             populated_manager.clear()
-        assert populated_manager.has_been_modified is True, (
+        assert populated_manager.pop_modified() is True, (
             f"{operation} should mark StyleManager as modified"
         )
 
     def test_accessing_flag_resets_it(self, empty_style_manager: StyleManager):
         empty_style_manager[0] = Style()
-        assert empty_style_manager.has_been_modified is True
-        assert empty_style_manager.has_been_modified is False, (
+        assert empty_style_manager.pop_modified() is True
+        assert empty_style_manager.pop_modified() is False, (
             "Second access should return False (flag auto-resets)"
         )
 

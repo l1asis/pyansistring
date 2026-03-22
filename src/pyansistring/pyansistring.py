@@ -143,7 +143,7 @@ class ANSIString(str):
     @property
     def styled_text(self) -> str:
         """The styled text, recomputed if styles have been modified."""
-        if self._style_manager.has_been_modified:
+        if self._style_manager.pop_modified():
             self._styled_text = self._render()
         return self._styled_text
 

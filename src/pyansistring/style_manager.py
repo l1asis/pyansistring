@@ -24,19 +24,21 @@ class StyleManager(dict[int, Style]):
 
     Attributes
     ----------
-    _has_been_modified : bool
-        Whether the styles have been modified since the last check.
-    has_been_modified : bool
-        Whether styles have been modified since the last access;
-        accessing this property resets the flag to ``False``.
+    has_changes : bool
+        Modification state of the StyleManager.
+
+    Methods
+    -------
+    pop_modified() -> bool
+        Consume the ``has_changes`` flag and reset it.
 
     Examples
     --------
     >>> style_manager = StyleManager()
     >>> style_manager[key] = value
-    >>> style_manager.has_been_modified
+    >>> style_manager.pop_modified()
     True
-    >>> style_manager.has_been_modified
+    >>> style_manager.pop_modified()
     False
     """
 
@@ -44,20 +46,23 @@ class StyleManager(dict[int, Style]):
 
     def __init__(self, *args: Any, **kwargs: Any) -> None:
         super().__init__(*args, **kwargs)
-        self._has_been_modified = False
+        self._has_changes = False
 
     @property
-    def has_been_modified(self) -> bool:
-        """Check if the styles have been modified since the last access."""
-        result = self._has_been_modified
-        if self._has_been_modified:
-            self._has_been_modified = False
+    def has_changes(self) -> bool:
+        return self._has_changes
+    
+    def pop_modified(self) -> bool:
+        """Consume the ``has_changes`` flag and reset it."""
+        result = self._has_changes
+        if self._has_changes:
+            self._has_changes = False
         return result
 
     def notify_if_changed(self, previous_length: int) -> None:
         """Update the modified flag if the collection length changed."""
-        if not self._has_been_modified and previous_length != len(self):
-            self._has_been_modified = True
+        if not self._has_changes and previous_length != len(self):
+            self._has_changes = True
 
     def __repr__(self) -> str:
         """Return a string representation of the StyleManager."""
@@ -75,7 +80,7 @@ class StyleManager(dict[int, Style]):
             value = cached
         else:
             self._style_cache[style_hash] = value
-        self._has_been_modified = True
+        self._has_changes = True
         return super().__setitem__(key, value)
 
     @_detect_style_change
@@ -106,7 +111,7 @@ class StyleManager(dict[int, Style]):
     def copy(self) -> "StyleManager":
         """Create a shallow copy of the StyleManager."""
         copied = StyleManager(dict[Any, Any].copy(self))
-        copied._has_been_modified = self._has_been_modified
+        copied._has_changes = self._has_changes
         return copied
 
     def copy_range(
