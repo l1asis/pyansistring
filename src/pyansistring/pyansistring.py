@@ -153,8 +153,8 @@ class ANSIString(str):
         return str.__str__(self)
 
     @property
-    def actual_length(self) -> int:
-        """The length of the styled text."""
+    def styled_length(self) -> int:
+        """The length including ANSI escape codes."""
         return len(self.styled_text)
 
     def __str__(self) -> str:

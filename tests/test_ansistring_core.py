@@ -58,7 +58,7 @@ class TestConstruction:
 
     def test_actual_length(self):
         s = ANSIString("Hello, World!").fm(SGR.BOLD)
-        assert s.actual_length > len("Hello, World!"), (
+        assert s.styled_length > len("Hello, World!"), (
             "actual_length should exceed plain length due to ANSI codes"
         )
 
