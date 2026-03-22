@@ -14,13 +14,10 @@ import pytest
 
 import pyansistring.core as pas
 from pyansistring import ANSIString
-from pyansistring._helpers import (
-    get_style_key,
-    prepare_font_variants,
-    resolve_skew,
-)
+from pyansistring._helpers import get_style_key, prepare_font_variants, resolve_skew
+from pyansistring.color import Color
 from pyansistring.constants import SGR, UnderlineMode
-from pyansistring.style import Color, Style
+from pyansistring.style import Style
 from tests.test_svg.conftest import (
     FakeHead,
     FakeHhea,

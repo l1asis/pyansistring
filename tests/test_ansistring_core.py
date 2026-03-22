@@ -5,8 +5,9 @@ from typing import Any
 import pytest
 
 from pyansistring import ANSIString, StyleManager
+from pyansistring.color import Color
 from pyansistring.constants import SGR, Foreground
-from pyansistring.style import Color, Style
+from pyansistring.style import Style
 from tests.conftest import ansi_wrap
 
 

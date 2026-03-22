@@ -1,4 +1,6 @@
-from typing import Any
+__all__ = ["FrozenMeta", "FrozenMixin"]
+
+from typing import Any as _Any
 
 
 class FrozenMeta(type):
@@ -8,13 +10,13 @@ class FrozenMeta(type):
         mcs,
         name: str,
         bases: tuple[type, ...],
-        namespace: dict[str, Any],
+        namespace: dict[str, _Any],
         /,
-        **kwds: Any,
+        **kwds: _Any,
     ):
         orig_init = namespace.get("__init__")
 
-        def __init__(self: object, *args: Any, **kwargs: Any):
+        def __init__(self: object, *args: _Any, **kwargs: _Any):
             if orig_init:
                 orig_init(self, *args, **kwargs)
             object.__setattr__(self, "_is_frozen", True)
@@ -26,7 +28,7 @@ class FrozenMeta(type):
                 or name in getattr(type(self), "__annotations__", {})
             )
 
-        def __setattr__(self: object, name: str, value: Any):
+        def __setattr__(self: object, name: str, value: _Any):
             if getattr(self, "_is_frozen", False):
                 if _attribute_exists(self, name):
                     raise AttributeError(
@@ -65,11 +67,11 @@ class FrozenMixin:
 
     _is_frozen: bool = False
 
-    # def __init__(self, *args: Any, **kwargs: Any) -> None:
+    # def __init__(self, *args: _Any, **kwargs: _Any) -> None:
     #     super().__init__(*args, **kwargs)
     #     self._freeze()
 
-    def __init_subclass__(cls, **kwargs: Any):
+    def __init_subclass__(cls, **kwargs: _Any):
         super().__init_subclass__(**kwargs)
 
     def __post_init__(self):
@@ -78,7 +80,7 @@ class FrozenMixin:
     def _freeze(self):
         object.__setattr__(self, "_is_frozen", True)
 
-    def __setattr__(self, name: str, value: Any):
+    def __setattr__(self, name: str, value: _Any):
         if getattr(self, "_is_frozen", False):
             raise AttributeError(
                 f"{self.__class__.__name__} object attribute {name!r} is read-only"

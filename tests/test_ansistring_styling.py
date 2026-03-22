@@ -5,13 +5,7 @@ from typing import Any
 import pytest
 
 from pyansistring import ANSIString
-from pyansistring.constants import (
-    SGR,
-    Background,
-    Foreground,
-    Underline,
-    UnderlineMode,
-)
+from pyansistring.constants import SGR, Background, Foreground, Underline, UnderlineMode
 from pyansistring.style import Style
 from tests.conftest import RESET, ansi_wrap, style_ansi
 

@@ -1,8 +1,8 @@
 __all__ = ["Color"]
 
-from typing import Any, Literal
+from typing import Any as _Any, Literal as _Literal
 
-from ._frozen import FrozenMeta
+from ._frozen import FrozenMeta as _FrozenMeta
 from .constants import (
     COLOR_THEMES,
     COLORS_8BIT,
@@ -14,7 +14,7 @@ from .constants import (
 )
 
 
-class Color(metaclass=FrozenMeta):
+class Color(metaclass=_FrozenMeta):
     """Unified color representation.
 
     Parameters
@@ -64,7 +64,7 @@ class Color(metaclass=FrozenMeta):
     def __hash__(self) -> int:
         return hash((self.mode, self.value))
 
-    def __eq__(self, other: Any) -> bool:
+    def __eq__(self, other: _Any) -> bool:
         if not isinstance(other, Color):
             return NotImplemented
         return (self.mode, self.value) == (other.mode, other.value)
@@ -88,8 +88,8 @@ class Color(metaclass=FrozenMeta):
 
     def to_sgr_param(
         self,
-        prefix: Literal[Foreground.SET, Background.SET, Underline.SET] | str = "",
-        format_mode: Literal["standard", "compatible"] = "standard",
+        prefix: _Literal[Foreground.SET, Background.SET, Underline.SET] | str = "",
+        format_mode: _Literal["standard", "compatible"] = "standard",
     ) -> str:
         if format_mode == "standard" or prefix == Underline.SET:
             separator = ":"

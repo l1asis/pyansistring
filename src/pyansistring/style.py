@@ -3,30 +3,33 @@ __all__ = [
     "StyleManager",
 ]
 
-import re
-from functools import wraps
-from typing import Any, Callable, Literal
+import re as _re
+from functools import wraps as _wraps
+from typing import TYPE_CHECKING, Any as _Any
 
-from ._frozen import FrozenMeta
-from .color import Color
+if TYPE_CHECKING:
+    from typing import Callable as _Callable, Literal as _Literal
+
+from ._frozen import FrozenMeta as _FrozenMeta
+from .color import Color as _Color
 from .constants import (
-    SGR,
-    Background,
-    ColorMode,
-    Foreground,
-    Regex,
-    Underline,
-    UnderlineMode,
+    SGR as _SGR,
+    Background as _Background,
+    ColorMode as _ColorMode,
+    Foreground as _Foreground,
+    Regex as _Regex,
+    Underline as _Underline,
+    UnderlineMode as _UnderlineMode,
 )
 
 
 def _detect_style_change(
-    method: Callable[..., Any],
-) -> Callable[..., Any]:
+    method: _Callable[..., _Any],
+) -> _Callable[..., _Any]:
     """Detect changes in the StyleManager and set the modified flag."""
 
-    @wraps(method)
-    def wrapped(self: "StyleManager", *args: Any, **kwargs: Any) -> Any:
+    @_wraps(method)
+    def wrapped(self: "StyleManager", *args: _Any, **kwargs: _Any) -> _Any:
         previous_length = len(self)
         result = method(self, *args, **kwargs)
         self._update_modified(previous_length)  # type: ignore
@@ -35,7 +38,7 @@ def _detect_style_change(
     return wrapped
 
 
-class Style(metaclass=FrozenMeta):
+class Style(metaclass=_FrozenMeta):
     """Composite style representation.
 
     Parameters
@@ -72,30 +75,30 @@ class Style(metaclass=FrozenMeta):
 
     def __init__(
         self,
-        foreground: Color | tuple[str, Any] = Color(),
-        background: Color | tuple[str, Any] = Color(),
-        underline: tuple[Color | tuple[str, Any], UnderlineMode | int | None] = (
-            Color(),
-            UnderlineMode.SINGLE,
+        foreground: _Color | tuple[str, _Any] = _Color(),
+        background: _Color | tuple[str, _Any] = _Color(),
+        underline: tuple[_Color | tuple[str, _Any], _UnderlineMode | int | None] = (
+            _Color(),
+            _UnderlineMode.SINGLE,
         ),
-        attributes: frozenset[SGR | int] = frozenset(),
+        attributes: frozenset[_SGR | int] = frozenset(),
     ) -> None:
         if isinstance(foreground, tuple):
-            self.foreground = Color(*foreground)
+            self.foreground = _Color(*foreground)
         else:
             self.foreground = foreground
         if isinstance(background, tuple):
-            self.background = Color(*background)
+            self.background = _Color(*background)
         else:
             self.background = background
         if type(underline[1]) is int and 1 <= underline[1] <= 5:
-            underline_mode = UnderlineMode(underline[1])
-        elif isinstance(underline[1], UnderlineMode):
+            underline_mode = _UnderlineMode(underline[1])
+        elif isinstance(underline[1], _UnderlineMode):
             underline_mode = underline[1]
         else:
-            underline_mode = UnderlineMode.SINGLE
+            underline_mode = _UnderlineMode.SINGLE
         if isinstance(underline[0], tuple):
-            self.underline = (Color(*underline[0]), underline_mode)
+            self.underline = (_Color(*underline[0]), underline_mode)
         else:
             self.underline = (underline[0], underline_mode)
         self.attributes = attributes
@@ -118,20 +121,20 @@ class Style(metaclass=FrozenMeta):
         )
 
     def __repr__(self) -> str:
-        attrs = ", ".join(f"SGR.{SGR(attr).name}" for attr in self.attributes)
+        attrs = ", ".join(f"_SGR.{_SGR(attr).name}" for attr in self.attributes)
         return (
             "Style("
             f"foreground={self.foreground!r}, "
             f"background={self.background!r}, "
             f"underline=({self.underline[0]!r}, "
-            f"UnderlineMode.{self.underline[1].name}), "
+            f"_UnderlineMode.{self.underline[1].name}), "
             f"attributes={{{attrs}}})"
         )
 
     def __hash__(self) -> int:
         return hash((self.foreground, self.background, self.underline, self.attributes))
 
-    def __eq__(self, other: Any) -> bool:
+    def __eq__(self, other: _Any) -> bool:
         if not isinstance(other, Style):
             return NotImplemented
         return (self.foreground, self.background, self.underline, self.attributes) == (
@@ -143,11 +146,11 @@ class Style(metaclass=FrozenMeta):
 
     def with_style(
         self,
-        style: Foreground
-        | Background
-        | Underline
-        | UnderlineMode
-        | SGR
+        style: _Foreground
+        | _Background
+        | _Underline
+        | _UnderlineMode
+        | _SGR
         | str
         | int
         | None = None,
@@ -159,37 +162,37 @@ class Style(metaclass=FrozenMeta):
         ul = self.underline
         attrs = set(self.attributes)
 
-        if isinstance(style, Foreground):
-            if style == Foreground.SET:
+        if isinstance(style, _Foreground):
+            if style == _Foreground.SET:
                 if len(args) == 1:
-                    fg = Color.from_8bit(args[0])
+                    fg = _Color.from_8bit(args[0])
                 elif len(args) == 3:
-                    fg = Color.from_24bit(*args)
+                    fg = _Color.from_24bit(*args)
             else:
-                fg = Color.from_4bit(style)
-        elif isinstance(style, Background):
-            if style == Background.SET:
+                fg = _Color.from_4bit(style)
+        elif isinstance(style, _Background):
+            if style == _Background.SET:
                 if len(args) == 1:
-                    bg = Color.from_8bit(args[0])
+                    bg = _Color.from_8bit(args[0])
                 elif len(args) == 3:
-                    bg = Color.from_24bit(*args)
+                    bg = _Color.from_24bit(*args)
             else:
-                bg = Color.from_4bit(style)
-        elif isinstance(style, Underline):
-            if style == Underline.SET:
+                bg = _Color.from_4bit(style)
+        elif isinstance(style, _Underline):
+            if style == _Underline.SET:
                 if len(args) == 1:
-                    ul = (Color.from_8bit(args[0]), ul[1])
+                    ul = (_Color.from_8bit(args[0]), ul[1])
                 elif len(args) == 3:
-                    ul = (Color.from_24bit(*args), ul[1])
+                    ul = (_Color.from_24bit(*args), ul[1])
             else:
-                ul = (Color.from_4bit(Underline.DEFAULT), ul[1])
-        elif isinstance(style, UnderlineMode):
+                ul = (_Color.from_4bit(_Underline.DEFAULT), ul[1])
+        elif isinstance(style, _UnderlineMode):
             ul = (ul[0], style)
-        elif isinstance(style, SGR):
+        elif isinstance(style, _SGR):
             attrs.add(style)
         elif isinstance(style, int):
-            if style in SGR:
-                attrs.add(SGR(style))
+            if style in _SGR:
+                attrs.add(_SGR(style))
         elif isinstance(style, str):
             return self.from_ansi(style)
 
@@ -200,18 +203,22 @@ class Style(metaclass=FrozenMeta):
     def to_ansi(
         self,
         separate_codes: bool = True,
-        format_mode: Literal["standard", "compatible"] = "standard",
+        format_mode: _Literal["standard", "compatible"] = "standard",
     ) -> str:
         parameters: list[str] = []
 
         if self.foreground:
-            parameters.append(self.foreground.to_sgr_param(Foreground.SET, format_mode))
+            parameters.append(
+                self.foreground.to_sgr_param(_Foreground.SET, format_mode)
+            )
         if self.background:
-            parameters.append(self.background.to_sgr_param(Background.SET, format_mode))
+            parameters.append(
+                self.background.to_sgr_param(_Background.SET, format_mode)
+            )
         if self.underline[0]:
-            underline_mode = f"{SGR.UNDERLINE}:{self.underline[1]}"
+            underline_mode = f"{_SGR.UNDERLINE}:{self.underline[1]}"
             underline_style = (
-                f"{self.underline[0].to_sgr_param(Underline.SET, format_mode)}"
+                f"{self.underline[0].to_sgr_param(_Underline.SET, format_mode)}"
             )
             parameters.extend((underline_mode, underline_style))
 
@@ -229,12 +236,12 @@ class Style(metaclass=FrozenMeta):
 
     @classmethod
     def from_ansi(cls, ansi: str) -> "Style":
-        foreground = Color.unset()
-        background = Color.unset()
-        underline = (Color.unset(), UnderlineMode.SINGLE)
-        attributes: set[SGR] = set()
+        foreground = _Color.unset()
+        background = _Color.unset()
+        underline = (_Color.unset(), _UnderlineMode.SINGLE)
+        attributes: set[_SGR] = set()
 
-        sequences: list[str] = re.findall(Regex.ANSI_SEQ, ansi)
+        sequences: list[str] = _re.findall(_Regex.ANSI_SEQ, ansi)
         for sequence in sequences:
             sequence = (
                 sequence.strip()
@@ -247,10 +254,12 @@ class Style(metaclass=FrozenMeta):
 
             parameter: str = ""
             style: (
-                Literal[Foreground.SET, Background.SET, Underline.SET, SGR.UNDERLINE]
+                _Literal[
+                    _Foreground.SET, _Background.SET, _Underline.SET, _SGR.UNDERLINE
+                ]
                 | None
             ) = None
-            mode: Literal[ColorMode.PALETTE, ColorMode.TRUE_COLOR] | None = None
+            mode: _Literal[_ColorMode.PALETTE, _ColorMode.TRUE_COLOR] | None = None
             rgb: list[int] = []
 
             for char in sequence:
@@ -263,53 +272,53 @@ class Style(metaclass=FrozenMeta):
                     sgr_param = int(parameter)
 
                     if not active_style:
-                        if sgr_param == Foreground.SET:
-                            style = Foreground.SET
-                        elif sgr_param == Background.SET:
-                            style = Background.SET
-                        elif sgr_param == Underline.SET:
-                            style = Underline.SET
-                        elif sgr_param == SGR.UNDERLINE:
+                        if sgr_param == _Foreground.SET:
+                            style = _Foreground.SET
+                        elif sgr_param == _Background.SET:
+                            style = _Background.SET
+                        elif sgr_param == _Underline.SET:
+                            style = _Underline.SET
+                        elif sgr_param == _SGR.UNDERLINE:
                             # Set state to expect an underline mode parameter next
-                            style = SGR.UNDERLINE
-                        elif sgr_param in Foreground:
-                            foreground = Color.from_4bit(Foreground(sgr_param))
-                        elif sgr_param in Background:
-                            background = Color.from_4bit(Background(sgr_param))
-                        elif sgr_param == Underline.DEFAULT:
+                            style = _SGR.UNDERLINE
+                        elif sgr_param in _Foreground:
+                            foreground = _Color.from_4bit(_Foreground(sgr_param))
+                        elif sgr_param in _Background:
+                            background = _Color.from_4bit(_Background(sgr_param))
+                        elif sgr_param == _Underline.DEFAULT:
                             underline = (
-                                Color.from_4bit(Underline.DEFAULT),
+                                _Color.from_4bit(_Underline.DEFAULT),
                                 underline[1],
                             )
-                        elif sgr_param in SGR:
-                            attributes.add(SGR(sgr_param))
+                        elif sgr_param in _SGR:
+                            attributes.add(_SGR(sgr_param))
 
                     # Check for underline mode or color mode
                     elif not mode:
-                        if active_style == SGR.UNDERLINE:
+                        if active_style == _SGR.UNDERLINE:
                             # This special case handles codes like "4:1"
                             if 1 <= sgr_param <= 5:
-                                underline = (underline[0], UnderlineMode(sgr_param))
+                                underline = (underline[0], _UnderlineMode(sgr_param))
                             else:  # Fallback for simple underline
-                                attributes.add(SGR.UNDERLINE)
+                                attributes.add(_SGR.UNDERLINE)
                             style = None
-                        elif sgr_param == ColorMode.PALETTE:
-                            mode = ColorMode.PALETTE
-                        elif sgr_param == ColorMode.TRUE_COLOR:
-                            mode = ColorMode.TRUE_COLOR
+                        elif sgr_param == _ColorMode.PALETTE:
+                            mode = _ColorMode.PALETTE
+                        elif sgr_param == _ColorMode.TRUE_COLOR:
+                            mode = _ColorMode.TRUE_COLOR
 
                     # Process color data now that style and mode are set
                     else:
-                        if mode == ColorMode.PALETTE:
-                            if active_style == Foreground.SET:
-                                foreground = Color.from_8bit(sgr_param)
-                            elif active_style == Background.SET:
-                                background = Color.from_8bit(sgr_param)
-                            elif active_style == Underline.SET:
-                                underline = (Color.from_8bit(sgr_param), underline[1])
+                        if mode == _ColorMode.PALETTE:
+                            if active_style == _Foreground.SET:
+                                foreground = _Color.from_8bit(sgr_param)
+                            elif active_style == _Background.SET:
+                                background = _Color.from_8bit(sgr_param)
+                            elif active_style == _Underline.SET:
+                                underline = (_Color.from_8bit(sgr_param), underline[1])
                             style = mode = None
 
-                        elif mode == ColorMode.TRUE_COLOR:
+                        elif mode == _ColorMode.TRUE_COLOR:
                             if 0 <= sgr_param <= 255:
                                 rgb.append(sgr_param)
                             else:
@@ -320,12 +329,12 @@ class Style(metaclass=FrozenMeta):
                                 continue
 
                             if len(rgb) == 3:
-                                if active_style == Foreground.SET:
-                                    foreground = Color.from_24bit(*rgb)
-                                elif active_style == Background.SET:
-                                    background = Color.from_24bit(*rgb)
-                                elif active_style == Underline.SET:
-                                    underline = (Color.from_24bit(*rgb), underline[1])
+                                if active_style == _Foreground.SET:
+                                    foreground = _Color.from_24bit(*rgb)
+                                elif active_style == _Background.SET:
+                                    background = _Color.from_24bit(*rgb)
+                                elif active_style == _Underline.SET:
+                                    underline = (_Color.from_24bit(*rgb), underline[1])
                                 style = mode = None
                                 rgb.clear()
 
@@ -342,7 +351,7 @@ class Style(metaclass=FrozenMeta):
 
     def merge(self, other: "Style") -> "Style":
         ul_color = other.underline[0] or self.underline[0]
-        if other.underline[0] or other.underline[1] != UnderlineMode.SINGLE:
+        if other.underline[0] or other.underline[1] != _UnderlineMode.SINGLE:
             ul_mode = other.underline[1]
         else:
             ul_mode = self.underline[1]
@@ -354,42 +363,42 @@ class Style(metaclass=FrozenMeta):
         )
 
     @classmethod
-    def fg_4bit(cls, color: Foreground) -> "Style":
-        return cls(foreground=Color.from_4bit(color))
+    def fg_4bit(cls, color: _Foreground) -> "Style":
+        return cls(foreground=_Color.from_4bit(color))
 
     @classmethod
-    def bg_4bit(cls, color: Background) -> "Style":
-        return cls(background=Color.from_4bit(color))
+    def bg_4bit(cls, color: _Background) -> "Style":
+        return cls(background=_Color.from_4bit(color))
 
     @classmethod
-    def ul_default(cls, mode: UnderlineMode = UnderlineMode.SINGLE) -> "Style":
-        return cls(underline=(Color.from_4bit(Underline.DEFAULT), mode))
+    def ul_default(cls, mode: _UnderlineMode = _UnderlineMode.SINGLE) -> "Style":
+        return cls(underline=(_Color.from_4bit(_Underline.DEFAULT), mode))
 
     @classmethod
     def fg_8bit(cls, n: int) -> "Style":
-        return cls(foreground=Color.from_8bit(n))
+        return cls(foreground=_Color.from_8bit(n))
 
     @classmethod
     def bg_8bit(cls, n: int) -> "Style":
-        return cls(background=Color.from_8bit(n))
+        return cls(background=_Color.from_8bit(n))
 
     @classmethod
-    def ul_8bit(cls, n: int, mode: UnderlineMode = UnderlineMode.SINGLE) -> "Style":
-        return cls(underline=(Color.from_8bit(n), mode))
+    def ul_8bit(cls, n: int, mode: _UnderlineMode = _UnderlineMode.SINGLE) -> "Style":
+        return cls(underline=(_Color.from_8bit(n), mode))
 
     @classmethod
     def fg_24bit(cls, r: int, g: int, b: int) -> "Style":
-        return cls(foreground=Color.from_24bit(r, g, b))
+        return cls(foreground=_Color.from_24bit(r, g, b))
 
     @classmethod
     def bg_24bit(cls, r: int, g: int, b: int) -> "Style":
-        return cls(background=Color.from_24bit(r, g, b))
+        return cls(background=_Color.from_24bit(r, g, b))
 
     @classmethod
     def ul_24bit(
-        cls, r: int, g: int, b: int, mode: UnderlineMode = UnderlineMode.SINGLE
+        cls, r: int, g: int, b: int, mode: _UnderlineMode = _UnderlineMode.SINGLE
     ) -> "Style":
-        return cls(underline=(Color.from_24bit(r, g, b), mode))
+        return cls(underline=(_Color.from_24bit(r, g, b), mode))
 
 
 class StyleManager(dict[int, Style]):
@@ -417,7 +426,7 @@ class StyleManager(dict[int, Style]):
 
     _style_cache: dict[int, Style] = {}
 
-    def __init__(self, *args: Any, **kwargs: Any) -> None:
+    def __init__(self, *args: _Any, **kwargs: _Any) -> None:
         super().__init__(*args, **kwargs)
         self._has_changes = False
 
@@ -442,7 +451,7 @@ class StyleManager(dict[int, Style]):
         # TODO: it is too verbose, but it is useful for debugging
         return f"StyleManager({super().__repr__()})"
 
-    def __setitem__(self, key: Any, value: Any) -> None:
+    def __setitem__(self, key: _Any, value: _Any) -> None:
         """Set a `Style` instance in the dictionary."""
         if not isinstance(value, Style):
             raise TypeError("StyleManager values must be Style instances")
@@ -457,7 +466,7 @@ class StyleManager(dict[int, Style]):
         return super().__setitem__(key, value)
 
     @_detect_style_change
-    def __delitem__(self, key: Any) -> None:
+    def __delitem__(self, key: _Any) -> None:
         """Delete a style from the dictionary."""
         return super().__delitem__(key)
 
@@ -466,7 +475,7 @@ class StyleManager(dict[int, Style]):
         return super().clear()
 
     @_detect_style_change  # type: ignore[override]
-    def pop(self, *args: Any) -> Any:
+    def pop(self, *args: _Any) -> _Any:
         return super().pop(*args)
 
     @_detect_style_change  # type: ignore[override]
@@ -474,16 +483,16 @@ class StyleManager(dict[int, Style]):
         return super().popitem()
 
     @_detect_style_change  # type: ignore[override]
-    def setdefault(self, *args: Any, **kwargs: Any) -> Any:
+    def setdefault(self, *args: _Any, **kwargs: _Any) -> _Any:
         return super().setdefault(*args, **kwargs)
 
     @_detect_style_change  # type: ignore[override]
-    def update(self, *args: Any, **kwargs: Any) -> None:
+    def update(self, *args: _Any, **kwargs: _Any) -> None:
         return super().update(*args, **kwargs)
 
     def copy(self) -> "StyleManager":
         """Create a shallow copy of the StyleManager."""
-        copied = StyleManager(dict[Any, Any].copy(self))
+        copied = StyleManager(dict[_Any, _Any].copy(self))
         copied._has_changes = self._has_changes
         return copied
 

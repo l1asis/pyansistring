@@ -28,13 +28,13 @@ __all__ = [
     "get_casefold_expansions",
 ]
 
-import os
-import sys
-from enum import Enum, EnumMeta, IntEnum
-from re import compile
-from typing import Literal
+import os as _os
+import sys as _sys
+from enum import Enum as _Enum, EnumMeta as _EnumMeta, IntEnum as _IntEnum
+from re import compile as _re_compile
+from typing import Literal as _Literal
 
-ThemeName = Literal[
+ThemeName = _Literal[
     "vga",
     "windows_xp",
     "powershell",
@@ -72,7 +72,7 @@ PUNCTUATION_AND_WHITESPACE = PUNCTUATION.union(WHITESPACE)
 # fmt: on
 
 
-class MetaEnum(EnumMeta):
+class MetaEnum(_EnumMeta):
     def __contains__(cls, item: object) -> bool:
         try:
             cls(item)
@@ -81,13 +81,13 @@ class MetaEnum(EnumMeta):
         return True
 
 
-class ColorMode(IntEnum, metaclass=MetaEnum):
+class ColorMode(_IntEnum, metaclass=MetaEnum):
     PALETTE = 5  # 8-bit
     TRUE_COLOR = 2  # 24-bit
     TRUECOLOR = 2  # alias
 
 
-class Foreground(IntEnum, metaclass=MetaEnum):
+class Foreground(_IntEnum, metaclass=MetaEnum):
     BLACK = 30
     RED = 31
     GREEN = 32
@@ -108,7 +108,7 @@ class Foreground(IntEnum, metaclass=MetaEnum):
     BRIGHT_WHITE = 97
 
 
-class Background(IntEnum, metaclass=MetaEnum):
+class Background(_IntEnum, metaclass=MetaEnum):
     BLACK = 40
     RED = 41
     GREEN = 42
@@ -129,12 +129,12 @@ class Background(IntEnum, metaclass=MetaEnum):
     BRIGHT_WHITE = 107
 
 
-class Underline(IntEnum, metaclass=MetaEnum):
+class Underline(_IntEnum, metaclass=MetaEnum):
     SET = 58
     DEFAULT = 59
 
 
-class UnderlineMode(IntEnum, metaclass=MetaEnum):
+class UnderlineMode(_IntEnum, metaclass=MetaEnum):
     """Underline modes (style of underlining)."""
 
     SINGLE = 1
@@ -144,7 +144,7 @@ class UnderlineMode(IntEnum, metaclass=MetaEnum):
     DASHED = 5
 
 
-class SGR(IntEnum, metaclass=MetaEnum):
+class SGR(_IntEnum, metaclass=MetaEnum):
     """Select Graphic Rendition (SGR) parameters."""
 
     RESET = 0
@@ -176,7 +176,7 @@ class SGR(IntEnum, metaclass=MetaEnum):
     RESET_SCRIPT = 75
 
 
-class NamedColors(Enum, metaclass=MetaEnum):
+class NamedColors(_Enum, metaclass=MetaEnum):
     """A collection of named colors with their RGB values.
 
     Source: https://convertingcolors.com/named-colors.html
@@ -2390,29 +2390,29 @@ COLOR_THEMES = {
 
 def _detect_default_theme() -> ThemeName:
     """Detect the default terminal theme based on environment variables and platform."""
-    if sys.platform == "win32":
+    if _sys.platform == "win32":
         # Windows
         if (
-            "pwsh" in os.environ.get("SHELL", "").lower()
-            or "powershell" in os.environ.get("TERM", "").lower()
+            "pwsh" in _os.environ.get("SHELL", "").lower()
+            or "powershell" in _os.environ.get("TERM", "").lower()
         ):
             return "powershell"
-        elif "vscode" in os.environ.get("TERM_PROGRAM", "").lower():
+        elif "vscode" in _os.environ.get("TERM_PROGRAM", "").lower():
             return "vscode"
-        elif os.environ.get("WT_SESSION"):
+        elif _os.environ.get("WT_SESSION"):
             return "windows_10"
         else:
             return "windows_xp"
-    elif sys.platform == "darwin":
+    elif _sys.platform == "darwin":
         # macOS
-        if "vscode" in os.environ.get("TERM_PROGRAM", "").lower():
+        if "vscode" in _os.environ.get("TERM_PROGRAM", "").lower():
             return "vscode"
         else:
             return "terminal_app"
     else:
         # Linux/Unix systems
-        term_program = os.environ.get("TERM_PROGRAM", "").lower()
-        term = os.environ.get("TERM", "").lower()
+        term_program = _os.environ.get("TERM_PROGRAM", "").lower()
+        term = _os.environ.get("TERM", "").lower()
 
         if "vscode" in term_program:
             return "vscode"
@@ -2434,19 +2434,19 @@ DEFAULT_THEME: ThemeName = _detect_default_theme()
 class Regex:
     """Compiled REs used in the library."""
 
-    INT8 = compile(r"(?:25[0-5]|2[0-4][0-9]|1?[0-9]{1,2})")
+    INT8 = _re_compile(r"(?:25[0-5]|2[0-4][0-9]|1?[0-9]{1,2})")
     SEP = r"(?:;|:)"
-    SET8 = compile(rf"(?:(?:38|48|58){SEP}5{SEP}{INT8.pattern})")
-    SET24 = compile(
+    SET8 = _re_compile(rf"(?:(?:38|48|58){SEP}5{SEP}{INT8.pattern})")
+    SET24 = _re_compile(
         rf"(?:(?:38|48|58){SEP}2(?:;|:){{1,2}}{INT8.pattern}(?:{SEP}{INT8.pattern}){r'{0,2}'})"
     )
-    SGR_PARAM = compile(
+    SGR_PARAM = _re_compile(
         rf"(?:{SET24.pattern}|{SET8.pattern}|[0-9]|2[0-9]|3[0-79]|4[0-79]|5[0-79]|[6-9][0-9]|10[0-7])"
     )
-    ANSI_SEQ = compile(
+    ANSI_SEQ = _re_compile(
         r"(?:\x1b[@-Z\\-_]|[\x80-\x9a\x9c-\x9f]|(?:\x1b\[|\x9b)[0-?]*[ -/]*[@-~])"
     )
-    MOD_SPEC = compile(
+    MOD_SPEC = _re_compile(
         r"%(?:\(([^)]*)\))?"
         r"[#0 +-]*"
         r"(\*|\d*)"
@@ -2465,7 +2465,7 @@ def get_casefold_expansions() -> dict[str, str]:
     if _CASEFOLD_EXPANSIONS is None:
         _CASEFOLD_EXPANSIONS = {  # type: ignore
             chr(cp): chr(cp).casefold()
-            for cp in range(sys.maxunicode + 1)
+            for cp in range(_sys.maxunicode + 1)
             if len(chr(cp).casefold()) > 1
         }
     return _CASEFOLD_EXPANSIONS

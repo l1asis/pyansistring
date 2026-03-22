@@ -3,8 +3,9 @@
 import pytest
 
 from pyansistring import StyleManager
+from pyansistring.color import Color
 from pyansistring.constants import Foreground
-from pyansistring.style import Color, Style
+from pyansistring.style import Style
 
 
 @pytest.fixture

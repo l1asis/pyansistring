@@ -2,8 +2,9 @@
 
 import pytest
 
+from pyansistring.color import Color
 from pyansistring.constants import SGR
-from pyansistring.style import Color, Style
+from pyansistring.style import Style
 
 
 @pytest.fixture(

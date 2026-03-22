@@ -5,52 +5,49 @@ __all__ = [
     "ANSIString",
 ]
 
-import re
-from collections.abc import Iterable, Sequence
-from pathlib import Path
-from typing import (
-    TYPE_CHECKING,
-    Annotated,
-    Any,
-    Mapping,
-    Self,
-    SupportsIndex,
-    Union,
-    cast,
-)
+import re as _re
+from pathlib import Path as _Path
+from typing import TYPE_CHECKING, Any as _Any, cast as _cast
+
+if TYPE_CHECKING:
+    from collections.abc import Iterable as _Iterable, Sequence as _Sequence
+    from typing import (
+        Mapping as _Mapping,
+        Self as _Self,
+        SupportsIndex as _SupportsIndex,
+        Union as _Union,
+    )
 
 if not TYPE_CHECKING:
     try:
-        from fontTools.ttLib import TTFont
+        from fontTools.ttLib import TTFont as _TTFont
 
         is_fonttools_available = True
     except Exception:
         is_fonttools_available = False
 else:
-    from fontTools.ttLib import TTFont  # type: ignore[import]
+    from fontTools.ttLib import TTFont as _TTFont  # type: ignore[import]
 
     is_fonttools_available = True
 
 from ._helpers import (
-    FMT,
-    MAP_FMT,
-    SVG_ESCAPE,
-    UNDERLINE_CSS,
-    Length,
-    ValueRange,
-    get_style_key,
-    hsl_to_rgb,
-    load_font,
-    prepare_font_variants,
-    remap_format,
-    resolve_skew,
-    rsearch_separators,
-    search_separators,
-    svg_build_underline_elements,
-    svg_create_transform_pen,
-    svg_resolve_underline,
-    svg_weight_stroke_attrs,
-    tspan,
+    FMT as _FMT,
+    MAP_FMT as _MAP_FMT,
+    SVG_ESCAPE as _SVG_ESCAPE,
+    UNDERLINE_CSS as _UNDERLINE_CSS,
+    get_style_key as _get_style_key,
+    hsl_to_rgb as _hsl_to_rgb,
+    load_font as _load_font,
+    prepare_font_variants as _prepare_font_variants,
+    remap_format as _remap_format,
+    resolve_skew as _resolve_skew,
+    rsearch_separators as _rsearch_separators,
+    search_separators as _search_separators,
+    svg_build_underline_elements as _svg_build_underline_elements,
+    svg_create_transform_pen as _svg_create_transform_pen,
+    svg_resolve_underline as _svg_resolve_underline,
+    svg_weight_stroke_attrs as _svg_weight_stroke_attrs,
+    tspan as _tspan,
 )
 from .constants import (
     SGR,
@@ -120,7 +117,7 @@ class ANSIString(str):
         cls,
         plain_text: str = "",
         style_manager: StyleManager | dict[int, Style] | dict[int, str] | None = None,
-    ) -> Self:
+    ) -> _Self:
         instance = super().__new__(cls, plain_text)
         if isinstance(style_manager, StyleManager):
             instance._style_manager = style_manager
@@ -169,7 +166,7 @@ class ANSIString(str):
             f"{self.style_manager if self.style_manager else None})"
         )
 
-    def __iter__(self) -> Iterable[Self]:  # type: ignore[override]
+    def __iter__(self) -> _Iterable[_Self]:  # type: ignore[override]
         """Iterate over characters, yielding styled ANSIStrings."""
         for index, char in enumerate(self.plain_text):
             style = self.style_manager.get(index)
@@ -183,7 +180,7 @@ class ANSIString(str):
         """Check if the styled text is equal to another string or ANSIString."""
         return self.styled_text == other
 
-    def __add__(self, other: Union[str, "ANSIString"]) -> "ANSIString":
+    def __add__(self, other: _Union[str, "ANSIString"]) -> "ANSIString":
         """Concatenate another string or ANSIString to this ANSIString."""
         style_manager = self.style_manager.copy()
         if isinstance(other, ANSIString):
@@ -196,7 +193,7 @@ class ANSIString(str):
             other = other.plain_text
         return type(self)(self.plain_text + other, style_manager)
 
-    def __radd__(self, other: Union[str, "ANSIString"]) -> "ANSIString":
+    def __radd__(self, other: _Union[str, "ANSIString"]) -> "ANSIString":
         """Concatenate this ANSIString to another string or ANSIString."""
         styles = {
             index + len(other): value for index, value in self.style_manager.items()
@@ -210,7 +207,7 @@ class ANSIString(str):
         """Check if a substring exists in the plain text."""
         return str.__contains__(self, sub)  # type: ignore[arg-type]
 
-    def __mul__(self, value: SupportsIndex) -> "ANSIString":
+    def __mul__(self, value: _SupportsIndex) -> "ANSIString":
         """Repeat the ANSIString a specified number of times."""
         n = int(value)
         if n <= 0:
@@ -225,11 +222,11 @@ class ANSIString(str):
                 styles[index + offset] = style
         return type(self)(self.plain_text * n, StyleManager(styles))
 
-    def __rmul__(self, value: SupportsIndex) -> "ANSIString":
+    def __rmul__(self, value: _SupportsIndex) -> "ANSIString":
         """Repeat the ANSIString a specified number of times (reflected operand)."""
         return self.__mul__(value)
 
-    def __mod__(self, args: Any) -> "ANSIString":
+    def __mod__(self, args: _Any) -> "ANSIString":
         """Perform ``%``-formatting, remapping styles to match the output."""
         formatted = str.__mod__(self.plain_text, args)
         plain = self.plain_text
@@ -242,7 +239,9 @@ class ANSIString(str):
 
         result_styles: dict[int, Style] = {}
         is_mapping = isinstance(args, dict)
-        args_tuple = cast(tuple[Any, ...], args if isinstance(args, tuple) else (args,))
+        args_tuple = _cast(
+            tuple[_Any, ...], args if isinstance(args, tuple) else (args,)
+        )
         arg_idx = 0
         src = 0
         dest = 0
@@ -286,7 +285,7 @@ class ANSIString(str):
 
         return type(self)(formatted, StyleManager(result_styles))
 
-    def __getitem__(self, key: SupportsIndex | slice) -> "ANSIString":
+    def __getitem__(self, key: _SupportsIndex | slice) -> "ANSIString":
         """Return a new ANSIString with the specified slice or index."""
         indices = range(len(self))
         selected_indices = indices[key] if isinstance(key, slice) else [indices[key]]
@@ -297,20 +296,20 @@ class ANSIString(str):
         }
         return type(self)(super().__getitem__(key), styles)
 
-    def __getattribute__(self, name: str) -> Any:
+    def __getattribute__(self, name: str) -> _Any:
         """Handle attribute access, delegating str methods to return ANSIString."""
         if name in type(self)._DELEGATED_STR_METHODS:
 
-            def method(self: Self, *args: Any, **kwargs: Any) -> Any:
+            def method(self: _Self, *args: _Any, **kwargs: _Any) -> _Any:
                 result = getattr(str, name)(self.plain_text, *args, **kwargs)
 
                 if isinstance(result, str):
                     return type(self)(result, self.style_manager)
                 elif isinstance(result, list):
-                    items = cast(list[str], result)
+                    items = _cast(list[str], result)
                     return [type(self)(item, self.style_manager) for item in items]
                 elif isinstance(result, tuple):
-                    items_t = cast(tuple[str, ...], result)
+                    items_t = _cast(tuple[str, ...], result)
                     return tuple(
                         type(self)(item, self.style_manager) for item in items_t
                     )
@@ -336,7 +335,7 @@ class ANSIString(str):
             + self.style_manager.__sizeof__()
         )
 
-    def __reduce__(self) -> tuple[Any, tuple[str, dict[int, Style]]]:
+    def __reduce__(self) -> tuple[_Any, tuple[str, dict[int, Style]]]:
         """Return a tuple for pickling the ANSIString."""
         return (ANSIString, (self.plain_text, dict(self.style_manager)))
 
@@ -388,9 +387,7 @@ class ANSIString(str):
 
         return "".join(parts)
 
-    def _get_indices(
-        self, slice_: Annotated[Sequence[int], Length(3)] | slice
-    ) -> tuple[int, int, int]:
+    def _get_indices(self, slice_: _Sequence[int] | slice) -> tuple[int, int, int]:
         """Convert a slice or sequence of three integers to (start, stop, step)."""
         if isinstance(slice_, slice):
             start, stop, step = slice_.indices(len(self))
@@ -402,11 +399,11 @@ class ANSIString(str):
         self, *words: str, case_sensitive: bool = True
     ) -> tuple[tuple[int, int], ...]:
         """Search for words in the plain text and return their (start, end) spans."""
-        flags = 0 if case_sensitive else re.IGNORECASE
-        joined_words = "|".join(re.escape(word) for word in words)
+        flags = 0 if case_sensitive else _re.IGNORECASE
+        joined_words = "|".join(_re.escape(word) for word in words)
         spans = (
             match.span(0)
-            for match in re.finditer(joined_words, self.plain_text, flags=flags)
+            for match in _re.finditer(joined_words, self.plain_text, flags=flags)
         )
         return tuple(spans)
 
@@ -419,7 +416,7 @@ class ANSIString(str):
         styles: dict[int, str] = {}
         sequences: dict[int, str] = {}
 
-        def smart_replacement(match_: re.Match[str]) -> str:
+        def smart_replacement(match_: _re.Match[str]) -> str:
             nonlocal decrement
             sequence, span = match_.group(0), match_.span(0)
             if sequence.endswith("m"):
@@ -430,9 +427,9 @@ class ANSIString(str):
             decrement += len(sequence)
             return ""
 
-        plain = re.sub(Regex.ANSI_SEQ, smart_replacement, plain)
+        plain = _re.sub(Regex.ANSI_SEQ, smart_replacement, plain)
         for index, sequence in sequences.items():
-            for match_ in re.finditer(Regex.SGR_PARAM, sequence):
+            for match_ in _re.finditer(Regex.SGR_PARAM, sequence):
                 parameter = match_.group(0)
                 if parameter == "0":
                     if style:
@@ -447,8 +444,8 @@ class ANSIString(str):
     def style(
         self,
         style_code: int | str,
-        *slices: Annotated[Sequence[int], Length(3)] | slice,
-    ) -> Self:
+        *slices: _Sequence[int] | slice,
+    ) -> _Self:
         """Apply a style to the string in a specified range."""
         # TODO: forbid formatting above the length of the string
         if style_code == SGR.RESET:
@@ -473,13 +470,13 @@ class ANSIString(str):
 
     def style_words(
         self, style_code: int | str, *words: str, case_sensitive: bool = True
-    ) -> Self:
+    ) -> _Self:
         """Apply a style to matched words of the string."""
         return self.style(
             style_code, *self._search_spans(*words, case_sensitive=case_sensitive)
         )
 
-    def unstyle(self, *slices: Annotated[Sequence[int], Length(3)] | slice) -> Self:
+    def unstyle(self, *slices: _Sequence[int] | slice) -> _Self:
         """Remove styling from the string in a specified range."""
         if slices:
             for slice_ in slices:
@@ -492,15 +489,15 @@ class ANSIString(str):
                     del self.style_manager[index]
         return self
 
-    def unstyle_words(self, *words: str, case_sensitive: bool = True) -> Self:
+    def unstyle_words(self, *words: str, case_sensitive: bool = True) -> _Self:
         """Remove styling from matched words of the string."""
         return self.unstyle(*self._search_spans(*words, case_sensitive=case_sensitive))
 
     def fg_4b(
         self,
         color: Foreground,
-        *slices: Annotated[Sequence[int], Length(3)] | slice,
-    ) -> Self:
+        *slices: _Sequence[int] | slice,
+    ) -> _Self:
         """Apply a 4-bit foreground color to the string in a specified range."""
         return self.style(color, *slices)
 
@@ -509,7 +506,7 @@ class ANSIString(str):
         color: Foreground,
         *words: str,
         case_sensitive: bool = True,
-    ) -> Self:
+    ) -> _Self:
         """Apply a 4-bit foreground color to matched words of the string."""
         return self.fg_4b(
             color, *self._search_spans(*words, case_sensitive=case_sensitive)
@@ -517,19 +514,19 @@ class ANSIString(str):
 
     def fg_8b(
         self,
-        color_index: Annotated[int, ValueRange(0, 255)],
-        *slices: Annotated[Sequence[int], Length(3)] | slice,
-    ) -> Self:
+        color_index: int,
+        *slices: _Sequence[int] | slice,
+    ) -> _Self:
         """Apply an 8-bit foreground color to the string in a specified range."""
         style = f"\x1b[{Foreground.SET};5;{color_index}m"
         return self.style(style, *slices)
 
     def fg_8b_words(
         self,
-        color_index: Annotated[int, ValueRange(0, 255)],
+        color_index: int,
         *words: str,
         case_sensitive: bool = True,
-    ) -> Self:
+    ) -> _Self:
         """Apply an 8-bit foreground color to matched words of the string."""
         return self.fg_8b(
             color_index, *self._search_spans(*words, case_sensitive=case_sensitive)
@@ -537,23 +534,23 @@ class ANSIString(str):
 
     def fg_24b(
         self,
-        r: Annotated[int, ValueRange(0, 255)],
-        g: Annotated[int, ValueRange(0, 255)],
-        b: Annotated[int, ValueRange(0, 255)],
-        *slices: Annotated[Sequence[int], Length(3)] | slice,
-    ) -> Self:
+        r: int,
+        g: int,
+        b: int,
+        *slices: _Sequence[int] | slice,
+    ) -> _Self:
         """Apply a 24-bit foreground color to the string in a specified range."""
         style = f"\x1b[{Foreground.SET};2;{r};{g};{b}m"
         return self.style(style, *slices)
 
     def fg_24b_words(
         self,
-        r: Annotated[int, ValueRange(0, 255)],
-        g: Annotated[int, ValueRange(0, 255)],
-        b: Annotated[int, ValueRange(0, 255)],
+        r: int,
+        g: int,
+        b: int,
         *words: str,
         case_sensitive: bool = True,
-    ) -> Self:
+    ) -> _Self:
         """Apply a 24-bit foreground color to matched words of the string."""
         return self.fg_24b(
             r, g, b, *self._search_spans(*words, case_sensitive=case_sensitive)
@@ -562,8 +559,8 @@ class ANSIString(str):
     def bg_4b(
         self,
         color: Background,
-        *slices: Annotated[Sequence[int], Length(3)] | slice,
-    ) -> Self:
+        *slices: _Sequence[int] | slice,
+    ) -> _Self:
         """Apply a 4-bit background color to the string in a specified range."""
         return self.style(color, *slices)
 
@@ -572,7 +569,7 @@ class ANSIString(str):
         color: Background,
         *words: str,
         case_sensitive: bool = True,
-    ) -> Self:
+    ) -> _Self:
         """Apply a 4-bit background color to matched words of the string."""
         return self.bg_4b(
             color, *self._search_spans(*words, case_sensitive=case_sensitive)
@@ -580,19 +577,19 @@ class ANSIString(str):
 
     def bg_8b(
         self,
-        color_index: Annotated[int, ValueRange(0, 255)],
-        *slices: Annotated[Sequence[int], Length(3)] | slice,
-    ) -> Self:
+        color_index: int,
+        *slices: _Sequence[int] | slice,
+    ) -> _Self:
         """Apply an 8-bit background color to the string in a specified range."""
         style = f"\x1b[{Background.SET};5;{color_index}m"
         return self.style(style, *slices)
 
     def bg_8b_words(
         self,
-        color_index: Annotated[int, ValueRange(0, 255)],
+        color_index: int,
         *words: str,
         case_sensitive: bool = True,
-    ) -> Self:
+    ) -> _Self:
         """Apply an 8-bit background color to matched words of the string."""
         return self.bg_8b(
             color_index, *self._search_spans(*words, case_sensitive=case_sensitive)
@@ -600,23 +597,23 @@ class ANSIString(str):
 
     def bg_24b(
         self,
-        r: Annotated[int, ValueRange(0, 255)],
-        g: Annotated[int, ValueRange(0, 255)],
-        b: Annotated[int, ValueRange(0, 255)],
-        *slices: Annotated[Sequence[int], Length(3)] | slice,
-    ) -> Self:
+        r: int,
+        g: int,
+        b: int,
+        *slices: _Sequence[int] | slice,
+    ) -> _Self:
         """Apply a 24-bit background color to the string in a specified range."""
         style = f"\x1b[{Background.SET};2;{r};{g};{b}m"
         return self.style(style, *slices)
 
     def bg_24b_words(
         self,
-        r: Annotated[int, ValueRange(0, 255)],
-        g: Annotated[int, ValueRange(0, 255)],
-        b: Annotated[int, ValueRange(0, 255)],
+        r: int,
+        g: int,
+        b: int,
         *words: str,
         case_sensitive: bool = True,
-    ) -> Self:
+    ) -> _Self:
         """Apply a 24-bit background color to matched words of the string."""
         return self.bg_24b(
             r, g, b, *self._search_spans(*words, case_sensitive=case_sensitive)
@@ -624,8 +621,8 @@ class ANSIString(str):
 
     def ul_default(
         self,
-        *slices: Annotated[Sequence[int], Length(3)] | slice,
-    ) -> Self:
+        *slices: _Sequence[int] | slice,
+    ) -> _Self:
         """Apply the default underline style to the string in a specified range."""
         return self.style(Underline.DEFAULT, *slices)
 
@@ -633,7 +630,7 @@ class ANSIString(str):
         self,
         *words: str,
         case_sensitive: bool = True,
-    ) -> Self:
+    ) -> _Self:
         """Apply the default underline style to matched words of the string."""
         return self.ul_default(
             *self._search_spans(*words, case_sensitive=case_sensitive)
@@ -641,19 +638,19 @@ class ANSIString(str):
 
     def ul_8b(
         self,
-        color_index: Annotated[int, ValueRange(0, 255)],
-        *slices: Annotated[Sequence[int], Length(3)] | slice,
-    ) -> Self:
+        color_index: int,
+        *slices: _Sequence[int] | slice,
+    ) -> _Self:
         """Apply an 8-bit underline color to the string in a specified range."""
         style = f"\x1b[{Underline.SET}:5:{color_index}m"
         return self.style(style, *slices)
 
     def ul_8b_words(
         self,
-        color_index: Annotated[int, ValueRange(0, 255)],
+        color_index: int,
         *words: str,
         case_sensitive: bool = True,
-    ) -> Self:
+    ) -> _Self:
         """Apply an 8-bit underline color to matched words of the string."""
         return self.ul_8b(
             color_index, *self._search_spans(*words, case_sensitive=case_sensitive)
@@ -661,23 +658,23 @@ class ANSIString(str):
 
     def ul_24b(
         self,
-        r: Annotated[int, ValueRange(0, 255)],
-        g: Annotated[int, ValueRange(0, 255)],
-        b: Annotated[int, ValueRange(0, 255)],
-        *slices: Annotated[Sequence[int], Length(3)] | slice,
-    ) -> Self:
+        r: int,
+        g: int,
+        b: int,
+        *slices: _Sequence[int] | slice,
+    ) -> _Self:
         """Apply a 24-bit underline color to the string in a specified range."""
         style = f"\x1b[{Underline.SET}:2::{r}:{g}:{b}m"
         return self.style(style, *slices)
 
     def ul_24b_words(
         self,
-        r: Annotated[int, ValueRange(0, 255)],
-        g: Annotated[int, ValueRange(0, 255)],
-        b: Annotated[int, ValueRange(0, 255)],
+        r: int,
+        g: int,
+        b: int,
         *words: str,
         case_sensitive: bool = True,
-    ) -> Self:
+    ) -> _Self:
         """Apply a 24-bit underline color to matched words of the string."""
         return self.ul_24b(
             r, g, b, *self._search_spans(*words, case_sensitive=case_sensitive)
@@ -685,12 +682,12 @@ class ANSIString(str):
 
     def rainbow(
         self,
-        *slices: Annotated[Sequence[int], Length(3)] | slice,
+        *slices: _Sequence[int] | slice,
         skip_whitespace: bool = False,
         fg: bool = False,
         bg: bool = False,
         ul: bool = False,
-    ) -> Self:
+    ) -> _Self:
         """Apply a rainbow effect to the string in a specified range."""
         if not slices:
             slices = tuple(
@@ -704,21 +701,21 @@ class ANSIString(str):
         for index, slice_ in enumerate(slices):
             hue = round(index / length * 360)
             if fg:
-                self.fg_24b(*hsl_to_rgb(hue), slice_)
+                self.fg_24b(*_hsl_to_rgb(hue), slice_)
             if bg:
-                self.bg_24b(*hsl_to_rgb(hue), slice_)
+                self.bg_24b(*_hsl_to_rgb(hue), slice_)
             if ul:
-                self.ul_24b(*hsl_to_rgb(hue), slice_)
+                self.ul_24b(*_hsl_to_rgb(hue), slice_)
         return self
 
     def to_svg(
         self,
-        font: TTFont | Path | str,
+        font: _TTFont | _Path | str,
         font_size_px: int | float,
-        font_bold: TTFont | Path | str | None = None,
-        font_italic: TTFont | Path | str | None = None,
-        font_bold_italic: TTFont | Path | str | None = None,
-        font_thin: TTFont | Path | str | None = None,
+        font_bold: _TTFont | _Path | str | None = None,
+        font_italic: _TTFont | _Path | str | None = None,
+        font_bold_italic: _TTFont | _Path | str | None = None,
+        font_thin: _TTFont | _Path | str | None = None,
         line_height_offset: int | float = 0,
         letter_spacing_offset: int | float = 0,
         weight: int | None = None,
@@ -778,17 +775,17 @@ class ANSIString(str):
                 "The 'fontTools' package is required to use the 'to_svg' method. "
                 "Please install it using 'pip install fonttools'."
             )
-        font = load_font(font)
+        font = _load_font(font)
 
         # Load variation fonts
-        loaded_bold = load_font(font_bold) if font_bold is not None else None
-        loaded_italic = load_font(font_italic) if font_italic is not None else None
+        loaded_bold = _load_font(font_bold) if font_bold is not None else None
+        loaded_italic = _load_font(font_italic) if font_italic is not None else None
         loaded_bold_italic = (
-            load_font(font_bold_italic) if font_bold_italic is not None else None
+            _load_font(font_bold_italic) if font_bold_italic is not None else None
         )
-        loaded_thin = load_font(font_thin) if font_thin is not None else None
+        loaded_thin = _load_font(font_thin) if font_thin is not None else None
 
-        variants = prepare_font_variants(
+        variants = _prepare_font_variants(
             font,
             loaded_bold,
             loaded_italic,
@@ -797,13 +794,13 @@ class ANSIString(str):
         )
 
         # Font metrics (from the base font)
-        font_family = cast(str, font["name"].getDebugName(1)) or "sans-serif"  # type: ignore[union-attr]
-        units_per_em = cast(int, font["head"].unitsPerEm)  # type: ignore[union-attr]
-        ascent = cast(int, font["hhea"].ascent)  # type: ignore[union-attr]
-        descent = cast(int, font["hhea"].descent)  # type: ignore[union-attr]
-        line_gap = cast(int, font["hhea"].lineGap)  # type: ignore[union-attr]
-        underline_pos = cast(int, font["post"].underlinePosition)  # type: ignore[union-attr]
-        underline_thickness = cast(int, font["post"].underlineThickness)  # type: ignore[union-attr]
+        font_family = _cast(str, font["name"].getDebugName(1)) or "sans-serif"  # type: ignore[union-attr]
+        units_per_em = _cast(int, font["head"].unitsPerEm)  # type: ignore[union-attr]
+        ascent = _cast(int, font["hhea"].ascent)  # type: ignore[union-attr]
+        descent = _cast(int, font["hhea"].descent)  # type: ignore[union-attr]
+        line_gap = _cast(int, font["hhea"].lineGap)  # type: ignore[union-attr]
+        underline_pos = _cast(int, font["post"].underlinePosition)  # type: ignore[union-attr]
+        underline_thickness = _cast(int, font["post"].underlineThickness)  # type: ignore[union-attr]
         scale = font_size_px / units_per_em
         line_height = (ascent - descent) + line_gap + line_height_offset
         line_height_px = line_height * scale
@@ -832,11 +829,11 @@ class ANSIString(str):
         for lineno, line in enumerate(lines):
             x_cursor = 0
             for char in line:
-                escaped = SVG_ESCAPE.get(char, char)
+                escaped = _SVG_ESCAPE.get(char, char)
                 style = self.style_manager.get(charno)
 
                 # Resolve font variant for this character
-                style_key = get_style_key(style)
+                style_key = _get_style_key(style)
                 variant = variants.get(style_key, variants["regular"])
 
                 glyph_name = variant.cmap.get(ord(char), ".notdef")
@@ -875,8 +872,8 @@ class ANSIString(str):
                             # Coloured underline: outer tspan carries the decoration
                             if not style.foreground:
                                 fill_attrs.append('fill="currentColor"')
-                            ul_css = UNDERLINE_CSS.get(style.underline[1], "solid")
-                            inner = tspan(escaped, fill_attrs)
+                            ul_css = _UNDERLINE_CSS.get(style.underline[1], "solid")
+                            inner = _tspan(escaped, fill_attrs)
                             chars.append(
                                 f'<tspan fill="rgb{style.underline[0].to_rgb()}" '
                                 f'text-decoration="underline auto {ul_css}">'
@@ -891,14 +888,14 @@ class ANSIString(str):
                                 fill_attrs.append(
                                     'text-decoration="underline auto double"'
                                 )
-                            chars.append(tspan(escaped, fill_attrs))
+                            chars.append(_tspan(escaped, fill_attrs))
                     else:
                         chars.append(f"<tspan>{escaped}</tspan>")
 
                 # Path mode (using <path> and other shapes)
                 else:
-                    effective_skew = resolve_skew(variant.needs_faux_italic, skew)
-                    t_pen, pen, left_ov, right_ov = svg_create_transform_pen(
+                    effective_skew = _resolve_skew(variant.needs_faux_italic, skew)
+                    t_pen, pen, left_ov, right_ov = _svg_create_transform_pen(
                         variant.glyph_set,
                         scale,
                         x_px,
@@ -914,7 +911,7 @@ class ANSIString(str):
                     path_attrs = list(fill_attrs)
                     path_attrs.append(f'd="{pen.getCommands()}"')
                     path_attrs.extend(
-                        svg_weight_stroke_attrs(
+                        _svg_weight_stroke_attrs(
                             style,
                             variant.needs_faux_bold,
                             faux_weight,
@@ -927,12 +924,12 @@ class ANSIString(str):
 
                     # Underline (path mode only)
                     if style is not None:
-                        ul_color, ul_mode = svg_resolve_underline(style)
+                        ul_color, ul_mode = _svg_resolve_underline(style)
                         if ul_color and ul_mode is not None:
                             ul_y = (y_cursor - underline_pos) * scale
                             ul_h = max(underline_thickness * scale, 1)
                             ul_w = (advance_width + letter_spacing_offset) * scale
-                            new_elems, max_bot = svg_build_underline_elements(
+                            new_elems, max_bot = _svg_build_underline_elements(
                                 ul_color,
                                 ul_mode,
                                 x_px,
@@ -998,7 +995,7 @@ class ANSIString(str):
 
         return svg_content
 
-    def join(self, iterable: Iterable[str], /) -> "ANSIString":
+    def join(self, iterable: _Iterable[str], /) -> "ANSIString":
         strings = list(iterable)
         styles: dict[int, Style] = {}
         pos = 0
@@ -1018,23 +1015,23 @@ class ANSIString(str):
             pos += len(string)
         return type(self)(super().join(strings), StyleManager(styles))
 
-    def ljust(self, width: SupportsIndex, fillchar: str = " ") -> "ANSIString":
+    def ljust(self, width: _SupportsIndex, fillchar: str = " ") -> "ANSIString":
         return self + fillchar * (int(width) - len(self))
 
-    def rjust(self, width: SupportsIndex, fillchar: str = " ") -> "ANSIString":
+    def rjust(self, width: _SupportsIndex, fillchar: str = " ") -> "ANSIString":
         return self.__radd__(fillchar * (int(width) - len(self)))
 
-    def center(self, width: SupportsIndex, fillchar: str = " ") -> "ANSIString":
+    def center(self, width: _SupportsIndex, fillchar: str = " ") -> "ANSIString":
         margin = int(width) - len(self)
         left = (margin // 2) + (margin & int(width) & 1)
         return self.__radd__(fillchar * left) + fillchar * (margin - left)
 
     def rsplit(  # type: ignore[override]
-        self, sep: str | None = None, maxsplit: SupportsIndex = -1
+        self, sep: str | None = None, maxsplit: _SupportsIndex = -1
     ) -> list["ANSIString"]:
-        actual: list[Any] = list(super().rsplit(sep, maxsplit))
+        actual: list[_Any] = list(super().rsplit(sep, maxsplit))
         max_index = len(self)
-        whitespace = rsearch_separators(self.plain_text) if not sep else iter(())
+        whitespace = _rsearch_separators(self.plain_text) if not sep else iter(())
         if not sep:
             if self.plain_text[-1] in WHITESPACE:
                 max_index -= len(next(whitespace, ""))
@@ -1046,11 +1043,11 @@ class ANSIString(str):
         return actual
 
     def split(  # type: ignore[override]
-        self, sep: str | None = None, maxsplit: SupportsIndex = -1
+        self, sep: str | None = None, maxsplit: _SupportsIndex = -1
     ) -> list["ANSIString"]:
-        actual: list[Any] = list(super().split(sep, maxsplit))
+        actual: list[_Any] = list(super().split(sep, maxsplit))
         min_index = 0
-        whitespace = search_separators(self.plain_text) if not sep else iter(())
+        whitespace = _search_separators(self.plain_text) if not sep else iter(())
         if not sep:
             if self.plain_text[0] in WHITESPACE:
                 min_index += len(next(whitespace, ""))
@@ -1062,7 +1059,7 @@ class ANSIString(str):
         return actual
 
     def splitlines(self, keepends: bool = False) -> list["ANSIString"]:  # type: ignore[override]
-        actual: list[Any] = list(super().splitlines(keepends))
+        actual: list[_Any] = list(super().splitlines(keepends))
         min_index = 0
         for no, string in enumerate(actual):
             max_index = min_index + len(string)
@@ -1098,7 +1095,7 @@ class ANSIString(str):
         self,
         old: str,
         new: str,
-        count: SupportsIndex = -1,
+        count: _SupportsIndex = -1,
     ) -> "ANSIString":
         max_count = int(count)
         plain = self.plain_text
@@ -1184,7 +1181,7 @@ class ANSIString(str):
             )
         return (self[:idx], self[idx : idx + len(sep)], self[idx + len(sep) :])
 
-    def zfill(self, width: SupportsIndex, /) -> "ANSIString":
+    def zfill(self, width: _SupportsIndex, /) -> "ANSIString":
         w = int(width)
         plain = self.plain_text
         if len(plain) >= w:
@@ -1205,7 +1202,7 @@ class ANSIString(str):
         shifted = {index + pad: style for index, style in self.style_manager.items()}
         return type(self)("0" * pad + plain, StyleManager(shifted))
 
-    def expandtabs(self, tabsize: SupportsIndex = 8) -> "ANSIString":  # type: ignore[override]
+    def expandtabs(self, tabsize: _SupportsIndex = 8) -> "ANSIString":  # type: ignore[override]
         ts = int(tabsize)
         plain = self.plain_text
         parts: list[str] = []
@@ -1265,7 +1262,7 @@ class ANSIString(str):
                 dest += 1
         return type(self)(actual, StyleManager(styles))
 
-    def translate(self, table: Mapping[int, int | str | None]) -> "ANSIString":  # type: ignore[override]
+    def translate(self, table: _Mapping[int, int | str | None]) -> "ANSIString":  # type: ignore[override]
         actual = super().translate(table)
         if actual == self.plain_text:
             return type(self)(actual, self.style_manager.copy())
@@ -1292,16 +1289,18 @@ class ANSIString(str):
                     dest += 1
         return type(self)(actual, StyleManager(styles))
 
-    def format(self, /, *args: Any, **kwargs: Any) -> "ANSIString":
+    def format(self, /, *args: _Any, **kwargs: _Any) -> "ANSIString":
         formatted = str.format(self.plain_text, *args, **kwargs)
         if not self.style_manager:
             return type(self)(formatted)
-        styles = remap_format(self.plain_text, self.style_manager, FMT, args, kwargs)
+        styles = _remap_format(self.plain_text, self.style_manager, _FMT, args, kwargs)
         return type(self)(formatted, StyleManager(styles))
 
-    def format_map(self, mapping: Mapping[str, Any], /) -> "ANSIString":  # type: ignore[override]
+    def format_map(self, mapping: _Mapping[str, _Any], /) -> "ANSIString":  # type: ignore[override]
         formatted = str.format_map(self.plain_text, mapping)
         if not self.style_manager:
             return type(self)(formatted)
-        styles = remap_format(self.plain_text, self.style_manager, MAP_FMT, (), mapping)
+        styles = _remap_format(
+            self.plain_text, self.style_manager, _MAP_FMT, (), mapping
+        )
         return type(self)(formatted, StyleManager(styles))

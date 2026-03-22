@@ -1,8 +1,6 @@
 __all__ = [
     "SVG_ESCAPE",
     "UNDERLINE_CSS",
-    "ValueRange",
-    "Length",
     "FontVariant",
     "find_spans",
     "search_separators",
@@ -26,7 +24,6 @@ __all__ = [
 import math
 from collections.abc import Generator
 from colorsys import hls_to_rgb
-from dataclasses import dataclass
 from pathlib import Path
 from string import Formatter as _Formatter
 from typing import Any, NamedTuple
@@ -53,23 +50,6 @@ UNDERLINE_CSS: dict[int, str] = {
     UnderlineMode.DASHED: "dashed",
     UnderlineMode.CURLY: "wavy",
 }
-
-
-@dataclass(frozen=True)
-class ValueRange:
-    lo: int
-    hi: int
-
-    def __hash__(self) -> int:
-        return hash((self.lo, self.hi))
-
-
-@dataclass(frozen=True)
-class Length:
-    value: int
-
-    def __hash__(self) -> int:
-        return hash(self.value)
 
 
 class FontVariant(NamedTuple):

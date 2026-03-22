@@ -4,14 +4,9 @@ from typing import Any, Callable
 
 import pytest
 
-from pyansistring.constants import (
-    SGR,
-    Background,
-    Foreground,
-    Underline,
-    UnderlineMode,
-)
-from pyansistring.style import Color, Style
+from pyansistring.color import Color
+from pyansistring.constants import SGR, Background, Foreground, Underline, UnderlineMode
+from pyansistring.style import Style
 
 
 def _get_fg(s: Style) -> Color:
