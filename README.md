@@ -100,7 +100,7 @@ print(
     ANSIString("Hello, World!")
         .fg_4b(Foreground.YELLOW)
         .bg_4b(Background.BLUE)
-        .fm(SGR.BOLD)
+        .style(SGR.BOLD)
 )
 ```
 ![Result: string with yellow foreground, blue background, and bold styling](https://raw.githubusercontent.com/l1asis/pyansistring/refs/heads/main/images/usage/whole.svg)
@@ -111,7 +111,7 @@ print(
     ANSIString("Hello, World!")
         .fg_4b(Foreground.YELLOW, (0, 5), (7, 12))  # "Hello" and "World"
         .bg_4b(Background.BLUE, (7, 12))            # "World"
-        .fm(SGR.BOLD, (7, 12))                      # "World"
+        .style(SGR.BOLD, (7, 12))                  # "World"
 )
 ```
 ![Result: string where "Hello" and "World" have a yellow foreground. "World" also has a blue background and is in bold.](https://raw.githubusercontent.com/l1asis/pyansistring/refs/heads/main/images/usage/slice.svg)
@@ -122,7 +122,7 @@ print(
     ANSIString("Hello, World!")
         .fg_4b_words(Foreground.YELLOW, "Hello", "World")
         .bg_4b_words(Background.BLUE, "World")
-        .fm_w(SGR.BOLD, "Hello", "World")
+        .style_words(SGR.BOLD, "Hello", "World")
 )
 ```
 ![Result: string where "Hello" and "World" have a yellow foreground and bold styling. "World" also has a blue background.](https://raw.githubusercontent.com/l1asis/pyansistring/refs/heads/main/images/usage/words.svg)
@@ -131,8 +131,8 @@ print(
 ```python
 print(
     ANSIString("Hello, World!")
-        .fm(SGR.BOLD)
-        .fm(SGR.UNDERLINE)
+        .style(SGR.BOLD)
+        .style(SGR.UNDERLINE)
 )
 ```
 ![Result: bold and single underlined string](https://raw.githubusercontent.com/l1asis/pyansistring/refs/heads/main/images/usage/sgr.svg)
@@ -175,7 +175,7 @@ print(
     ANSIString("Hello, World!")
         .bg_24b(255, 255, 255)  # White
         .ul_24b(255, 0, 0)      # Red
-        .fm(UnderlineMode.DOUBLE)
+        .style(UnderlineMode.DOUBLE)
 )
 ```
 ![Result: string with white background and red double underline](https://raw.githubusercontent.com/l1asis/pyansistring/refs/heads/main/images/usage/underline.svg)
@@ -188,9 +188,9 @@ print(len(styled) == len("Hello, World!"))
 # True (logical length ignores ANSI)
 print(len(styled.styled_text) == len("Hello, World!"))
 # False (includes ANSI codes)
-print(styled.actual_length == len("Hello, World!"))
+print(styled.styled_length == len("Hello, World!"))
 # False (includes ANSI codes)
-print(styled.plain)
+print(styled.plain_text)
 # "Hello, World!"
 ```
 
