@@ -12,7 +12,7 @@ from .color import Color as _Color
 from .constants import (
     SGR as _SGR,
     Background as _Background,
-    ColorMode as _ColorMode,
+    ColorDepth as _ColorDepth,
     Foreground as _Foreground,
     Regex as _Regex,
     Underline as _Underline,
@@ -256,7 +256,7 @@ class Style(metaclass=_FrozenMeta):
                 ]
                 | None
             ) = None
-            mode: _Literal[_ColorMode.PALETTE, _ColorMode.TRUE_COLOR] | None = None
+            depth: _Literal[_ColorDepth.PALETTE, _ColorDepth.TRUE_COLOR] | None = None
             rgb: list[int] = []
 
             for char in sequence:
@@ -290,8 +290,8 @@ class Style(metaclass=_FrozenMeta):
                         elif sgr_param in _SGR:
                             attributes.add(_SGR(sgr_param))
 
-                    # Check for underline mode or color mode
-                    elif not mode:
+                    # Check for underline mode or color bit depth
+                    elif not depth:
                         if active_style == _SGR.UNDERLINE:
                             # This special case handles codes like "4:1"
                             if 1 <= sgr_param <= 5:
@@ -299,29 +299,29 @@ class Style(metaclass=_FrozenMeta):
                             else:  # Fallback for simple underline
                                 attributes.add(_SGR.UNDERLINE)
                             style = None
-                        elif sgr_param == _ColorMode.PALETTE:
-                            mode = _ColorMode.PALETTE
-                        elif sgr_param == _ColorMode.TRUE_COLOR:
-                            mode = _ColorMode.TRUE_COLOR
+                        elif sgr_param == _ColorDepth.PALETTE:
+                            depth = _ColorDepth.PALETTE
+                        elif sgr_param == _ColorDepth.TRUE_COLOR:
+                            depth = _ColorDepth.TRUE_COLOR
 
-                    # Process color data now that style and mode are set
+                    # Process color data now that style and bit depth are set
                     else:
-                        if mode == _ColorMode.PALETTE:
+                        if depth == _ColorDepth.PALETTE:
                             if active_style == _Foreground.SET:
                                 foreground = _Color.from_8bit(sgr_param)
                             elif active_style == _Background.SET:
                                 background = _Color.from_8bit(sgr_param)
                             elif active_style == _Underline.SET:
                                 underline = (_Color.from_8bit(sgr_param), underline[1])
-                            style = mode = None
+                            style = depth = None
 
-                        elif mode == _ColorMode.TRUE_COLOR:
+                        elif depth == _ColorDepth.TRUE_COLOR:
                             if 0 <= sgr_param <= 255:
                                 rgb.append(sgr_param)
                             else:
                                 # TODO: Do replace, e.g. clamp(value, 0, 255)?
                                 # NOTE: Invalid RGB value, reset
-                                style = mode = None
+                                style = depth = None
                                 rgb.clear()
                                 continue
 
@@ -332,7 +332,7 @@ class Style(metaclass=_FrozenMeta):
                                     background = _Color.from_24bit(*rgb)
                                 elif active_style == _Underline.SET:
                                     underline = (_Color.from_24bit(*rgb), underline[1])
-                                style = mode = None
+                                style = depth = None
                                 rgb.clear()
 
                     parameter = ""  # Reset for the next parameter

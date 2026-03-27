@@ -16,7 +16,7 @@
 ### Features
 
 * Preservation of the str methods.
-* Support for 4-, 8-, and 24-bit (True Color) color modes.
+* Support for 4-, 8-, and 24-bit (True Color) color depths.
 * Per-word coloring.
 * Left, right, and center alignment without problems caused by string length.
 * Support for multiple SGR (Select Graphic Rendition) parameters.

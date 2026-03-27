@@ -19,24 +19,24 @@ class Color(metaclass=_FrozenMeta):
 
     Parameters
     ----------
-    mode : Literal["4bit", "8bit", "24bit"] | None
-        The color mode or ``None`` for unset.
+    depth : Literal["4bit", "8bit", "24bit"] | None
+        The color bit depth or ``None`` for unset.
     value : Foreground | Background | Underline | int | tuple[int, int, int] | None
         The color value.
 
     Attributes
     ----------
-    mode : Literal["4bit", "8bit", "24bit"] | None
-        The color mode or ``None`` for unset.
+    depth : Literal["4bit", "8bit", "24bit"] | None
+        The color bit depth or ``None`` for unset.
     value : int | tuple[int, int, int] | None
         The normalized color value.
     """
 
-    __slots__ = ("mode", "value", "_is_frozen")
+    __slots__ = ("depth", "value", "_is_frozen")
 
     def __init__(
         self,
-        mode: str | None = None,
+        depth: str | None = None,
         value: Foreground
         | Background
         | Underline
@@ -44,10 +44,10 @@ class Color(metaclass=_FrozenMeta):
         | int
         | None = None,
     ) -> None:
-        if mode in {"4bit", "8bit", "24bit"}:
-            self.mode = mode
+        if depth in {"4bit", "8bit", "24bit"}:
+            self.depth = depth
         else:
-            self.mode = None
+            self.depth = None
         if isinstance(value, (Foreground, Background, Underline)):
             self.value = value.value
         elif isinstance(value, (int, tuple)):
@@ -56,18 +56,18 @@ class Color(metaclass=_FrozenMeta):
             self.value = None
 
     def __bool__(self) -> bool:
-        return True if (self.mode and self.value) else False
+        return True if (self.depth and self.value) else False
 
     def __repr__(self) -> str:
-        return f"Color(mode={self.mode!r}, value={self.value!r})"
+        return f"Color(mode={self.depth!r}, value={self.value!r})"
 
     def __hash__(self) -> int:
-        return hash((self.mode, self.value))
+        return hash((self.depth, self.value))
 
     def __eq__(self, other: _Any) -> bool:
         if not isinstance(other, Color):
             return NotImplemented
-        return (self.mode, self.value) == (other.mode, other.value)
+        return (self.depth, self.value) == (other.depth, other.value)
 
     @classmethod
     def unset(cls) -> "Color":
@@ -97,13 +97,13 @@ class Color(metaclass=_FrozenMeta):
             separator = ";"
         if prefix:
             prefix = str(prefix) + separator
-        if self.mode == "24bit" and isinstance(self.value, tuple):
+        if self.depth == "24bit" and isinstance(self.value, tuple):
             r, g, b = self.value
             sep = separator * 2 if separator == ":" else ";"
             return f"{prefix}2{sep}{r}{separator}{g}{separator}{b}"
-        elif self.mode == "8bit" and isinstance(self.value, int):
+        elif self.depth == "8bit" and isinstance(self.value, int):
             return f"{prefix}5{separator}{self.value}"
-        elif self.mode == "4bit" and isinstance(self.value, int):
+        elif self.depth == "4bit" and isinstance(self.value, int):
             return f"{self.value}"
         return ""
 
@@ -112,13 +112,13 @@ class Color(metaclass=_FrozenMeta):
         theme: ThemeName = DEFAULT_THEME,
     ) -> tuple[int, int, int]:
         """Return the RGB tuple for this color based on the theme."""
-        if self.mode == "24bit":
+        if self.depth == "24bit":
             assert isinstance(self.value, tuple)
             return self.value
-        elif self.mode == "8bit":
+        elif self.depth == "8bit":
             assert isinstance(self.value, int)
             return COLORS_8BIT[self.value]
-        elif self.mode == "4bit":
+        elif self.depth == "4bit":
             assert isinstance(self.value, int)
             return COLOR_THEMES[theme][self.value]
         else:

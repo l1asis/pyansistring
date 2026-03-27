@@ -27,7 +27,7 @@ class TestColorConstruction:
     def test_unset_color_is_falsy(self):
         c = Color()
         assert not c, "Unset Color should be falsy"
-        assert c.mode is None, "Unset Color.mode must be None"
+        assert c.depth is None, "Unset Color.depth must be None"
         assert c.value is None, "Unset Color.value must be None"
 
     def test_unset_classmethod(self):
@@ -35,7 +35,7 @@ class TestColorConstruction:
         assert not c, "Color.unset() should produce a falsy Color"
 
     @pytest.mark.parametrize(
-        "factory, args, expected_mode, expected_value",
+        "factory, args, expected_depth, expected_value",
         [
             pytest.param(
                 Color.from_4bit,
@@ -72,13 +72,13 @@ class TestColorConstruction:
         self,
         factory: Callable[[Any], Color],
         args: tuple[Foreground | int, ...],
-        expected_mode: str,
+        expected_depth: str,
         expected_value: tuple[int, int, int] | int,
     ):
         c = factory(*args)
         assert c, f"Color created via {factory.__name__}{args} should be truthy"
-        assert c.mode == expected_mode, (
-            f"Expected mode {expected_mode!r}, got {c.mode!r}"
+        assert c.depth == expected_depth, (
+            f"Expected depth {expected_depth!r}, got {c.depth!r}"
         )
         assert c.value == expected_value, (
             f"Expected value {expected_value!r}, got {c.value!r}"
@@ -86,7 +86,7 @@ class TestColorConstruction:
 
     def test_invalid_mode_ignored(self):
         c = Color("invalid", 42)
-        assert c.mode is None, "Invalid mode string should be normalized to None"
+        assert c.depth is None, "Invalid depth string should be normalized to None"
 
     def test_enum_value_unwrapped(self):
         c = Color("4bit", Foreground.GREEN)

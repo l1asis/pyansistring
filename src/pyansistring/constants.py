@@ -3,7 +3,7 @@ __all__ = [
     "UNIVERSAL_NEWLINES",
     "PUNCTUATION",
     "PUNCTUATION_AND_WHITESPACE",
-    "ColorMode",
+    "ColorDepth",
     "Foreground",
     "Background",
     "Underline",
@@ -81,7 +81,7 @@ class MetaEnum(_EnumMeta):
         return True
 
 
-class ColorMode(_IntEnum, metaclass=MetaEnum):
+class ColorDepth(_IntEnum, metaclass=MetaEnum):
     PALETTE = 5  # 8-bit
     TRUE_COLOR = 2  # 24-bit
     TRUECOLOR = 2  # alias

@@ -30,19 +30,23 @@ else:
 
     is_fonttools_available = True
 
-from ._helpers import (
+from ._format import (
     FMT as _FMT,
     MAP_FMT as _MAP_FMT,
+    remap_format as _remap_format,
+)
+from ._helpers import (
+    hsl_to_rgb as _hsl_to_rgb,
+    rsearch_separators as _rsearch_separators,
+    search_separators as _search_separators,
+)
+from ._svg import (
     SVG_ESCAPE as _SVG_ESCAPE,
     UNDERLINE_CSS as _UNDERLINE_CSS,
     get_style_key as _get_style_key,
-    hsl_to_rgb as _hsl_to_rgb,
     load_font as _load_font,
     prepare_font_variants as _prepare_font_variants,
-    remap_format as _remap_format,
     resolve_skew as _resolve_skew,
-    rsearch_separators as _rsearch_separators,
-    search_separators as _search_separators,
     svg_build_underline_elements as _svg_build_underline_elements,
     svg_create_transform_pen as _svg_create_transform_pen,
     svg_resolve_underline as _svg_resolve_underline,
