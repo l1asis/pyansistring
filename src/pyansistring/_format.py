@@ -7,7 +7,7 @@ __all__ = [
 from string import Formatter as _Formatter
 from typing import Any as _Any
 
-from pyansistring.style import Style, StyleManager
+from pyansistring.style import Style as _Style, StyleManager as _StyleManager
 
 FMT = _Formatter()
 
@@ -53,13 +53,13 @@ def _resolve_format_spec(
 
 def remap_format(
     template: str,
-    sm: StyleManager,
+    sm: _StyleManager,
     fmt: _Formatter,
     args: tuple[_Any, ...],
     kwargs: _Any,
-) -> dict[int, Style]:
+) -> dict[int, _Style]:
     """Map styles from a format template onto the formatted output positions."""
-    styles: dict[int, Style] = {}
+    styles: dict[int, _Style] = {}
     src = 0
     dest = 0
     auto_idx = 0

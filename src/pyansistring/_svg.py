@@ -25,8 +25,8 @@ from fontTools.pens.transformPen import (  # type: ignore[import-untyped]
 )
 from fontTools.ttLib import TTFont as _TTFont  # type: ignore[import-untyped]
 
-from pyansistring.constants import SGR, UnderlineMode
-from pyansistring.style import Style
+from pyansistring.constants import SGR as _SGR, UnderlineMode as _UnderlineMode
+from pyansistring.style import Style as _Style
 
 SVG_ESCAPE: dict[str, str] = {
     "&": "&amp;",
@@ -37,11 +37,11 @@ SVG_ESCAPE: dict[str, str] = {
 }
 
 UNDERLINE_CSS: dict[int, str] = {
-    UnderlineMode.SINGLE: "solid",
-    UnderlineMode.DOUBLE: "double",
-    UnderlineMode.DOTTED: "dotted",
-    UnderlineMode.DASHED: "dashed",
-    UnderlineMode.CURLY: "wavy",
+    _UnderlineMode.SINGLE: "solid",
+    _UnderlineMode.DOUBLE: "double",
+    _UnderlineMode.DOTTED: "dotted",
+    _UnderlineMode.DASHED: "dashed",
+    _UnderlineMode.CURLY: "wavy",
 }
 
 
@@ -61,13 +61,13 @@ def load_font(font: "_TTFont | _Path | str") -> "_TTFont":
     return font
 
 
-def get_style_key(style: "Style | None") -> str:
-    """Map a per-character :class:`Style` to one of the variant keys.
+def get_style_key(style: "_Style | None") -> str:
+    """Map a per-character :class:`_Style` to one of the variant keys.
 
     Parameters
     ----------
-    style : Style | None
-        The character's Style, or ``None`` for default.
+    style : _Style | None
+        The character's _Style, or ``None`` for default.
 
     Returns
     -------
@@ -76,9 +76,9 @@ def get_style_key(style: "Style | None") -> str:
     """
     if style is None:
         return "regular"
-    is_bold = SGR.BOLD in style.attributes
-    is_italic = SGR.ITALIC in style.attributes
-    is_dim = SGR.DIM in style.attributes
+    is_bold = _SGR.BOLD in style.attributes
+    is_italic = _SGR.ITALIC in style.attributes
+    is_dim = _SGR.DIM in style.attributes
     if is_bold and is_italic:
         return "bold_italic"
     if is_bold:
@@ -111,7 +111,7 @@ def prepare_font_variants(
         Optional font to use for bold italic text. If ``None``, bold italic will
         be emulated.
     font_thin : TTFont | None
-        Optional font to use for thin (SGR.DIM) text. If ``None``, thin will be
+        Optional font to use for thin (_SGR.DIM) text. If ``None``, thin will be
         emulated as regular.
 
     Returns
@@ -248,7 +248,7 @@ def prepare_font_variants(
         # No real font support — faux both
         variants["bold_italic"] = FontVariant(main_gs, main_cmap, True, True)
 
-    # Thin (SGR.DIM)
+    # Thin (_SGR.DIM)
     if font_thin is not None:
         variants["thin"] = FontVariant(
             _gs(font_thin),
@@ -367,7 +367,7 @@ def svg_create_transform_pen(
 
 
 def svg_weight_stroke_attrs(
-    style: Style | None,
+    style: _Style | None,
     needs_faux_bold: bool,
     faux_weight: int,
     font_size_px: int | float,
@@ -379,8 +379,8 @@ def svg_weight_stroke_attrs(
 
     Parameters
     ----------
-    style : Style | None
-        The character's Style, or ``None`` for default.
+    style : _Style | None
+        The character's _Style, or ``None`` for default.
     needs_faux_bold : bool
         Whether the current font variant requires faux bold emulation.
     faux_weight : int
@@ -393,7 +393,7 @@ def svg_weight_stroke_attrs(
         visible.
     background_color : tuple[int, int, int]
         The background color as an RGB tuple, used for faux bold emulation when no
-        background color is specified in the Style.
+        background color is specified in the _Style.
 
     Returns
     -------
@@ -424,22 +424,22 @@ def svg_weight_stroke_attrs(
     return [f'stroke="{thin}"', f'stroke-width="{sw}"', 'stroke-linejoin="round"']
 
 
-def svg_resolve_underline(style: Style) -> tuple[str | None, UnderlineMode | None]:
-    """Determine underline colour string and mode from a character's Style."""
+def svg_resolve_underline(style: _Style) -> tuple[str | None, _UnderlineMode | None]:
+    """Determine underline colour string and mode from a character's _Style."""
     if style.underline[0]:
         return f"rgb{style.underline[0].to_rgb()}", style.underline[1]
-    if SGR.UNDERLINE in style.attributes:
+    if _SGR.UNDERLINE in style.attributes:
         color = f"rgb{style.foreground.to_rgb()}" if style.foreground else "black"
-        return color, UnderlineMode.SINGLE
-    if SGR.DOUBLE_UNDERLINE in style.attributes:
+        return color, _UnderlineMode.SINGLE
+    if _SGR.DOUBLE_UNDERLINE in style.attributes:
         color = f"rgb{style.foreground.to_rgb()}" if style.foreground else "black"
-        return color, UnderlineMode.DOUBLE
+        return color, _UnderlineMode.DOUBLE
     return None, None
 
 
 def svg_build_underline_elements(
     ul_color: str,
-    ul_mode: UnderlineMode,
+    ul_mode: _UnderlineMode,
     ul_x: float,
     ul_y: float,
     ul_w: float,
@@ -451,7 +451,7 @@ def svg_build_underline_elements(
     ----------
     ul_color : str
         The underline color as an SVG color string (e.g. ``"rgb(255,0,0)"``).
-    ul_mode : UnderlineMode
+    ul_mode : _UnderlineMode
         The underline mode (single, double, curly, dotted, dashed).
     ul_x : float
         The x-coordinate of the left edge of the underline.
@@ -474,14 +474,14 @@ def svg_build_underline_elements(
     elems: list[str] = []
     max_bot = 0.0
 
-    if ul_mode == UnderlineMode.SINGLE:
+    if ul_mode == _UnderlineMode.SINGLE:
         elems.append(
             f'  <rect x="{ul_x}" y="{ul_y}" '
             f'width="{ul_w}" height="{ul_h}" fill="{ul_color}"/>'
         )
         max_bot = ul_y + ul_h
 
-    elif ul_mode == UnderlineMode.DOUBLE:
+    elif ul_mode == _UnderlineMode.DOUBLE:
         gap = ul_h * 1.5
         for y_off in (ul_y, ul_y + ul_h + gap):
             elems.append(
@@ -490,7 +490,7 @@ def svg_build_underline_elements(
             )
         max_bot = ul_y + 2 * ul_h + gap
 
-    elif ul_mode == UnderlineMode.CURLY:
+    elif ul_mode == _UnderlineMode.CURLY:
         cy = ul_y + ul_h / 2
         amp = ul_h * 2
         segs = max(2, int(ul_w / (ul_h * 4)))
@@ -506,7 +506,7 @@ def svg_build_underline_elements(
         )
         max_bot = cy + amp + ul_h / 2
 
-    elif ul_mode == UnderlineMode.DOTTED:
+    elif ul_mode == _UnderlineMode.DOTTED:
         cy = ul_y + ul_h / 2
         r = ul_h / 2
         spacing = ul_h * 3
@@ -516,7 +516,7 @@ def svg_build_underline_elements(
             pos += spacing
         max_bot = cy + r
 
-    elif ul_mode == UnderlineMode.DASHED:
+    elif ul_mode == _UnderlineMode.DASHED:
         dash = ul_h * 3
         cy = ul_y + ul_h / 2
         elems.append(
