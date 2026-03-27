@@ -1,10 +1,11 @@
 """Tests for Color and Style classes."""
 
-from typing import Any, Callable
+from colorsys import rgb_to_hls
+from typing import Any, Callable, Literal
 
 import pytest
 
-from pyansistring.color import Color
+from pyansistring.color import Color, ColorScale
 from pyansistring.constants import SGR, Background, Foreground, Underline, UnderlineMode
 from pyansistring.style import Style
 
@@ -177,6 +178,114 @@ class TestColorToRGB:
         assert all(isinstance(v, int) for v in rgb), (
             f"All RGB values must be int, got {rgb}"
         )
+
+
+class TestColorToHSL:
+    """Color.to_hsl() conversion contract."""
+
+    @pytest.mark.parametrize(
+        "color",
+        [
+            pytest.param(Color.from_24bit(255, 0, 0), id="24bit-red"),
+            pytest.param(Color.from_8bit(135), id="8bit"),
+            pytest.param(Color.from_4bit(Foreground.BLUE), id="4bit"),
+        ],
+    )
+    def test_matches_colorsys_from_to_rgb(self, color: Color):
+        expected = rgb_to_hls(*map(lambda x: x / 255, color.to_rgb()))
+        actual = color.to_hsl()
+        assert (actual[0], actual[2], actual[1]) == expected, (
+            "to_hsl() should match colorsys.rgb_to_hls on the resolved RGB value"
+        )
+
+    def test_theme_argument_is_applied(self):
+        color = Color.from_4bit(Foreground.RED)
+        expected = rgb_to_hls(*map(lambda x: x / 255, color.to_rgb("vga")))
+        actual = color.to_hsl("vga")
+        assert (actual[0], actual[2], actual[1]) == expected
+
+    def test_returns_3_tuple_of_floats(self):
+        hsl = Color.from_24bit(12, 34, 56).to_hsl()
+        assert isinstance(hsl, tuple) and len(hsl) == 3
+        assert all(isinstance(v, float) for v in hsl)
+
+
+class TestColorScale:
+    """ColorScale.interpolate() behaviour in rgb and hsl spaces."""
+
+    def test_empty_scale_returns_unset(self):
+        scale = ColorScale([], "rgb")
+        assert scale.interpolate(0.5) == Color.unset()
+
+    def test_invalid_space_raises_value_error(self):
+        scale = ColorScale([(0, 0, 0), (255, 255, 255)], "lab")  # type: ignore
+        with pytest.raises(ValueError, match="Unsupported color space"):
+            scale.interpolate(0.5)
+
+    @pytest.mark.parametrize(
+        "t, expected",
+        [
+            pytest.param(0.0, (255, 0, 0), id="left-end"),
+            pytest.param(0.25, (128, 128, 0), id="quarter-point"),
+            pytest.param(0.5, (0, 255, 0), id="midpoint"),
+            pytest.param(0.75, (0, 128, 128), id="three-quarters"),
+            pytest.param(1.0, (0, 0, 255), id="right-end"),
+        ],
+    )
+    def test_rgb_interpolation_three_stops(
+        self, t: float, expected: tuple[int, int, int]
+    ):
+        scale = ColorScale([(255, 0, 0), (0, 255, 0), (0, 0, 255)], "rgb")
+        out = scale.interpolate(t)
+        assert out.depth == "24bit"
+        assert out.value == expected
+
+    @pytest.mark.parametrize(
+        "t, expected",
+        [
+            pytest.param(0.0, (255, 0, 0), id="left-end"),
+            pytest.param(0.25, (255, 255, 0), id="quarter-point"),
+            pytest.param(0.5, (0, 255, 0), id="midpoint"),
+            pytest.param(0.75, (0, 255, 255), id="three-quarters"),
+            pytest.param(1.0, (0, 0, 255), id="right-end"),
+        ],
+    )
+    def test_hsl_interpolation_three_stops(
+        self, t: float, expected: tuple[int, int, int]
+    ):
+        scale = ColorScale([(255, 0, 0), (0, 255, 0), (0, 0, 255)], "hsl")
+        out = scale.interpolate(t)
+        assert out.depth == "24bit"
+        assert out.value == expected
+
+    @pytest.mark.parametrize(
+        "t, expected",
+        [
+            pytest.param(-1.0, (255, 0, 0), id="clamp-left"),
+            pytest.param(2.0, (0, 0, 255), id="clamp-right"),
+        ],
+    )
+    def test_rgb_clamps_t_to_range(self, t: float, expected: tuple[int, int, int]):
+        scale = ColorScale([(255, 0, 0), (0, 0, 255)], "rgb")
+        assert scale.interpolate(t).value == expected
+
+    def test_accepts_color_instances(self):
+        scale = ColorScale(
+            [Color.from_24bit(0, 0, 0), Color.from_24bit(255, 255, 255)], "rgb"
+        )
+        assert scale.interpolate(0.5).value == (128, 128, 128)
+
+    @pytest.mark.parametrize("space", ["rgb", "hsl"])
+    def test_single_stop_returns_same_color(self, space: Literal["rgb", "hsl"]):
+        scale = ColorScale([Color.from_24bit(10, 20, 30)], space)
+        assert scale.interpolate(0.25).value == (10, 20, 30)
+
+    def test_hsl_interpolation_returns_24bit_color(self):
+        scale = ColorScale([(255, 0, 0), (0, 255, 0)], "hsl")
+        out = scale.interpolate(0.5)
+        assert out.depth == "24bit"
+        assert isinstance(out.value, tuple) and len(out.value) == 3
+        assert all(isinstance(v, int) for v in out.value)
 
 
 class TestStyleConstruction:
