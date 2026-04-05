@@ -2441,7 +2441,7 @@ class Regex:
         rf"(?:(?:38|48|58){SEP}2(?:;|:){{1,2}}{INT8.pattern}(?:{SEP}{INT8.pattern}){r'{0,2}'})"
     )
     SGR_PARAM = _re_compile(
-        rf"(?:{SET24.pattern}|{SET8.pattern}|[0-9]|2[0-9]|3[0-79]|4[0-79]|5[0-79]|[6-9][0-9]|10[0-7])"
+        rf"(?:{SET24.pattern}|{SET8.pattern}|10[0-7]|[6-9][0-9]|5[0-79]|4[0-79]|3[0-79]|2[0-9]|[0-9])"
     )
     ANSI_SEQ = _re_compile(
         r"(?:\x1b[@-Z\\-_]|[\x80-\x9a\x9c-\x9f]|(?:\x1b\[|\x9b)[0-?]*[ -/]*[@-~])"

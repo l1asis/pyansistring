@@ -445,6 +445,12 @@ class ANSIString(str):
         styles: dict[int, str] = {}
         sequences: dict[int, str] = {}
 
+        def flush(end: int) -> None:
+            nonlocal style, start
+            if style and start < end:
+                for sub_index in range(start, end):
+                    styles[sub_index] = style
+
         def smart_replacement(match_: _re.Match[str]) -> str:
             nonlocal decrement
             sequence, span = match_.group(0), match_.span(0)
@@ -461,13 +467,15 @@ class ANSIString(str):
             for match_ in _re.finditer(Regex.SGR_PARAM, sequence):
                 parameter = match_.group(0)
                 if parameter == "0":
-                    if style:
-                        for sub_index in range(start, index):
-                            styles[sub_index] = style
-                        style = ""
+                    flush(index)
+                    style = ""
+                    start = index
                 else:
+                    if style and start < index:
+                        flush(index)
                     style += f"\x1b[{parameter}m"
                     start = index
+        flush(len(plain))
         return ANSIString(plain, styles)
 
     def style(

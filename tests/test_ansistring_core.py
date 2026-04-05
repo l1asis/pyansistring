@@ -125,3 +125,33 @@ class TestFromAnsi:
         raw = "\x1b[10;10H\x1b[31mH\x1b[0mello"
         result = ANSIString.from_ansi(raw)
         assert result.plain_text == "Hello", "Non-SGR escapes should be dropped"
+
+    def test_parses_4bit_foreground_red(self):
+        raw = "\x1b[31mError\x1b[0m: file not found"
+        parsed = ANSIString.from_ansi(raw)
+        expected = ANSIString("Error: file not found").fg_4b(Foreground.RED, (0, 5))
+
+        assert parsed.style_manager == expected.style_manager, (
+            "SGR 31 should parse as red foreground, not split into style attrs"
+        )
+
+    def test_style_change_without_intermediate_reset(self):
+        raw = "\x1b[31mA\x1b[32mB\x1b[0m"
+        parsed = ANSIString.from_ansi(raw)
+        expected = (
+            ANSIString("AB")
+            .fg_4b(Foreground.RED, (0, 1))
+            .fg_4b(Foreground.GREEN, (1, 2))
+        )
+
+        assert parsed.style_manager == expected.style_manager, (
+            "Changing colors mid-string should preserve the previous styled span"
+        )
+
+    def test_trailing_style_without_reset_is_applied(self):
+        parsed = ANSIString.from_ansi("\x1b[31mX")
+        expected = ANSIString("X").fg_4b(Foreground.RED, (0, 1))
+
+        assert parsed.style_manager == expected.style_manager, (
+            "Active styles at end-of-input should be applied even without reset"
+        )
