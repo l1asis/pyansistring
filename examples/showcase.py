@@ -5,7 +5,13 @@ Run with:
     python examples/showcase.py
 """
 
-from pyansistring import ANSIString
+from pyansistring import (
+    ANSIString,
+    ArtRegistry,
+    ColorGeneratorContext,
+    register_color_generator,
+    unregister_color_generator,
+)
 from pyansistring.constants import (
     SGR,
     Background,
@@ -30,6 +36,22 @@ def section(title: str) -> None:
 def show(label: str, value: ANSIString | str) -> None:
     """Print a labelled example with visual framing."""
     print(f"  {label:<40} {WALL}{value}{WALL}")
+
+
+def zigzag_generator(context: ColorGeneratorContext) -> list[tuple[int, int, int]]:
+    """Return a mirrored zigzag palette sized to the requested step count."""
+    palette = [
+        (84, 161, 255),
+        (255, 99, 71),
+        (255, 215, 0),
+        (120, 220, 160),
+    ]
+    out: list[tuple[int, int, int]] = []
+    for index in range(max(2, context["step_count"])):
+        phase = (index // len(palette)) % 2
+        slot = index % len(palette)
+        out.append(palette[slot] if phase == 0 else palette[-slot - 1])
+    return out
 
 
 # ── Main showcase ─────────────────────────────────────────────────────────
@@ -203,7 +225,7 @@ def main() -> None:
     )
     show(
         ".rainbow(skip_whitespace=True)",
-        ANSIString("Hello, World! pyansistring!").rainbow(skip_whitespace=True),
+        ANSIString("Hello, World! Rainbow text!").rainbow(skip_whitespace=True),
     )
 
     # ── 12. Gradient API ──────────────────────────────────────────────────
@@ -244,7 +266,36 @@ def main() -> None:
         ),
     )
 
-    # ── 13. String operations preserve styles ─────────────────────────────
+    # ── 13. Art registry and generators ───────────────────────────────────
+    section("ArtRegistry and custom generators")
+
+    register_color_generator("zigzag_showcase_v1", zigzag_generator)
+    try:
+        custom_registry = ArtRegistry()
+        custom_registry.register(
+            "ZIGZAG",
+            " /\\/\\/\\/\\\n \\/\\/\\/\\/",
+            colorings=(
+                {
+                    "mode": "gradient",
+                    "colors": {
+                        "generator": "zigzag_showcase_v1",
+                        "mode": "seeded",
+                        "seed": 7,
+                    },
+                    "skip_whitespace": True,
+                    "fg": True,
+                },
+            ),
+        )
+        show(
+            "Custom ArtRegistry + zigzag generator",
+            custom_registry.get_colored_art("ZIGZAG"),
+        )
+    finally:
+        unregister_color_generator("zigzag_showcase_v1")
+
+    # ── 14. String operations preserve styles ─────────────────────────────
     section("String operations that preserve styles")
 
     styled = ANSIString("Hello, World!").fg_24b(0, 128, 255)
@@ -276,14 +327,14 @@ def main() -> None:
     joined = ANSIString(" + ").style(SGR.BOLD).join(parts)
     show(".join(parts)", joined)
 
-    # ── 14. f-string support ──────────────────────────────────────────────
+    # ── 15. f-string support ──────────────────────────────────────────────
     section("f-string support")
     s = ANSIString("Hi").fg_4b(Foreground.RED)
     show("f'{s}'", f"{s}")
     show("f'{s:>5}'", f"{s:>5}")
     show("f'{s:^10}'", f"{s:^10}")
 
-    # ── 15. from_ansi parsing ─────────────────────────────────────────────
+    # ── 16. from_ansi parsing ─────────────────────────────────────────────
     section("from_ansi — parse raw ANSI back to ANSIString")
     raw = "\x1b[38;2;0;128;255mHello\x1b[0m, \x1b[1mWorld!\x1b[0m"
     parsed = ANSIString.from_ansi(raw)

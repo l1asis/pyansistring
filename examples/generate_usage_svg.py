@@ -1,8 +1,7 @@
-"""
-Generate example SVG images from the ANSIString usage examples in the README.
+"""Generate SVG images for README usage snippets.
 
-Produces SVG files in images/usage/ that visualise each styling technique
-described in the README.
+Produces files in ``images/usage`` for commonly documented features,
+including styling, underline modes, rainbow, gradients, and ArtRegistry usage.
 
 Requires Consolas fonts installed at the standard Windows location.
 """
@@ -14,7 +13,13 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
 from fontTools.ttLib import TTFont  # type: ignore
 
-from pyansistring import ANSIString
+from pyansistring import (
+    ANSIString,
+    ArtRegistry,
+    ColorGeneratorContext,
+    register_color_generator,
+    unregister_color_generator,
+)
 from pyansistring.constants import SGR, Background, Foreground, UnderlineMode
 
 # ── Font paths (Consolas family, standard Windows location) ────────────────
@@ -48,6 +53,22 @@ def write(name: str, svg: str) -> None:
 
 def add(name: str, s: ANSIString):
     examples[name] = s
+
+
+def zigzag_generator(context: ColorGeneratorContext) -> list[tuple[int, int, int]]:
+    """Return a mirrored zigzag palette sized to the requested step count."""
+    palette = [
+        (84, 161, 255),
+        (255, 99, 71),
+        (255, 215, 0),
+        (120, 220, 160),
+    ]
+    out: list[tuple[int, int, int]] = []
+    for index in range(max(2, context["step_count"])):
+        phase = (index // len(palette)) % 2
+        slot = index % len(palette)
+        out.append(palette[slot] if phase == 0 else palette[-slot - 1])
+    return out
 
 
 # ── Unstyled text ─────────────────────────────────────────────────────────
@@ -125,19 +146,65 @@ add(
     ANSIString("Hello, World! This is rainbow text!").rainbow(fg=True),
 )
 
-# ── Multicolor ────────────────────────────────────────────────────────────
+# ── Gradient (string-wide) ───────────────────────────────────────────────
 add(
-    "multicolor.svg",
-    ANSIString("Hello, World! This is multicolor text!").multicolor(
-        (
-            "r=0:|g=0:|b=255:   $ "  # Start with blue
-            "b>0:repeat(auto)   # "  # Decrease blue
-            "r>255:repeat(auto) | "  # Increase green and combine with...
-            "g>255:repeat(auto)   "  # Increase red
-            "                   &*"  # Cycle & Start without apply flags
-        )
+    "gradient.svg",
+    ANSIString("Hello, World! This is gradient text!").gradient(
+        [(84, 161, 255), (255, 255, 255)],
+        fg=True,
     ),
 )
+
+# ── Gradient by words ─────────────────────────────────────────────────────
+add(
+    "gradient_words.svg",
+    ANSIString("Hello, colorful gradient world!").gradient_words(
+        [(255, 99, 71), (255, 215, 0)],
+        "Hello",
+        "world",
+        case_sensitive=False,
+        fg=True,
+    ),
+)
+
+# ── Gradient by coordinates ───────────────────────────────────────────────
+add(
+    "gradient_coordinates.svg",
+    ANSIString("HELLO\nworld").gradient_coordinates(
+        [(255, 0, 120), (0, 200, 255)],
+        (1, 1),
+        (2, 1),
+        (3, 1),
+        (4, 1),
+        (5, 1),
+        index_base=1,
+        fg=True,
+    ),
+)
+
+# ── ArtRegistry (custom generator) ───────────────────────────────────────
+register_color_generator("zigzag_usage_v1", zigzag_generator)
+try:
+    custom_registry = ArtRegistry()
+    custom_registry.register(
+        "ZIGZAG",
+        " /\\/\\/\\/\\\n \\/\\/\\/\\/",
+        colorings=(
+            {
+                "mode": "gradient",
+                "colors": {
+                    "generator": "zigzag_usage_v1",
+                    "mode": "seeded",
+                    "seed": 42,
+                },
+                "skip_whitespace": True,
+                "fg": True,
+            },
+        ),
+    )
+    add("art_registry_zigzag.svg", custom_registry.get_colored_art("ZIGZAG"))
+finally:
+    unregister_color_generator("zigzag_usage_v1")
 
 
 # ── Generate all SVGs ─────────────────────────────────────────────────────
