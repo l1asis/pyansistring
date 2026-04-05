@@ -4,6 +4,11 @@ __all__ = [
     "ArtColoring",
     "ArtDefinition",
     "ArtMetadata",
+    "ColorGeneratorContext",
+    "ColorGeneratorFn",
+    "ColorGeneratorSpec",
+    "ColorScaleSpec",
+    "ColorSource",
     "ColorStop",
     "Coordinate",
     "CoordinateGroup",
@@ -13,7 +18,7 @@ __all__ = [
     "SliceSpec",
 ]
 
-from collections.abc import Iterable as _Iterable
+from collections.abc import Callable as _Callable, Iterable as _Iterable
 from typing import (
     Literal as _Literal,
     NotRequired as _NotRequired,
@@ -32,7 +37,7 @@ SliceGroup: _TypeAlias = SliceSpec | tuple[SliceSpec, ...]
 
 class GradientCoordinatesColoring(_TypedDict):
     mode: _Literal["gradient_coordinates"]
-    colors: _ColorScale | ColorStop | _Iterable[ColorStop]
+    colors: "ColorSource"
     coordinates: tuple[CoordinateGroup, ...]
     fg: _NotRequired[bool]
     bg: _NotRequired[bool]
@@ -46,7 +51,7 @@ class GradientCoordinatesColoring(_TypedDict):
 
 class GradientSliceColoring(_TypedDict):
     mode: _Literal["gradient"]
-    colors: _ColorScale | ColorStop | _Iterable[ColorStop]
+    colors: "ColorSource"
     slices: _NotRequired[tuple[SliceGroup, ...]]
     skip_whitespace: _NotRequired[bool]
     fg: _NotRequired[bool]
@@ -56,6 +61,41 @@ class GradientSliceColoring(_TypedDict):
 
 
 ArtColoring: _TypeAlias = GradientCoordinatesColoring | GradientSliceColoring
+
+
+class ColorScaleSpec(_TypedDict):
+    space: _Literal["rgb", "hsl"]
+    stops: list[tuple[int, int, int]] | list[list[int]]
+
+
+class ColorGeneratorSpec(_TypedDict, total=False):
+    generator: str
+    mode: _NotRequired[_Literal["random", "seeded"]]
+    seed: _NotRequired[int]
+    step_count: _NotRequired[int]
+
+
+class ColorGeneratorContext(_TypedDict):
+    generator: str
+    art_mode: _Literal["gradient_coordinates", "gradient"]
+    generator_mode: _Literal["random", "seeded"]
+    step_count: int
+    text_length: int
+    skip_whitespace: bool
+    coordinates_count: int
+    slices_count: int
+    seed: _NotRequired[int]
+
+
+ColorGeneratorFn: _TypeAlias = _Callable[
+    [ColorGeneratorContext],
+    _ColorScale | ColorStop | _Iterable[ColorStop] | ColorScaleSpec,
+]
+
+
+ColorSource: _TypeAlias = (
+    _ColorScale | ColorStop | _Iterable[ColorStop] | ColorScaleSpec | ColorGeneratorSpec
+)
 
 
 class ArtMetadata(_TypedDict, total=False):

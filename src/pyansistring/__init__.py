@@ -15,7 +15,14 @@ try:
 except PackageNotFoundError:
     __version__ = "unknown"
 
-from .art_registry import DEFAULT_ART_REGISTRY, ArtRegistry, load_art_pack_toml
+from ._types import ColorGeneratorContext
+from .art_registry import (
+    DEFAULT_ART_REGISTRY,
+    ArtRegistry,
+    load_art_pack_toml,
+    register_color_generator,
+    unregister_color_generator,
+)
 from .color import Color
 from .constants import (
     COLOR_THEMES,
@@ -42,6 +49,9 @@ __all__ = [
     "ArtRegistry",
     "DEFAULT_ART_REGISTRY",
     "load_art_pack_toml",
+    "register_color_generator",
+    "unregister_color_generator",
+    "ColorGeneratorContext",
     "Style",
     "StyleManager",
     "ColorDepth",

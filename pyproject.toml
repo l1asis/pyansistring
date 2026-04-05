@@ -48,6 +48,14 @@ img = [
 Repository = "https://github.com/l1asis/pyansistring.git"
 Issues = "https://github.com/l1asis/pyansistring/issues"
 
+[tool.hatch.build]
+include = [
+  "src/pyansistring/data/*.toml",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/pyansistring"]
+
 [tool.pytest.ini_options]
 addopts = "-v"
 testpaths = ["tests"]
@@ -63,9 +71,6 @@ target-version = "py311"
 
 [tool.ruff.lint]
 select = ["E", "F", "I"]
-
-[tool.ruff.lint.per-file-ignores]
-"src/pyansistring/arts.py" = ["E501"]
 
 [tool.ruff.lint.isort]
 combine-as-imports = true

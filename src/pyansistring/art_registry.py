@@ -5,6 +5,8 @@ __all__ = [
     "ArtMetadata",
     "ArtRegistry",
     "DEFAULT_ART_REGISTRY",
+    "register_color_generator",
+    "unregister_color_generator",
     "load_art_pack_toml",
     "normalize_art_coloring",
 ]
@@ -15,26 +17,27 @@ from collections.abc import (
     Mapping as _Mapping,
     Sequence as _Sequence,
 )
+from importlib import resources as _resources
 from pathlib import Path as _Path
-from typing import Any as _Any, cast as _cast
+from typing import Any as _Any, Literal as _Literal, cast as _cast
 
+from pyansistring import _art_engine as _art_engine
 from pyansistring._types import (
     ArtColoring,
     ArtDefinition,
     ArtMetadata,
-    ColorStop,
+    ColorGeneratorFn,
+    ColorSource,
     Coordinate,
     CoordinateGroup,
     SliceGroup,
     SliceSpec,
 )
-from pyansistring.arts import (
-    ART_COLORINGS as _ART_COLORINGS,
-    PLAIN_ARTS as _PLAIN_ARTS,
-    color_art as _color_art,
-)
-from pyansistring.color import Color as _Color, ColorScale as _ColorScale
 from pyansistring.core import ANSIString as _ANSIString
+
+_COLOR_SPACES = frozenset({"rgb", "hsl"})
+_COORDINATE_SYSTEMS = frozenset({"terminal", "cartesian"})
+_OUT_OF_BOUNDS_MODES = frozenset({"ignore", "clamp", "raise"})
 
 
 def _is_int_sequence(value: object, length: int | None = None) -> bool:
@@ -49,35 +52,8 @@ def _is_int_sequence(value: object, length: int | None = None) -> bool:
     return all(isinstance(item, int) for item in sequence)
 
 
-def _normalize_color_stop(stop: object) -> ColorStop:
-    if isinstance(stop, _Color):
-        return stop
-
-    if _is_int_sequence(stop, 3):
-        red, green, blue = _cast(tuple[int, int, int], stop)
-        return (int(red), int(green), int(blue))
-
-    raise TypeError("Expected a Color or an RGB triplet")
-
-
-def _normalize_colors(
-    colors: _ColorScale | ColorStop | _Iterable[ColorStop] | _Iterable[_Sequence[int]],
-) -> _ColorScale | list[ColorStop]:
-    if isinstance(colors, _ColorScale):
-        return colors
-
-    if isinstance(colors, _Color):
-        return [colors]
-
-    if _is_int_sequence(colors, 3):
-        red, green, blue = _cast(tuple[int, int, int], colors)
-        return [(int(red), int(green), int(blue))]
-
-    normalized: list[ColorStop] = []
-    for stop in _cast(_Iterable[_Any], colors):
-        normalized.append(_normalize_color_stop(stop))
-
-    return normalized
+def _normalize_colors(colors: ColorSource) -> ColorSource:
+    return _art_engine.normalize_colors(colors)
 
 
 def _normalize_coordinate(value: object) -> Coordinate:
@@ -148,10 +124,45 @@ def _normalize_slice_group(value: object) -> SliceGroup:
     return tuple(normalized_slices)
 
 
+def _normalize_space(value: object) -> _Literal["rgb", "hsl"]:
+    if value not in _COLOR_SPACES:
+        raise TypeError("Expected color space to be 'rgb' or 'hsl'")
+    return _cast(_Literal["rgb", "hsl"], value)
+
+
+def _normalize_origin(value: object) -> tuple[int, int]:
+    if not _is_int_sequence(value, 2):
+        raise TypeError("Expected origin to be an (x, y) coordinate")
+    x, y = _cast(tuple[int, int], value)
+    return (int(x), int(y))
+
+
+def _normalize_coordinate_system(value: object) -> _Literal["terminal", "cartesian"]:
+    if value not in _COORDINATE_SYSTEMS:
+        raise TypeError("Expected system to be 'terminal' or 'cartesian'")
+    return _cast(_Literal["terminal", "cartesian"], value)
+
+
+def _normalize_on_out_of_bounds(
+    value: object,
+) -> _Literal["ignore", "clamp", "raise"]:
+    if value not in _OUT_OF_BOUNDS_MODES:
+        raise TypeError(
+            "Expected on_out_of_bounds to be one of 'ignore', 'clamp', or 'raise'"
+        )
+    return _cast(_Literal["ignore", "clamp", "raise"], value)
+
+
 def normalize_art_coloring(coloring: _Mapping[str, _Any]) -> ArtColoring:
     mode = coloring["mode"]
 
     if mode == "gradient_coordinates":
+        space = _normalize_space(coloring.get("space", "hsl"))
+
+        index_base = coloring.get("index_base", 0)
+        if not isinstance(index_base, int):
+            raise TypeError("Expected index_base to be an integer")
+
         return _cast(
             ArtColoring,
             {
@@ -164,18 +175,21 @@ def normalize_art_coloring(coloring: _Mapping[str, _Any]) -> ArtColoring:
                 "fg": bool(coloring.get("fg", True)),
                 "bg": bool(coloring.get("bg", False)),
                 "ul": bool(coloring.get("ul", False)),
-                "space": coloring.get("space", "hsl"),
-                "index_base": int(coloring.get("index_base", 0)),
-                "origin": _cast(
-                    tuple[int, int],
-                    tuple(_cast(_Iterable[_Any], coloring.get("origin", (0, 0)))),
+                "space": space,
+                "index_base": index_base,
+                "origin": _normalize_origin(coloring.get("origin", (0, 0))),
+                "system": _normalize_coordinate_system(
+                    coloring.get("system", "terminal")
                 ),
-                "system": coloring.get("system", "terminal"),
-                "on_out_of_bounds": coloring.get("on_out_of_bounds", "raise"),
+                "on_out_of_bounds": _normalize_on_out_of_bounds(
+                    coloring.get("on_out_of_bounds", "raise")
+                ),
             },
         )
 
     if mode == "gradient":
+        space = _normalize_space(coloring.get("space", "hsl"))
+
         return _cast(
             ArtColoring,
             {
@@ -189,7 +203,7 @@ def normalize_art_coloring(coloring: _Mapping[str, _Any]) -> ArtColoring:
                 "fg": bool(coloring.get("fg", True)),
                 "bg": bool(coloring.get("bg", False)),
                 "ul": bool(coloring.get("ul", False)),
-                "space": coloring.get("space", "hsl"),
+                "space": space,
             },
         )
 
@@ -208,13 +222,24 @@ class ArtRegistry:
 
     @classmethod
     def from_builtin(cls) -> "ArtRegistry":
-        registry = cls()
-        for name, plain_art in _PLAIN_ARTS.items():
+        resource = _resources.files("pyansistring").joinpath("data/builtins.toml")
+        with resource.open("rb") as file:
+            data = _tomllib.load(file)
+
+        registry = cls.from_mapping(data)
+
+        # TOML multiline strings include a trailing newline before the
+        # closing delimiter. Trim exactly one newline to keep plain art stable.
+        for name in registry.names():
+            definition = registry.definition(name)
+            plain_art = definition["plain_art"].removesuffix("\n")
             registry.register(
                 name,
                 plain_art,
-                colorings=_ART_COLORINGS.get(name, ()),
+                colorings=definition["colorings"],
+                metadata=definition.get("metadata"),
             )
+
         return registry
 
     @classmethod
@@ -310,7 +335,7 @@ class ArtRegistry:
 
     def get_colored_art(self, name: str) -> _ANSIString:
         definition = self._arts[name]
-        return _color_art(definition["plain_art"], definition["colorings"])
+        return _art_engine.color_art(definition["plain_art"], definition["colorings"])
 
     def build_colored_arts(self) -> dict[str, _ANSIString]:
         return {name: self.get_colored_art(name) for name in self._arts}
@@ -321,3 +346,11 @@ DEFAULT_ART_REGISTRY = ArtRegistry.from_builtin()
 
 def load_art_pack_toml(path: str | _Path) -> ArtRegistry:
     return ArtRegistry.from_toml(path)
+
+
+def register_color_generator(name: str, generator: ColorGeneratorFn) -> None:
+    _art_engine.register_color_generator(name, generator)
+
+
+def unregister_color_generator(name: str) -> None:
+    _art_engine.unregister_color_generator(name)
