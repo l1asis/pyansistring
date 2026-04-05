@@ -179,11 +179,11 @@ class ColorScale:
             )
         return self._hsl_stops
 
-    def interpolate(self, t: float) -> Color:
-        """Interpolate a color at position t in [0, 1]."""
+    def interpolate_rgb(self, t: float) -> tuple[int, int, int]:
+        """Interpolate an RGB tuple at position t in [0, 1]."""
 
         if not self._rgb_stops:
-            return Color.unset()
+            return (0, 0, 0)
         if self.space not in {"rgb", "hsl"}:
             raise ValueError(f"Unsupported color space: {self.space}")
         t = _clamp(t, 0.0, 1.0)
@@ -194,7 +194,7 @@ class ColorScale:
         left_index = _trunc(t_scaled)
 
         if left_index >= segments:
-            return Color.from_24bit(*self._rgb_stops[-1])
+            return self._rgb_stops[-1]
 
         t_local = t_scaled - left_index
 
@@ -204,26 +204,29 @@ class ColorScale:
             r = round(r1 + (r2 - r1) * t_local)
             g = round(g1 + (g2 - g1) * t_local)
             b = round(b1 + (b2 - b1) * t_local)
-            return Color.from_24bit(r, g, b)
+            return (r, g, b)
 
-        elif self.space == "hsl":
-            hsl_stops = self._ensure_hsl_stops()
-            h1, s1, l1 = hsl_stops[left_index]
-            h2, s2, l2 = hsl_stops[left_index + 1]
+        hsl_stops = self._ensure_hsl_stops()
+        h1, s1, l1 = hsl_stops[left_index]
+        h2, s2, l2 = hsl_stops[left_index + 1]
 
-            # Interpolate Hue with Shortest-Path Math
-            d = h2 - h1
-            if d > 0.5:
-                d -= 1.0
-            elif d < -0.5:
-                d += 1.0
-            h_out = (h1 + d * t_local) % 1.0
+        # Interpolate Hue with Shortest-Path Math
+        d = h2 - h1
+        if d > 0.5:
+            d -= 1.0
+        elif d < -0.5:
+            d += 1.0
+        h_out = (h1 + d * t_local) % 1.0
 
-            # Interpolate S and L normally
-            s_out = s1 + (s2 - s1) * t_local
-            l_out = l1 + (l2 - l1) * t_local
+        # Interpolate S and L normally
+        s_out = s1 + (s2 - s1) * t_local
+        l_out = l1 + (l2 - l1) * t_local
 
-            r, g, b = _hls_to_rgb(h_out, l_out, s_out)
-            return Color.from_24bit(round(r * 255), round(g * 255), round(b * 255))
+        r, g, b = _hls_to_rgb(h_out, l_out, s_out)
+        return (round(r * 255), round(g * 255), round(b * 255))
 
-        return Color.unset()
+    def interpolate(self, t: float) -> Color:
+        """Interpolate a color at position t in [0, 1]."""
+        if not self._rgb_stops:
+            return Color.unset()
+        return Color.from_24bit(*self.interpolate_rgb(t))
