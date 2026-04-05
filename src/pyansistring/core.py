@@ -11,9 +11,11 @@ from pathlib import Path as _Path
 from typing import (
     TYPE_CHECKING,
     Any as _Any,
+    Literal as _Literal,
     Mapping as _Mapping,
     Self as _Self,
     SupportsIndex as _SupportsIndex,
+    TypeAlias as _TypeAlias,
     Union as _Union,
     cast as _cast,
 )
@@ -53,6 +55,7 @@ from ._svg import (
     svg_weight_stroke_attrs as _svg_weight_stroke_attrs,
     tspan as _tspan,
 )
+from .color import Color, ColorScale
 from .constants import (
     SGR,
     WHITESPACE,
@@ -63,6 +66,11 @@ from .constants import (
     get_casefold_expansions,
 )
 from .style import Style, StyleManager
+
+SliceSpec: _TypeAlias = _Union[tuple[int, int], tuple[int, int, int], slice]
+SliceGroup: _TypeAlias = _Union[SliceSpec, tuple[SliceSpec, ...]]
+Coordinate: _TypeAlias = tuple[int, int]
+CoordinateGroup: _TypeAlias = _Union[Coordinate, tuple[Coordinate, ...]]
 
 
 class ANSIString(str):
@@ -999,6 +1007,207 @@ class ANSIString(str):
                 f.write(svg_content)
 
         return svg_content
+
+    def gradient(
+        self,
+        colors: ColorScale | list[Color | tuple[int, int, int]],
+        *slices: SliceGroup,
+        skip_whitespace: bool = False,
+        fg: bool = False,
+        bg: bool = False,
+        ul: bool = False,
+        space: _Literal["rgb", "hsl"] = "hsl",
+    ) -> _Self:
+
+        if isinstance(colors, list):
+            colors = ColorScale(colors, space)
+
+        if not (fg or bg or ul):
+            fg = True
+
+        if not slices:
+            slices = tuple(
+                (index, index + 1)
+                for index, char in enumerate(self.plain_text)
+                if not (skip_whitespace and char.isspace())
+            )
+            if not slices:
+                return self
+
+        length = len(slices)
+        denom = length - 1 if length > 1 else 1
+
+        for index, item in enumerate(slices):
+            color = colors.interpolate(index / denom)
+            r, g, b = color.to_rgb()
+            if isinstance(item, slice) or isinstance(item[0], int):
+                # Assume it's a slice or a tuple of (start, end, [step])
+                item = _cast(SliceSpec, item)
+                if fg:
+                    self.fg_24b(r, g, b, item)
+                if bg:
+                    self.bg_24b(r, g, b, item)
+                if ul:
+                    self.ul_24b(r, g, b, item)
+            else:
+                # Assume it's a group of slice specs to be applied with the same color
+                item = _cast(tuple[SliceSpec, ...], item)
+                for sub_item in item:
+                    if fg:
+                        self.fg_24b(r, g, b, sub_item)
+                    if bg:
+                        self.bg_24b(r, g, b, sub_item)
+                    if ul:
+                        self.ul_24b(r, g, b, sub_item)
+
+        return self
+
+    def gradient_words(
+        self,
+        colors: ColorScale | list[Color | tuple[int, int, int]],
+        *words: str,
+        case_sensitive: bool = True,
+        skip_whitespace: bool = False,
+        fg: bool = False,
+        bg: bool = False,
+        ul: bool = False,
+        space: _Literal["rgb", "hsl"] = "hsl",
+    ) -> _Self:
+        spans = self._search_spans(*words, case_sensitive=case_sensitive)
+        if skip_whitespace:
+            spans = tuple(
+                span
+                for span in spans
+                if not all(self.plain_text[i].isspace() for i in range(*span))
+            )
+
+        if not spans:
+            return self
+
+        return self.gradient(
+            colors,
+            *spans,
+            skip_whitespace=skip_whitespace,
+            fg=fg,
+            bg=bg,
+            ul=ul,
+            space=space,
+        )
+
+    def gradient_coordinates(
+        self,
+        colors: ColorScale | list[Color | tuple[int, int, int]],
+        *coordinates: CoordinateGroup,
+        fg: bool = False,
+        bg: bool = False,
+        ul: bool = False,
+        space: _Literal["rgb", "hsl"] = "hsl",
+        index_base: int = 0,
+        origin: tuple[int, int] = (0, 0),
+        system: _Literal["cartesian", "terminal"] = "terminal",
+        on_out_of_bounds: _Literal["ignore", "clamp", "raise"] = "raise",
+    ) -> _Self:
+
+        line_starts = (
+            0,
+            *(
+                index + 1
+                for index, char in enumerate(self.plain_text)
+                if char == "\n" and index + 1 < len(self)
+            ),
+        )
+
+        height = len(line_starts)
+
+        slices: list[SliceGroup] = []
+
+        for item in coordinates:
+            if len(item) == 2 and isinstance(item[0], int):
+                # Assume it's a single coordinate (x, y)
+                x, y = _cast(Coordinate, item)
+                x = x - index_base + origin[0]
+                if system == "terminal":
+                    y = y - index_base + origin[1]
+                elif system == "cartesian":
+                    y = height - (y - index_base + origin[1]) - 1
+
+                if not (0 <= y < height):
+                    if on_out_of_bounds == "raise":
+                        raise IndexError(
+                            f"Y coordinate {y} is out of bounds for height {height}"
+                        )
+                    elif on_out_of_bounds == "clamp":
+                        y = max(0, min(y, height - 1))
+                    else:
+                        continue
+
+                # Process the line corresponding to the y coordinate
+                line_start = line_starts[y]
+                line_end = line_starts[y + 1] - 1 if y + 1 < height else len(self)
+                if 0 <= x < line_end - line_start:
+                    index = line_start + x
+                    slices.append((index, index + 1))
+                else:
+                    if on_out_of_bounds == "raise":
+                        raise IndexError(
+                            f"Coordinate ({x}, {y}) is out of bounds "
+                            f"for line {y} with length {line_end - line_start}"
+                        )
+                    elif on_out_of_bounds == "clamp":
+                        clamped_x = max(0, min(x, line_end - line_start - 1))
+                        index = line_start + clamped_x
+                        slices.append((index, index + 1))
+            else:
+                # Assume it's a group of coordinates to be applied with the same color
+                group: list[Coordinate] = []
+                for sub_item in _cast(tuple[Coordinate, ...], item):
+                    x, y = sub_item
+                    x = x - index_base + origin[0]
+                    if system == "terminal":
+                        y = y - index_base + origin[1]
+                    elif system == "cartesian":
+                        y = height - (y - index_base + origin[1]) - 1
+
+                    if not (0 <= y < height):
+                        if on_out_of_bounds == "raise":
+                            raise IndexError(
+                                f"Y coordinate {y} is out of bounds for height {height}"
+                            )
+                        elif on_out_of_bounds == "clamp":
+                            y = max(0, min(y, height - 1))
+                        else:
+                            continue
+
+                    line_start = line_starts[y]
+                    line_end = line_starts[y + 1] - 1 if y + 1 < height else len(self)
+                    if 0 <= x < line_end - line_start:
+                        index = line_start + x
+                        group.append((index, index + 1))
+                    else:
+                        if on_out_of_bounds == "raise":
+                            raise IndexError(
+                                f"X coordinate {x} is out of bounds "
+                                f"for line {y} with length {line_end - line_start}"
+                            )
+                        elif on_out_of_bounds == "clamp":
+                            clamped_x = max(0, min(x, line_end - line_start - 1))
+                            index = line_start + clamped_x
+                            group.append((index, index + 1))
+
+                if group:
+                    slices.append(tuple(group))
+
+        if not slices:
+            return self
+
+        return self.gradient(
+            colors,
+            *slices,
+            fg=fg,
+            bg=bg,
+            ul=ul,
+            space=space,
+        )
 
     def join(self, iterable: _Iterable[str], /) -> "ANSIString":
         strings = list(iterable)
