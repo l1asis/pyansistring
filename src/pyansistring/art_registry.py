@@ -154,6 +154,26 @@ def _normalize_on_out_of_bounds(
 
 
 def normalize_art_coloring(coloring: _Mapping[str, _Any]) -> ArtColoring:
+    """Normalize and validate a raw coloring mapping.
+
+    Parameters
+    ----------
+    coloring : Mapping[str, Any]
+        Raw coloring mapping, typically loaded from TOML/JSON-like data.
+        Supported modes are ``"gradient"`` and ``"gradient_coordinates"``.
+
+    Returns
+    -------
+    ArtColoring
+        A normalized coloring structure compatible with the art engine.
+
+    Raises
+    ------
+    TypeError
+        If the input shape or field types are invalid.
+    ValueError
+        If the ``mode`` value is unsupported.
+    """
     mode = coloring["mode"]
 
     if mode == "gradient_coordinates":
@@ -211,6 +231,8 @@ def normalize_art_coloring(coloring: _Mapping[str, _Any]) -> ArtColoring:
 
 
 class ArtRegistry:
+    """Registry for named ASCII/ANSI art definitions and coloring metadata."""
+
     def __init__(
         self,
         arts: _Mapping[str, ArtDefinition] | None = None,
@@ -222,6 +244,7 @@ class ArtRegistry:
 
     @classmethod
     def from_builtin(cls) -> "ArtRegistry":
+        """Create a registry loaded from the built-in TOML art pack."""
         resource = _resources.files("pyansistring").joinpath("data/builtins.toml")
         with resource.open("rb") as file:
             data = _tomllib.load(file)
@@ -244,12 +267,30 @@ class ArtRegistry:
 
     @classmethod
     def from_toml(cls, path: str | _Path) -> "ArtRegistry":
+        """Create a registry from an art-pack TOML file."""
         with _Path(path).open("rb") as file:
             data = _tomllib.load(file)
         return cls.from_mapping(data)
 
     @classmethod
     def from_mapping(cls, data: _Mapping[str, _Any]) -> "ArtRegistry":
+        """Build a registry from a mapping containing art definitions.
+
+        Parameters
+        ----------
+        data : Mapping[str, Any]
+            Mapping that contains an ``arts`` iterable of art definitions.
+
+        Returns
+        -------
+        ArtRegistry
+            A registry containing validated and normalized definitions.
+
+        Raises
+        ------
+        TypeError
+            If the input mapping structure or field types are invalid.
+        """
         registry = cls()
         arts = data.get("arts", ())
         if not isinstance(arts, _Iterable) or isinstance(arts, (str, bytes)):
@@ -291,6 +332,7 @@ class ArtRegistry:
         return registry
 
     def register_definition(self, name: str, definition: ArtDefinition) -> None:
+        """Register a named art definition mapping."""
         self.register(
             name,
             definition["plain_art"],
@@ -306,6 +348,7 @@ class ArtRegistry:
         colorings: _Iterable[ArtColoring] = (),
         metadata: ArtMetadata | None = None,
     ) -> None:
+        """Register or replace a named art entry."""
         definition = _cast(
             ArtDefinition,
             {
@@ -319,25 +362,32 @@ class ArtRegistry:
         self._arts[name] = definition
 
     def names(self) -> tuple[str, ...]:
+        """Return all registered art names."""
         return tuple(self._arts)
 
     def definition(self, name: str) -> ArtDefinition:
+        """Return the stored definition for a given art name."""
         return self._arts[name]
 
     def get_plain_art(self, name: str) -> str:
+        """Return the uncolored plain art text for a given name."""
         return self._arts[name]["plain_art"]
 
     def get_colorings(self, name: str) -> tuple[ArtColoring, ...]:
+        """Return normalized coloring operations for a given art name."""
         return self._arts[name]["colorings"]
 
     def get_metadata(self, name: str) -> ArtMetadata | None:
+        """Return optional metadata for a given art name."""
         return self._arts[name].get("metadata")
 
     def get_colored_art(self, name: str) -> _ANSIString:
+        """Render and return a colored ANSIString for a given art name."""
         definition = self._arts[name]
         return _art_engine.color_art(definition["plain_art"], definition["colorings"])
 
     def build_colored_arts(self) -> dict[str, _ANSIString]:
+        """Render and return all registered arts as colored ANSIString values."""
         return {name: self.get_colored_art(name) for name in self._arts}
 
 
@@ -345,12 +395,15 @@ DEFAULT_ART_REGISTRY = ArtRegistry.from_builtin()
 
 
 def load_art_pack_toml(path: str | _Path) -> ArtRegistry:
+    """Load an art-pack TOML file into a new ArtRegistry."""
     return ArtRegistry.from_toml(path)
 
 
 def register_color_generator(name: str, generator: ColorGeneratorFn) -> None:
+    """Register a named color generator function used by the art engine."""
     _art_engine.register_color_generator(name, generator)
 
 
 def unregister_color_generator(name: str) -> None:
+    """Unregister a previously registered color generator by name."""
     _art_engine.unregister_color_generator(name)
