@@ -210,8 +210,8 @@ print(
 )
 ```
 
-![gradient](https://raw.githubusercontent.com/l1asis/pyansistring/refs/heads/main/images/usage/gradient.svg)
-![gradient_words](https://raw.githubusercontent.com/l1asis/pyansistring/refs/heads/main/images/usage/gradient_words.svg)
+![gradient](https://raw.githubusercontent.com/l1asis/pyansistring/refs/heads/main/images/usage/gradient.svg)  
+![gradient_words](https://raw.githubusercontent.com/l1asis/pyansistring/refs/heads/main/images/usage/gradient_words.svg)  
 ![gradient_coordinates](https://raw.githubusercontent.com/l1asis/pyansistring/refs/heads/main/images/usage/gradient_coordinates.svg)
 
 ### ArtRegistry and custom generators
