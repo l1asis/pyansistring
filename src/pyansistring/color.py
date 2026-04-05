@@ -101,6 +101,23 @@ class Color(metaclass=_FrozenMeta):
         prefix: _Literal[Foreground.SET, Background.SET, Underline.SET] | str = "",
         format_mode: _Literal["standard", "compatible"] = "standard",
     ) -> str:
+        """Generate an SGR parameter string for this color.
+
+        Parameters
+        ----------
+        prefix : Foreground.SET | Background.SET | Underline.SET | str
+            SGR prefix code that qualifies this color (e.g., 38 for foreground).
+        format_mode : Literal["standard", "compatible"]
+            Separator style: ``"standard"`` uses colons, ``"compatible"``
+            uses semicolons. For 24-bit colors in standard mode,
+            uses double colons (e.g., ``38:2::r:g:b``).
+
+        Returns
+        -------
+        str
+            SGR parameter string (e.g., ``"38:2::255:0:0"`` for standard 24-bit,
+            or ``"38;2;255;0;0"`` for compatible 24-bit).
+        """
         if format_mode == "standard" or prefix == Underline.SET:
             separator = ":"
         else:
