@@ -57,11 +57,49 @@ class FakeAxis:
         self.maxValue = max_val
 
 
+class FakeAxisTagOnly:
+    """Axis stand-in that matches modern fontTools API (`axisTag`)."""
+
+    def __init__(self, tag: str, min_val: int, default_val: int, max_val: int) -> None:
+        self.axisTag = tag
+        self.minValue = min_val
+        self.defaultValue = default_val
+        self.maxValue = max_val
+
+
 class FakeFvar:
     """Minimal stand-in for an fvar table."""
 
     def __init__(self, axes: list[FakeAxis]) -> None:
         self.axes = axes
+
+
+class TrackingVariableFont(FakeTTFont):
+    """Fake variable font that records `location` passed to getGlyphSet."""
+
+    def __init__(self, *, min_wght: int = 100, max_wght: int = 900) -> None:
+        super().__init__(
+            tables={
+                "head": FakeHead(),
+                "hhea": FakeHhea(),
+                "hmtx": FakeHmtx(),
+                "name": FakeName(),
+                "post": FakePost(),
+                "fvar": FakeFvar(
+                    [
+                        FakeAxis("wght", min_wght, 400, max_wght),
+                        FakeAxis("ital", 0, 0, 1),
+                    ]
+                ),
+            }
+        )
+        self.seen_locations: list[dict[str, float] | None] = []
+
+    def getGlyphSet(  # type: ignore[override]
+        self, *, location: dict[str, float] | None = None, **_kw: object
+    ):
+        self.seen_locations.append(location)
+        return super().getGlyphSet(location=location)
 
 
 @pytest.fixture(autouse=True)
@@ -261,6 +299,30 @@ class TestPrepareVariants:
         assert not variants["italic"].needs_faux_italic
         assert not variants["bold_italic"].needs_faux_bold
         assert not variants["bold_italic"].needs_faux_italic
+
+    def test_variable_font_axis_tag_only(self):
+        variable_font = make_font(
+            600,
+            fvar_axes=[
+                FakeAxisTagOnly("wght", 100, 400, 900),
+                FakeAxisTagOnly("ital", 0, 0, 1),
+            ],
+        )
+        variants = prepare_font_variants(variable_font, None, None, None, None)
+        assert not variants["bold"].needs_faux_bold
+        assert not variants["italic"].needs_faux_italic
+        assert not variants["bold_italic"].needs_faux_bold
+        assert not variants["bold_italic"].needs_faux_italic
+
+    def test_variable_font_uses_explicit_bold_weight(self):
+        variable_font = TrackingVariableFont(min_wght=100, max_wght=900)
+        prepare_font_variants(variable_font, None, None, None, None, bold_weight=850)
+        assert {"wght": 850} in variable_font.seen_locations
+
+    def test_variable_font_clamps_explicit_bold_weight(self):
+        variable_font = TrackingVariableFont(min_wght=300, max_wght=650)
+        prepare_font_variants(variable_font, None, None, None, None, bold_weight=900)
+        assert {"wght": 650} in variable_font.seen_locations
 
     def test_variable_font_wght_only(self, variable_font_wght_only: FakeTTFont):
         variants = prepare_font_variants(

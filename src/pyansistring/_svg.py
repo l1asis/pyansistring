@@ -15,7 +15,7 @@ __all__ = [
 
 import math as _math
 from pathlib import Path as _Path
-from typing import Any as _Any, NamedTuple as _NamedTuple
+from typing import Any as _Any, NamedTuple as _NamedTuple, cast as _cast
 
 from fontTools.pens.svgPathPen import (  # type: ignore[import-untyped]
     SVGPathPen as _SVGPathPen,
@@ -96,6 +96,7 @@ def prepare_font_variants(
     font_italic: "_TTFont | None",
     font_bold_italic: "_TTFont | None",
     font_thin: "_TTFont | None",
+    bold_weight: int = 700,
 ) -> dict[str, FontVariant]:
     """Build a mapping from style keys to :class:`FontVariant` tuples.
 
@@ -129,7 +130,20 @@ def prepare_font_variants(
         return f.getGlyphSet(**kw)  # type: ignore[no-any-return]
 
     def _fvar_axes(f: _TTFont) -> dict[str, _Any]:
-        return {a.axTag: a for a in f["fvar"].axes}  # type: ignore[union-attr]
+        # fontTools uses `axisTag` on modern Axis objects; keep `axTag` fallback
+        # for compatibility with older versions.
+        axes: dict[str, _Any] = {}
+        for axis in f["fvar"].axes:  # type: ignore[union-attr]
+            axis_obj = _cast(object, axis)
+            tag = getattr(axis_obj, "axisTag", getattr(axis_obj, "axTag", None))
+            if tag is not None:
+                axes[str(tag)] = axis
+        return axes
+
+    def _clamp_axis_value(axis: _Any, value: int | float) -> int | float:
+        min_val = getattr(axis, "minValue", value)
+        max_val = getattr(axis, "maxValue", value)
+        return max(min_val, min(max_val, value))
 
     main_cmap = _cmap(font)
     main_gs = _gs(font)
@@ -147,6 +161,9 @@ def prepare_font_variants(
     has_wght = "wght" in var_axes
     has_ital = "ital" in var_axes
     has_slnt = "slnt" in var_axes
+    resolved_bold_weight = bold_weight
+    if has_wght:
+        resolved_bold_weight = int(_clamp_axis_value(var_axes["wght"], bold_weight))
 
     # Bold
     if font_bold is not None:
@@ -158,7 +175,7 @@ def prepare_font_variants(
         )
     elif has_wght:
         variants["bold"] = FontVariant(
-            _gs(font, location={"wght": 700}),
+            _gs(font, location={"wght": resolved_bold_weight}),
             main_cmap,
             False,
             False,
@@ -200,7 +217,7 @@ def prepare_font_variants(
             False,
         )
     elif has_wght and (has_ital or has_slnt):
-        loc: dict[str, int | float] = {"wght": 700}
+        loc: dict[str, int | float] = {"wght": resolved_bold_weight}
         if has_ital:
             loc["ital"] = 1
         else:
@@ -230,7 +247,7 @@ def prepare_font_variants(
     elif has_wght:
         # Variable bold + faux italic
         variants["bold_italic"] = FontVariant(
-            _gs(font, location={"wght": 700}),
+            _gs(font, location={"wght": resolved_bold_weight}),
             main_cmap,
             False,
             True,

@@ -768,8 +768,9 @@ class ANSIString(str):
         letter_spacing_offset : int | float
             Extra horizontal spacing between characters (in font units).
         weight : int | None
-            Faux-bold stroke weight (100-900), used only as a last-resort fallback
-            when no dedicated bold font or variable ``wght`` axis is available.
+            Bold weight (100-900). If a variable ``wght`` axis is available,
+            this value is used for bold variants (clamped to axis bounds).
+            Otherwise, it is used as faux-bold stroke weight.
         skew : int | None
             Faux-italic skew angle in degrees, used only as a last-resort fallback
             when no dedicated italic font or variable ``ital``/``slnt`` axis is
@@ -821,6 +822,7 @@ class ANSIString(str):
             loaded_italic,
             loaded_bold_italic,
             loaded_thin,
+            weight if weight is not None else 700,
         )
 
         # Font metrics (from the base font)
