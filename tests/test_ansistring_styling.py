@@ -512,6 +512,25 @@ class TestGradient:
                 space="rgb",
             )
 
+    def test_coordinates_group_with_single_valid_coordinate_flattens(self):
+        s = ANSIString("ab").gradient_coordinates(
+            [(255, 0, 0), (0, 0, 255)],
+            ((0, 0), (99, 0)),
+            on_out_of_bounds="ignore",
+            space="rgb",
+        )
+        assert len(s.style_manager) == 1
+        assert s.style_manager[0].foreground.to_rgb() == (255, 0, 0)
+
+    def test_coordinates_clamp_skips_empty_line(self):
+        s = ANSIString("a\n\nb").gradient_coordinates(
+            [(255, 0, 0), (0, 0, 255)],
+            (5, 1),
+            on_out_of_bounds="clamp",
+            space="rgb",
+        )
+        assert not s.style_manager
+
 
 class TestRainbow:
     def test_fg_rainbow_styles_all_chars(self):
