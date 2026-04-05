@@ -103,6 +103,7 @@ class Style(metaclass=_FrozenMeta):
 
     @property
     def ansi(self) -> str:
+        """Return the cached ANSI escape sequence representation."""
         return self._ansi
 
     def __bool__(self) -> bool:
@@ -153,7 +154,23 @@ class Style(metaclass=_FrozenMeta):
         | None = None,
         *args: int,
     ) -> "Style":
-        """Return a new Style with the given style data applied."""
+        """Return a new Style with the given style data applied.
+
+        Parameters
+        ----------
+        style : Foreground | Background | Underline | UnderlineMode | SGR | str \
+            | int | None
+            Style code or SGR constant to apply. When ``None``, no changes
+            are made.
+        *args : int
+            Additional color parameters (e.g., palette index or RGB
+            components for 24-bit color).
+
+        Returns
+        -------
+        Style
+            A new Style instance with the given style applied.
+        """
         fg = self.foreground
         bg = self.background
         ul = self.underline
@@ -202,6 +219,24 @@ class Style(metaclass=_FrozenMeta):
         separate_codes: bool = True,
         format_mode: _Literal["standard", "compatible"] = "standard",
     ) -> str:
+        """Generate an ANSI escape sequence from this Style.
+
+        Parameters
+        ----------
+        separate_codes : bool
+            When ``True``, emit each ANSI code as a separate escape sequence.
+            When ``False``, combine all codes into a single sequence.
+        format_mode : Literal["standard", "compatible"]
+            Separator style for multi-parameter color codes. ``"standard"`` uses colons
+            (with double colons for 24-bit colors, e.g., ``38:2::r:g:b``), while
+            ``"compatible"`` uses semicolons (e.g., ``38;2;r;g;b``) for broader
+            terminal support.
+
+        Returns
+        -------
+        str
+            An ANSI escape sequence string.
+        """
         parameters: list[str] = []
 
         if self.foreground:
@@ -233,6 +268,18 @@ class Style(metaclass=_FrozenMeta):
 
     @classmethod
     def from_ansi(cls, ansi: str) -> "Style":
+        """Parse a Style from an ANSI escape sequence string.
+
+        Parameters
+        ----------
+        ansi : str
+            An ANSI escape sequence (e.g., ``"\\x1b[1;32m"``).
+
+        Returns
+        -------
+        Style
+            A Style instance with colors and attributes parsed from the sequence.
+        """
         foreground = _Color.unset()
         background = _Color.unset()
         underline = (_Color.unset(), _UnderlineMode.SINGLE)
@@ -347,6 +394,19 @@ class Style(metaclass=_FrozenMeta):
         )
 
     def merge(self, other: "Style") -> "Style":
+        """Merge another style into this one, with other taking precedence.
+
+        Parameters
+        ----------
+        other : Style
+            The style to merge in. Non-empty attributes of *other* override
+            this style's equivalents.
+
+        Returns
+        -------
+        Style
+            A new Style combining both, with *other* having priority.
+        """
         ul_color = other.underline[0] or self.underline[0]
         if other.underline[0] or other.underline[1] != _UnderlineMode.SINGLE:
             ul_mode = other.underline[1]
@@ -361,40 +421,49 @@ class Style(metaclass=_FrozenMeta):
 
     @classmethod
     def fg_4bit(cls, color: _Foreground) -> "Style":
+        """Create a Style with a 4-bit foreground color."""
         return cls(foreground=_Color.from_4bit(color))
 
     @classmethod
     def bg_4bit(cls, color: _Background) -> "Style":
+        """Create a Style with a 4-bit background color."""
         return cls(background=_Color.from_4bit(color))
 
     @classmethod
     def ul_default(cls, mode: _UnderlineMode = _UnderlineMode.SINGLE) -> "Style":
+        """Create a Style with the default underline color and mode."""
         return cls(underline=(_Color.from_4bit(_Underline.DEFAULT), mode))
 
     @classmethod
     def fg_8bit(cls, n: int) -> "Style":
+        """Create a Style with an 8-bit (256-color palette) foreground color."""
         return cls(foreground=_Color.from_8bit(n))
 
     @classmethod
     def bg_8bit(cls, n: int) -> "Style":
+        """Create a Style with an 8-bit (256-color palette) background color."""
         return cls(background=_Color.from_8bit(n))
 
     @classmethod
     def ul_8bit(cls, n: int, mode: _UnderlineMode = _UnderlineMode.SINGLE) -> "Style":
+        """Create a Style with an 8-bit (256-color palette) underline color."""
         return cls(underline=(_Color.from_8bit(n), mode))
 
     @classmethod
     def fg_24bit(cls, r: int, g: int, b: int) -> "Style":
+        """Create a Style with a 24-bit (true color) foreground color."""
         return cls(foreground=_Color.from_24bit(r, g, b))
 
     @classmethod
     def bg_24bit(cls, r: int, g: int, b: int) -> "Style":
+        """Create a Style with a 24-bit (true color) background color."""
         return cls(background=_Color.from_24bit(r, g, b))
 
     @classmethod
     def ul_24bit(
         cls, r: int, g: int, b: int, mode: _UnderlineMode = _UnderlineMode.SINGLE
     ) -> "Style":
+        """Create a Style with a 24-bit (true color) underline color."""
         return cls(underline=(_Color.from_24bit(r, g, b), mode))
 
 
@@ -449,7 +518,7 @@ class StyleManager(dict[int, Style]):
         return f"StyleManager({super().__repr__()})"
 
     def __setitem__(self, key: _Any, value: _Any) -> None:
-        """Set a `Style` instance in the dictionary."""
+        """Set a Style instance in the dictionary, with caching and change tracking."""
         if not isinstance(value, Style):
             raise TypeError("StyleManager values must be Style instances")
         # NOTE: Cache identical Style objects by their hash
@@ -464,7 +533,7 @@ class StyleManager(dict[int, Style]):
 
     @_detect_style_change
     def __delitem__(self, key: _Any) -> None:
-        """Delete a style from the dictionary."""
+        """Delete a style from the dictionary and mark as modified."""
         return super().__delitem__(key)
 
     @_detect_style_change  # type: ignore[override]
