@@ -275,6 +275,13 @@ class TestColorScale:
         )
         assert scale.interpolate(0.5).value == (128, 128, 128)
 
+    def test_hsl_interpolation_accepts_mixed_stop_types(self):
+        scale = ColorScale(
+            [Color.from_24bit(255, 0, 0), (0, 255, 0), Color.from_24bit(0, 0, 255)],
+            "hsl",
+        )
+        assert scale.interpolate(0.75).value == (0, 255, 255)
+
     @pytest.mark.parametrize("space", ["rgb", "hsl"])
     def test_single_stop_returns_same_color(self, space: Literal["rgb", "hsl"]):
         scale = ColorScale([Color.from_24bit(10, 20, 30)], space)

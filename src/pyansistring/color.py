@@ -134,6 +134,11 @@ class Color(metaclass=_FrozenMeta):
         else:
             return (0, 0, 0)
 
+    @staticmethod
+    def rgb_to_hsl(r: int, g: int, b: int) -> tuple[float, float, float]:
+        h, l, s = _rgb_to_hls(r / 255, g / 255, b / 255)  # noqa: E741
+        return h, s, l
+
     def to_hsl(
         self,
         theme: ThemeName = DEFAULT_THEME,
@@ -147,62 +152,64 @@ class Color(metaclass=_FrozenMeta):
 class ColorScale:
     """Color interpolation scale for gradients."""
 
-    __slots__ = ("colors", "space")
+    __slots__ = ("colors", "space", "_rgb_stops", "_hsl_stops")
 
     def __init__(
         self, colors: list[Color | tuple[int, int, int]], space: _Literal["rgb", "hsl"]
     ) -> None:
-        self.colors = colors
+        self.colors = list(colors)
         self.space = space
+        self._rgb_stops = tuple(
+            color.to_rgb() if isinstance(color, Color) else color
+            for color in self.colors
+        )
+        self._hsl_stops: tuple[tuple[float, float, float], ...] = (
+            tuple(Color.rgb_to_hsl(r, g, b) for r, g, b in self._rgb_stops)
+            if space == "hsl"
+            else ()
+        )
 
     def __repr__(self) -> str:
         return f"ColorScale(colors={self.colors!r}, space={self.space!r})"
 
+    def _ensure_hsl_stops(self) -> tuple[tuple[float, float, float], ...]:
+        if not self._hsl_stops and self._rgb_stops:
+            self._hsl_stops = tuple(
+                Color.rgb_to_hsl(r, g, b) for r, g, b in self._rgb_stops
+            )
+        return self._hsl_stops
+
     def interpolate(self, t: float) -> Color:
         """Interpolate a color at position t in [0, 1]."""
 
-        if not self.colors:
+        if not self._rgb_stops:
             return Color.unset()
         if self.space not in {"rgb", "hsl"}:
             raise ValueError(f"Unsupported color space: {self.space}")
         t = _clamp(t, 0.0, 1.0)
 
-        n = len(self.colors)
+        n = len(self._rgb_stops)
         segments = n - 1
         t_scaled = t * segments
         left_index = _trunc(t_scaled)
 
         if left_index >= segments:
-            return Color.from_24bit(
-                *self.colors[-1].to_rgb()
-                if isinstance(self.colors[-1], Color)
-                else self.colors[-1]
-            )
+            return Color.from_24bit(*self._rgb_stops[-1])
 
         t_local = t_scaled - left_index
 
-        c1 = self.colors[left_index]
-        c2 = self.colors[left_index + 1]
-
         if self.space == "rgb":
-            r1, g1, b1 = c1.to_rgb() if isinstance(c1, Color) else c1
-            r2, g2, b2 = c2.to_rgb() if isinstance(c2, Color) else c2
+            r1, g1, b1 = self._rgb_stops[left_index]
+            r2, g2, b2 = self._rgb_stops[left_index + 1]
             r = round(r1 + (r2 - r1) * t_local)
             g = round(g1 + (g2 - g1) * t_local)
             b = round(b1 + (b2 - b1) * t_local)
             return Color.from_24bit(r, g, b)
 
         elif self.space == "hsl":
-            if isinstance(c1, Color):
-                h1, s1, l1 = c1.to_hsl()
-            else:
-                r1, g1, b1 = c1
-                h1, l1, s1 = _rgb_to_hls(r1 / 255, g1 / 255, b1 / 255)
-            if isinstance(c2, Color):
-                h2, s2, l2 = c2.to_hsl()
-            else:
-                r2, g2, b2 = c2
-                h2, l2, s2 = _rgb_to_hls(r2 / 255, g2 / 255, b2 / 255)
+            hsl_stops = self._ensure_hsl_stops()
+            h1, s1, l1 = hsl_stops[left_index]
+            h2, s2, l2 = hsl_stops[left_index + 1]
 
             # Interpolate Hue with Shortest-Path Math
             d = h2 - h1
