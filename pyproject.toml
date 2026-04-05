@@ -10,15 +10,16 @@ requires-python = ">=3.11"
 authors = [
   {name="Volodymyr Horshenin"},
 ]
-description = "A library for string color styling using ANSI escape sequences."
+description = "A powerful Python library for terminal string styling, ANSI color manipulation, ASCII art generation, and SVG terminal rendering."
 readme = "README.md"
 license = "MIT"
 license-files = ["LICEN[CS]E*"]
 keywords = [
-  "ansi", "color", "terminal", "console", "cli", "tui",
-  "ansi-colors", "ansi-escape-codes", "terminal-colors", "colored-text",
-  "text-formatting", "text-styling", "string-formatting", "colorize",
-  "logging", "debugging", "rich-text"
+  "ansi", "terminal", "console", "cli", "tui",
+  "ansi-colors", "ansi-escape-codes", "terminal-colors", 
+  "text-formatting", "string-styling", "colorize",
+  "logging", "debugging", "rich-text", 
+  "ascii-art", "svg-rendering", "terminal-graphics", "cowsay"
 ]
 classifiers = [
   "Development Status :: 4 - Beta",
