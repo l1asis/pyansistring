@@ -55,11 +55,6 @@ adapters = [
 Repository = "https://github.com/l1asis/pyansistring.git"
 Issues = "https://github.com/l1asis/pyansistring/issues"
 
-[tool.hatch.build]
-include = [
-  "src/pyansistring/data/*.toml",
-]
-
 [tool.hatch.build.targets.wheel]
 packages = ["src/pyansistring"]
 
