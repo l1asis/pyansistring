@@ -1,11 +1,29 @@
+from __future__ import annotations
+
 __all__ = [
     "PLAIN_ARTS",
     "COLORED_ARTS",
+    "ART_COLORINGS",
+    "ArtColoring",
+    "GradientCoordinatesColoring",
+    "GradientSliceColoring",
+    "apply_coloring",
+    "color_art",
+    "build_colored_arts",
 ]
 
-from pyansistring.core import ANSIString
-from pyansistring.color import Color, ColorScale
-from random import randint
+from collections.abc import Iterable as _Iterable, Mapping as _Mapping
+from random import randint as _randint
+from typing import Any as _Any, cast as _cast
+
+from pyansistring._types import (
+    ArtColoring,
+    ColorStop,
+    GradientCoordinatesColoring,
+    GradientSliceColoring,
+)
+from pyansistring.color import Color as _Color, ColorScale as _ColorScale
+from pyansistring.core import ANSIString as _ANSIString
 
 PLAIN_ARTS = {
     "BANNER": (
@@ -13,7 +31,7 @@ PLAIN_ARTS = {
         "                ╱ . .│          ░*░░░░░                                         \n"
         "           /‾\\__╱   ╲         ░░░░╲ ░.░░                ▄                       \n"
         "           ╰    ╲   ╱       ░░░░._╱╲╱░░░_                                       \n"
-        "      __________╱╲_╱ ╔▄▄▄▄▄   ░░░░\\*╲  ╱╱        ╭────╮  █▄-.-.---.--.-         \n"
+        "      ___________╲_╱ ╔▄▄▄▄▄   ░░░░\\*╲  ╱╱        ╭────╮  █▄-.-.---.--.-         \n"
         "     ╱     ╱         ║█╝  █╗    __ ╱ ╲╱╱*░░░     │   .╯ -.█▄---.-.----.-        \n"
         "    ╱     ╱ ╱    ╱   ║█▄▄▄█║   ╱╱╲╲  ╱╱╲ ╲░░     ╰────╮ ---█▄-.---.--.-- string \n"
         "   ╱ ‾‾‾‾‾ ╱    ╱    ╚█░  █║  ╱╱ ╱╲╲╱╱ ╱╲╱░░░░        │ -.-██▄ .----.--.        \n"
@@ -52,11 +70,177 @@ PLAIN_ARTS = {
     ),
 }
 
-NEW_STYLES = {
-    "BANNER": {
+
+def _random_tree_gradient(step_count: int = 60) -> list[tuple[int, int, int]]:
+    return [
+        (40 + _randint(-40, 0), 189 + _randint(-50, 50), 38) for _ in range(step_count)
+    ]
+
+
+def _normalize_colors(
+    colors: _ColorScale | ColorStop | _Iterable[ColorStop],
+) -> _ColorScale | list[ColorStop]:
+    if isinstance(colors, _ColorScale):
+        return colors
+
+    if isinstance(colors, _Color):
+        return [colors]
+
+    if (
+        isinstance(colors, tuple)
+        and len(colors) == 3
+        and all(isinstance(channel, int) for channel in colors)
+    ):
+        return [_cast(tuple[int, int, int], colors)]
+
+    normalized: list[ColorStop] = []
+    for stop in colors:
+        if isinstance(stop, _Color):
+            normalized.append(stop)
+            continue
+        if isinstance(stop, tuple):
+            normalized.append(stop)
+            continue
+        raise TypeError("Expected color stop to be Color or an RGB tuple of 3 integers")
+
+    return normalized
+
+
+def apply_coloring(text: _ANSIString, coloring: ArtColoring) -> _ANSIString:
+    mode = coloring["mode"]
+    normalized_colors = _normalize_colors(coloring["colors"])
+
+    if mode == "gradient_coordinates":
+        text.gradient_coordinates(
+            normalized_colors,
+            *coloring.get("coordinates", ()),
+            fg=coloring.get("fg", True),
+            bg=coloring.get("bg", False),
+            ul=coloring.get("ul", False),
+            space=coloring.get("space", "hsl"),
+            index_base=coloring.get("index_base", 0),
+            origin=coloring.get("origin", (0, 0)),
+            system=coloring.get("system", "terminal"),
+            on_out_of_bounds=coloring.get("on_out_of_bounds", "raise"),
+        )
+        return text
+
+    text.gradient(
+        normalized_colors,
+        *coloring.get("slices", ()),
+        skip_whitespace=coloring.get("skip_whitespace", False),
+        fg=coloring.get("fg", True),
+        bg=coloring.get("bg", False),
+        ul=coloring.get("ul", False),
+        space=coloring.get("space", "hsl"),
+    )
+    return text
+
+
+def color_art(plain_art: str, colorings: _Iterable[ArtColoring]) -> _ANSIString:
+    art = _ANSIString(plain_art)
+    for coloring in colorings:
+        apply_coloring(art, coloring)
+    return art
+
+
+def build_colored_arts(
+    plain_arts: _Mapping[str, str],
+    art_colorings: _Mapping[str, _Iterable[ArtColoring]],
+) -> dict[str, _ANSIString]:
+    return {
+        name: color_art(plain_art, art_colorings.get(name, ()))
+        for name, plain_art in plain_arts.items()
+    }
+
+
+def _style_group_to_coloring(
+    style_group: tuple[_Any, ...],
+) -> ArtColoring:
+    if len(style_group) == 2:
+        colors, coordinates = style_group
+        options: _Mapping[str, _Any] = {}
+    elif len(style_group) == 3:
+        colors, coordinates, raw_options = style_group
+        if not isinstance(raw_options, _Mapping):
+            raise TypeError("Expected style group options to be a mapping")
+        options = _cast(_Mapping[str, _Any], raw_options)
+    else:
+        raise TypeError(
+            "Expected style group as (colors, coordinates) or "
+            "(colors, coordinates, options)"
+        )
+
+    return _cast(
+        ArtColoring,
+        {
+            "mode": "gradient_coordinates",
+            "colors": colors,
+            "coordinates": coordinates,
+            "fg": bool(options.get("fg", True)),
+            "bg": bool(options.get("bg", False)),
+            "ul": bool(options.get("ul", False)),
+            "space": _cast(str, options.get("space", "hsl")),
+            "on_out_of_bounds": _cast(str, options.get("on_out_of_bounds", "raise")),
+        },
+    )
+
+
+ART_STYLE_CONFIGURATIONS = {
+    "BANNER": (
+        # /-----------/ CAT: CURRENT STYLING (BLACK CAT, GRADIENT BG)
+        (
+            _ColorScale([(255, 170, 50), (255, 70, 10)], "rgb"),
+            (
+                # Line 0 (including eyes for background)
+                (17, 0), (18, 0), (19, 0), (20, 0), (21, 0),
+                # Line 1 
+                (16, 1), (17, 1), (18, 1), (19, 1), (20, 1), (21, 1),
+                # Line 2
+                (11, 2), (12, 2), (13, 2), (14, 2), (15, 2), (16, 2), (17, 2), (18, 2), (19, 2), (20, 2),
+                # Line 3
+                (11, 3), (12, 3), (16, 3), (17, 3), (20, 3),
+                # Line 4
+                (17, 4), (18, 4), (19, 4),
+            ),
+            {"bg": True, "fg": False},
+        ),
+
+        # /-----------/ CAT: GRAY BELLY
+        (
+            (231, 231, 231),
+            (
+                # Line 3
+                (18, 3), (19, 3),
+            ),
+            {"bg": True, "fg": False},
+        ),
+
+        # /-----------/ CAT: BLACK OUTLINE
+        (
+            (0, 0, 0),
+            (
+                (17, 0), (18, 0), (19, 0), (20, 0), (21, 0),
+                (16, 1), (21, 1),
+                (11, 2), (12, 2), (13, 2), (14, 2), (15, 2), (16, 2), (20, 2),
+                (11, 3), (16, 3), (20, 3),
+                (17, 4), (18, 4), (19, 4),
+            ),
+            {"fg": True},
+        ),
+
+        # /-----------/ CAT: CYAN EYES
+        (
+            (0, 255, 255),
+            (
+                (18, 1), (20, 1),
+            ),
+            {"fg": True},
+        ),
+
         # /-----------/ P LETTER: BLUE
         (
-            ColorScale([(0, 0, 255), (112, 196, 255)], "hsl"),
+            _ColorScale([(0, 0, 255), (112, 196, 255)], "hsl"),
             (
                 (1, 9),
                 (2, 8),
@@ -73,11 +257,12 @@ NEW_STYLES = {
                 (13, 4),
                 (14, 4),
                 (15, 4),
+                (16, 4),
             ),
         ),
         # /-----------/ Y LETTER: YELLOW
         (
-            ColorScale([(255, 255, 0), (255, 255, 168)], "hsl"),
+            _ColorScale([(165, 125, 2), (213, 176, 56)], "hsl"),
             (
                 (12, 11),
                 (13, 10),
@@ -92,7 +277,7 @@ NEW_STYLES = {
         ),
         # /-----------/ A LETTER: LEFT CELL
         (
-            ColorScale([(255, 166, 166), (255, 126, 126)], "hsl"),
+            _ColorScale([(255, 166, 166), (255, 126, 126)], "hsl"),
             (
                 (23, 5),
                 (21, 4),
@@ -103,12 +288,12 @@ NEW_STYLES = {
         ),
         # /-----------/ A LETTER: RIGHT CELL
         (
-            ColorScale([(255, 218, 110), (255, 233, 185)], "hsl"),
+            _ColorScale([(255, 218, 110), (255, 233, 185)], "hsl"),
             ((27, 8), (27, 7), (27, 6), (27, 5)),
         ),
         # /-----------/ A LETTER: GRAY
         (
-            ColorScale([(100, 100, 100), (196, 184, 172)], "hsl"),
+            _ColorScale([(100, 100, 100), (196, 184, 172)], "hsl"),
             (
                 (22, 8),
                 (22, 7),
@@ -127,7 +312,7 @@ NEW_STYLES = {
         ),
         # /-----------/ N LETTER: TREE
         (
-            (40 + randint(-40, 0), 189 + randint(-50, 50), 38 for _ in range(60)),
+            _random_tree_gradient(),
             (
                 (33, 0),
                 (34, 0),
@@ -188,7 +373,8 @@ NEW_STYLES = {
                 (37, 11),
                 (39, 11),
                 (40, 11),
-                (41, 11)),
+                (41, 11),
+            ),
         ),
         # /-----------/ N LETTER: APPLES AND CHERRIES
         (
@@ -235,7 +421,7 @@ NEW_STYLES = {
         ),
         # /-----------/ N LETTER: CYAN
         (
-            ColorScale([(229, 255, 185), (114, 255, 185)], "hsl"),
+            _ColorScale([(229, 255, 185), (114, 255, 185)], "hsl"),
             (
                 (29, 8),
                 (30, 7),
@@ -265,7 +451,7 @@ NEW_STYLES = {
         ),
         # /-----------/ S LETTER: SNAKE
         (
-            ColorScale([(100, 100, 150), (225, 100, 150)], "hsl"),
+            _ColorScale([(100, 100, 150), (225, 100, 150)], "hsl"),
             (
                 (50, 9),
                 (49, 9),
@@ -374,7 +560,7 @@ NEW_STYLES = {
         ),
         # /-----------/ I LETTER: MOON AND REFLECTION
         (
-            ColorScale([(84, 161, 255), (192, 209, 255)], "hsl"),
+            _ColorScale([(84, 161, 255), (192, 209, 255)], "hsl"),
             (
                 (56, 2),
                 (57, 4),
@@ -391,17 +577,17 @@ NEW_STYLES = {
                 (62, 8),
             ),
         ),
-    }
+    )
 }
 
+ART_COLORINGS: dict[str, tuple[ArtColoring, ...]] = {
+    art_name: tuple(
+        _style_group_to_coloring(style_group) for style_group in style_groups
+    )
+    for art_name, style_groups in ART_STYLE_CONFIGURATIONS.items()
+}
 
-COLORED_ARTS: dict[str, ANSIString] = {}
-for name, art in PLAIN_ARTS.items():
-    colored = ANSIString(art)
-    if name in STYLES:
-        for sequence, coordinates in STYLES[name].items():
-            colored.multicolor_c(sequence, *coordinates)
-    COLORED_ARTS[name] = colored
+COLORED_ARTS = build_colored_arts(PLAIN_ARTS, ART_COLORINGS)
 
 if __name__ == "__main__":
     print(COLORED_ARTS["BANNER"])

@@ -3,6 +3,10 @@ from __future__ import annotations
 __all__ = [
     "StyleManager",
     "ANSIString",
+    "SliceSpec",
+    "SliceGroup",
+    "Coordinate",
+    "CoordinateGroup",
 ]
 
 import re as _re
@@ -15,7 +19,6 @@ from typing import (
     Mapping as _Mapping,
     Self as _Self,
     SupportsIndex as _SupportsIndex,
-    TypeAlias as _TypeAlias,
     Union as _Union,
     cast as _cast,
 )
@@ -42,6 +45,8 @@ from ._helpers import (
     rsearch_separators as _rsearch_separators,
     search_separators as _search_separators,
 )
+from ._types import Coordinate, CoordinateGroup, SliceGroup, SliceSpec
+
 if is_fonttools_available or TYPE_CHECKING:
     from ._svg import (
         SVG_ESCAPE as _SVG_ESCAPE,
@@ -68,11 +73,6 @@ from .constants import (
     get_casefold_expansions,
 )
 from .style import Style, StyleManager
-
-SliceSpec: _TypeAlias = _Union[tuple[int, int], tuple[int, int, int], slice]
-SliceGroup: _TypeAlias = _Union[SliceSpec, tuple[SliceSpec, ...]]
-Coordinate: _TypeAlias = tuple[int, int]
-CoordinateGroup: _TypeAlias = _Union[Coordinate, tuple[Coordinate, ...]]
 
 
 class ANSIString(str):

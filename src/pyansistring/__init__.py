@@ -15,6 +15,7 @@ try:
 except PackageNotFoundError:
     __version__ = "unknown"
 
+from .art_registry import DEFAULT_ART_REGISTRY, ArtRegistry, load_art_pack_toml
 from .color import Color
 from .constants import (
     COLOR_THEMES,
@@ -32,12 +33,15 @@ from .constants import (
     Underline,
     UnderlineMode,
 )
-from .core import ANSIString
+from .core import ANSIString, Coordinate, CoordinateGroup, SliceGroup, SliceSpec
 from .style import Style, StyleManager
 
 __all__ = [
     "ANSIString",
     "Color",
+    "ArtRegistry",
+    "DEFAULT_ART_REGISTRY",
+    "load_art_pack_toml",
     "Style",
     "StyleManager",
     "ColorDepth",
@@ -54,4 +58,8 @@ __all__ = [
     "PUNCTUATION",
     "PUNCTUATION_AND_WHITESPACE",
     "Regex",
+    "SliceSpec",
+    "SliceGroup",
+    "Coordinate",
+    "CoordinateGroup",
 ]
