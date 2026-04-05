@@ -78,6 +78,7 @@ class ANSIString(str):
 
     _style_manager: StyleManager
     _styled_text: str
+    _line_starts_cache: tuple[int, ...] | None
 
     # str method names that have explicit overrides and must NOT be
     # auto-delegated by __getattribute__.
@@ -143,6 +144,7 @@ class ANSIString(str):
         else:
             instance._style_manager = StyleManager()
         instance._styled_text = cls._render(instance)
+        instance._line_starts_cache = None
         return instance
 
     @property
@@ -406,6 +408,19 @@ class ANSIString(str):
         else:
             start, stop, step = slice(*slice_).indices(len(self))
         return start, stop, step
+
+    def _get_line_starts(self) -> tuple[int, ...]:
+        """Return cached line start indices for plain text coordinates."""
+        if self._line_starts_cache is None:
+            self._line_starts_cache = (
+                0,
+                *(
+                    index + 1
+                    for index, char in enumerate(self.plain_text)
+                    if char == "\n" and index + 1 < len(self)
+                ),
+            )
+        return self._line_starts_cache
 
     def _search_spans(
         self, *words: str, case_sensitive: bool = True
@@ -1038,8 +1053,7 @@ class ANSIString(str):
         denom = length - 1 if length > 1 else 1
 
         for index, item in enumerate(slices):
-            color = colors.interpolate(index / denom)
-            r, g, b = color.to_rgb()
+            r, g, b = colors.interpolate_rgb(index / denom)
             if isinstance(item, slice) or isinstance(item[0], int):
                 # Assume it's a slice or a tuple of (start, end, [step])
                 item = _cast(SliceSpec, item)
@@ -1107,15 +1121,7 @@ class ANSIString(str):
         system: _Literal["cartesian", "terminal"] = "terminal",
         on_out_of_bounds: _Literal["ignore", "clamp", "raise"] = "raise",
     ) -> _Self:
-
-        line_starts = (
-            0,
-            *(
-                index + 1
-                for index, char in enumerate(self.plain_text)
-                if char == "\n" and index + 1 < len(self)
-            ),
-        )
+        line_starts = self._get_line_starts()
 
         height = len(line_starts)
 
