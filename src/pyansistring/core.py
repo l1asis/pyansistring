@@ -42,19 +42,21 @@ from ._helpers import (
     rsearch_separators as _rsearch_separators,
     search_separators as _search_separators,
 )
-from ._svg import (
-    SVG_ESCAPE as _SVG_ESCAPE,
-    UNDERLINE_CSS as _UNDERLINE_CSS,
-    get_style_key as _get_style_key,
-    load_font as _load_font,
-    prepare_font_variants as _prepare_font_variants,
-    resolve_skew as _resolve_skew,
-    svg_build_underline_elements as _svg_build_underline_elements,
-    svg_create_transform_pen as _svg_create_transform_pen,
-    svg_resolve_underline as _svg_resolve_underline,
-    svg_weight_stroke_attrs as _svg_weight_stroke_attrs,
-    tspan as _tspan,
-)
+if is_fonttools_available or TYPE_CHECKING:
+    from ._svg import (
+        SVG_ESCAPE as _SVG_ESCAPE,
+        UNDERLINE_CSS as _UNDERLINE_CSS,
+        get_style_key as _get_style_key,
+        load_font as _load_font,
+        prepare_font_variants as _prepare_font_variants,
+        resolve_skew as _resolve_skew,
+        svg_build_underline_elements as _svg_build_underline_elements,
+        svg_create_transform_pen as _svg_create_transform_pen,
+        svg_resolve_underline as _svg_resolve_underline,
+        svg_weight_stroke_attrs as _svg_weight_stroke_attrs,
+        tspan as _tspan,
+    )
+
 from .color import Color, ColorScale
 from .constants import (
     SGR,
