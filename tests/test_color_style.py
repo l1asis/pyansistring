@@ -294,6 +294,21 @@ class TestColorScale:
         assert isinstance(out.value, tuple) and len(out.value) == 3
         assert all(isinstance(v, int) for v in out.value)
 
+    @pytest.mark.parametrize(
+        "space,t",
+        [
+            pytest.param("rgb", -0.5, id="rgb-clamp-left"),
+            pytest.param("rgb", 0.25, id="rgb-mid"),
+            pytest.param("rgb", 1.5, id="rgb-clamp-right"),
+            pytest.param("hsl", -0.5, id="hsl-clamp-left"),
+            pytest.param("hsl", 0.25, id="hsl-mid"),
+            pytest.param("hsl", 1.5, id="hsl-clamp-right"),
+        ],
+    )
+    def test_interpolate_rgb_matches_interpolate(self, space: str, t: float):
+        scale = ColorScale([(255, 0, 0), (0, 255, 0), (0, 0, 255)], space)  # type: ignore[arg-type]
+        assert scale.interpolate_rgb(t) == scale.interpolate(t).to_rgb()
+
 
 class TestStyleConstruction:
     """Constructing Style objects."""
