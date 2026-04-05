@@ -1037,6 +1037,34 @@ class ANSIString(str):
         ul: bool = False,
         space: _Literal["rgb", "hsl"] = "hsl",
     ) -> _Self:
+        """Apply a gradient across slices of the string.
+
+        Parameters
+        ----------
+        colors : ColorScale | list[Color | tuple[int, int, int]]
+            Gradient stops used for interpolation. When a list is provided, it is
+            converted to :class:`ColorScale` using *space*.
+        *slices : SliceGroup
+            Target slices to color. Each item can be a single slice spec
+            ``(start, stop[, step])`` or a tuple of slice specs to receive the
+            same interpolated color.
+        skip_whitespace : bool
+            When ``True`` and no explicit *slices* are passed, whitespace
+            characters are skipped while building per-character slices.
+        fg : bool
+            Apply colors to the foreground channel.
+        bg : bool
+            Apply colors to the background channel.
+        ul : bool
+            Apply colors to the underline channel.
+        space : Literal["rgb", "hsl"]
+            Color interpolation space used when *colors* is a list.
+
+        Returns
+        -------
+        Self
+            This ANSIString instance, modified in place.
+        """
 
         if isinstance(colors, list):
             colors = ColorScale(colors, space)
@@ -1091,6 +1119,32 @@ class ANSIString(str):
         ul: bool = False,
         space: _Literal["rgb", "hsl"] = "hsl",
     ) -> _Self:
+        """Apply a gradient to matching word spans.
+
+        Parameters
+        ----------
+        colors : ColorScale | list[Color | tuple[int, int, int]]
+            Gradient stops used for interpolation.
+        *words : str
+            Words to search for and color.
+        case_sensitive : bool
+            When ``True``, matches are case-sensitive.
+        skip_whitespace : bool
+            When ``True``, matched spans containing only whitespace are ignored.
+        fg : bool
+            Apply colors to the foreground channel.
+        bg : bool
+            Apply colors to the background channel.
+        ul : bool
+            Apply colors to the underline channel.
+        space : Literal["rgb", "hsl"]
+            Color interpolation space used when *colors* is a list.
+
+        Returns
+        -------
+        Self
+            This ANSIString instance, modified in place.
+        """
         spans = self._search_spans(*words, case_sensitive=case_sensitive)
         if skip_whitespace:
             spans = tuple(
@@ -1125,6 +1179,45 @@ class ANSIString(str):
         system: _Literal["cartesian", "terminal"] = "terminal",
         on_out_of_bounds: _Literal["ignore", "clamp", "raise"] = "raise",
     ) -> _Self:
+        """Apply a gradient to characters selected by 2D coordinates.
+
+        Parameters
+        ----------
+        colors : ColorScale | list[Color | tuple[int, int, int]]
+            Gradient stops used for interpolation.
+        *coordinates : CoordinateGroup
+            Coordinate targets. Each item can be a single coordinate ``(x, y)`` or
+            a tuple of coordinates to receive the same interpolated color.
+        fg : bool
+            Apply colors to the foreground channel.
+        bg : bool
+            Apply colors to the background channel.
+        ul : bool
+            Apply colors to the underline channel.
+        space : Literal["rgb", "hsl"]
+            Color interpolation space used when *colors* is a list.
+        index_base : int
+            Coordinate indexing base (for example, ``0`` for zero-based and ``1``
+            for one-based coordinates).
+        origin : tuple[int, int]
+            Origin point for the input coordinate plane,
+            applied after index-base normalization.
+        system : Literal["cartesian", "terminal"]
+            Coordinate system interpretation for ``y`` values.
+        on_out_of_bounds : Literal["ignore", "clamp", "raise"]
+            Policy for out-of-range coordinates.
+
+        Returns
+        -------
+        Self
+            This ANSIString instance, modified in place.
+
+        Raises
+        ------
+        IndexError
+            If *on_out_of_bounds* is ``"raise"`` and a coordinate falls outside
+            available text bounds.
+        """
         line_starts = self._get_line_starts()
 
         height = len(line_starts)
