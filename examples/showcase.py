@@ -10,7 +10,6 @@ from pyansistring.constants import (
     SGR,
     Background,
     Foreground,
-    MulticolorSequences,
     UnderlineMode,
 )
 
@@ -30,7 +29,7 @@ def section(title: str) -> None:
 
 def show(label: str, value: ANSIString | str) -> None:
     """Print a labelled example with visual framing."""
-    print(f"  {label:<36} {WALL}{value}{WALL}")
+    print(f"  {label:<40} {WALL}{value}{WALL}")
 
 
 # ── Main showcase ─────────────────────────────────────────────────────────
@@ -42,7 +41,7 @@ def main() -> None:
     show("ANSIString('Hello, World!')", ANSIString("Hello, World!"))
 
     # ── 2. SGR attributes ─────────────────────────────────────────────────
-    section("SGR attributes via fm()")
+    section("SGR attributes via style()")
     attrs = {
         "BOLD": SGR.BOLD,
         "DIM": SGR.DIM,
@@ -54,12 +53,12 @@ def main() -> None:
         "OVERLINED": SGR.OVERLINED,
     }
     for name, sgr in attrs.items():
-        show(f".fm(SGR.{name})", ANSIString("Hello, World!").style(sgr))
+        show(f".style(SGR.{name})", ANSIString("Hello, World!").style(sgr))
 
     # ── 3. Stacking attributes ────────────────────────────────────────────
     section("Stacking multiple attributes")
     show(
-        ".fm(BOLD).fm(ITALIC).fm(UNDERLINE)",
+        ".style(BOLD).style(ITALIC).style(UNDERLINE)",
         ANSIString("Hello, World!")
         .style(SGR.BOLD)
         .style(SGR.ITALIC)
@@ -142,7 +141,7 @@ def main() -> None:
         ANSIString("Hello, World!").fg_4b_words(Foreground.BRIGHT_BLUE, "Hello"),
     )
     show(
-        ".fm_w(BOLD, 'World')",
+        ".style_words(BOLD, 'World')",
         ANSIString("Hello, World!").style_words(SGR.BOLD, "World"),
     )
     show(
@@ -171,22 +170,22 @@ def main() -> None:
     ]
     for name, mode in modes:
         show(
-            f".ul_24b(255,100,0).fm({name})",
+            f".ul_24b(255,100,0).style({name})",
             ANSIString("Hello, World!").ul_24b(255, 100, 0).style(mode),
         )
 
     # ── 10. Removing styles ───────────────────────────────────────────────
-    section("Removing styles (unfm / unstyle_words)")
+    section("Removing styles (unstyle / unstyle_words)")
     show(
-        ".fm(BOLD).unfm()",
+        ".style(BOLD).unstyle()",
         ANSIString("Hello, World!").style(SGR.BOLD).unstyle(),
     )
     show(
-        ".fm(BOLD).unfm((0,5))",
+        ".style(BOLD).unstyle((0,5))",
         ANSIString("Hello, World!").style(SGR.BOLD).unstyle((0, 5)),
     )
     show(
-        ".fm_w(BOLD,'Hello').unstyle_words('Hello')",
+        ".style_words(BOLD,'Hello').unstyle_words('Hello')",
         ANSIString("Hello, World!")
         .style_words(SGR.BOLD, "Hello")
         .unstyle_words("Hello"),
@@ -204,42 +203,44 @@ def main() -> None:
     )
     show(
         ".rainbow(skip_whitespace=True)",
-        ANSIString("Hello, World! This is pyansistring").rainbow(skip_whitespace=True),
+        ANSIString("Hello, World! pyansistring!").rainbow(skip_whitespace=True),
     )
 
-    # ── 12. Multicolor sequences ──────────────────────────────────────────
-    section("Built-in multicolor sequences")
+    # ── 12. Gradient API ──────────────────────────────────────────────────
+    section("Gradients (gradient, gradient_words, gradient_coordinates)")
     show(
-        "RAINBOW",
-        ANSIString("abcdefghijklmnopqrstuvwxyz").multicolor(
-            MulticolorSequences.RAINBOW
+        ".gradient([(84,161,255),(255,255,255)])",
+        ANSIString("abcdefghijklmnopqrstuvwxyz").gradient(
+            [(84, 161, 255), (255, 255, 255)]
         ),
     )
     show(
-        "REVERSED_RAINBOW",
-        ANSIString("abcdefghijklmnopqrstuvwxyz").multicolor(
-            MulticolorSequences.REVERSED_RAINBOW
-        ),
-    )
-
-    section("Custom multicolor command")
-    show(
-        "blue-to-white gradient",
-        ANSIString("abcdefghijklmnopqrstuvwxyz").multicolor(
-            "r=84:|g=161:|b=255: $ r+9:minmax(0,inf)|g+4:minmax(0,inf) &*"
+        ".gradient(..., bg=True)",
+        ANSIString("abcdefghijklmnopqrstuvwxyz").gradient(
+            [(34, 34, 34), (84, 161, 255), (255, 255, 255)],
+            bg=True,
         ),
     )
     show(
-        "reversed gradient (@)",
-        ANSIString("abcdefghijklmnopqrstuvwxyz").multicolor(
-            "r=84:|g=161:|b=255: $ r+9:minmax(0,inf)|g+4:minmax(0,inf) @&*"
+        ".gradient_words(..., 'Hello', 'World')",
+        ANSIString("Hello, colorful gradient world!").gradient_words(
+            [(255, 99, 71), (255, 215, 0)],
+            "Hello",
+            "world",
+            case_sensitive=False,
         ),
     )
     show(
-        "mirrored gradient (!)",
-        ANSIString("abcdefghijklmnopqrstuvwxyz").multicolor(
-            "r=84:|g=161:|b=255: $ r+50:minmax(0,inf)"
-            "|g+25:minmax(0,inf) # b-70:minmax(0,inf) !&*"
+        ".gradient_coordinates(..., (1,1)..(5,1), index_base=1)",
+        ANSIString("HELLO\nworld").gradient_coordinates(
+            [(255, 0, 120), (0, 200, 255)],
+            (1, 1),
+            (2, 1),
+            (3, 1),
+            (4, 1),
+            (5, 1),
+            index_base=1,
+            fg=True,
         ),
     )
 
