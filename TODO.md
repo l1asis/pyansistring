@@ -141,8 +141,9 @@
 - [X] `ul_24b` (set underline color using RGB color model, a.k.a. true color)
 - [X] `ul_24b_words` (`ul_24b` per word)
 
-- [ ] `multicolor` (apply a specific custom coloring using the provided coloring system)
-- [ ] `multicolor_c` (`multicolor` using coordinates, it's useful for multiline strings)
+- [X] `gradient` (apply a color gradient across the string)
+- [X] `gradient_words` (apply a color gradient across each word)
+- [X] `gradient_coordinates` (apply a color gradient based on coordinates)
 - [ ] `colormap` (apply a specific predefined coloring)
 - [X] `rainbow` (apply rainbow coloring (using a separate algorithm))
 - [ ] `random_art` (return random color art)
