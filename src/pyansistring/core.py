@@ -702,8 +702,9 @@ class ANSIString(str):
         if not (fg or bg or ul):
             fg = True
         length = len(slices)
+        denom = length - 1 if length > 1 else 1
         for index, slice_ in enumerate(slices):
-            hue = round(index / length * 360)
+            hue = round(index / denom * 360)
             if fg:
                 self.fg_24b(*_hsl_to_rgb(hue), slice_)
             if bg:
