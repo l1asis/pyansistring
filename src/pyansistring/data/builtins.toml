@@ -189,6 +189,16 @@ bg = false
 ul = false
 space = "hsl"
 
+[[arts.colorings]]
+mode = "gradient_coordinates"
+colors = [255, 255, 255]
+coordinates = [[73, 6], [74, 6], [75, 6], [76, 6], [77, 6], [78, 6]]
+on_out_of_bounds = "raise"
+fg = false
+bg = true
+ul = false
+space = "hsl"
+
 [[arts]]
 name = "MESSAGE"
 plain_art = '''
