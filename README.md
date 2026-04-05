@@ -187,7 +187,7 @@ from pyansistring import ANSIString
 
 print(
     ANSIString("Hello, World! This is gradient text!")
-    .gradient([(84, 161, 255), (255, 255, 255)], fg=True)
+    .gradient([(84, 161, 255), (233, 200, 216)], fg=True)
 )
 
 print(
