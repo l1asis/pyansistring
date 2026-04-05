@@ -14,13 +14,16 @@ from pyansistring.constants import WHITESPACE
 
 def find_spans(string: str, substring: str) -> _Generator[tuple[int, int], None, None]:
     """Find all non-overlapping occurrences of `substring` in `string`."""
-    i = j = 0
-    while i < len(string):
-        i = string[i:].find(substring)
+    if substring == "":
+        raise ValueError("substring must not be empty")
+    start = 0
+    size = len(substring)
+    while True:
+        i = string.find(substring, start)
         if i == -1:
             break
-        yield (i + j, i + j + len(substring))
-        j = i = i + j + len(substring)
+        yield (i, i + size)
+        start = i + size
 
 
 def search_separators(
