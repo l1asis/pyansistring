@@ -38,10 +38,16 @@ classifiers = [
 
 [project.optional-dependencies]
 all = [
-  "pyansistring[img]",
+  "pyansistring[img,adapters]",
 ]
 img = [
   "fonttools",
+]
+adapter-cowsay = [
+  "cowsay>=6.1",
+]
+adapters = [
+  "pyansistring[adapter-cowsay]",
 ]
 
 [project.urls]
