@@ -55,9 +55,6 @@ adapters = [
 Repository = "https://github.com/l1asis/pyansistring.git"
 Issues = "https://github.com/l1asis/pyansistring/issues"
 
-[tool.hatch.build.targets.wheel]
-packages = ["src/pyansistring"]
-
 [tool.pytest.ini_options]
 addopts = "-v"
 testpaths = ["tests"]
