@@ -1141,20 +1141,23 @@ class ANSIString(str):
                     else:
                         continue
 
-                # Process the line corresponding to the y coordinate
                 line_start = line_starts[y]
                 line_end = line_starts[y + 1] - 1 if y + 1 < height else len(self)
-                if 0 <= x < line_end - line_start:
+                line_length = line_end - line_start
+
+                if 0 <= x < line_length:
                     index = line_start + x
                     slices.append((index, index + 1))
                 else:
                     if on_out_of_bounds == "raise":
                         raise IndexError(
-                            f"Coordinate ({x}, {y}) is out of bounds "
-                            f"for line {y} with length {line_end - line_start}"
+                            f"X coordinate {x} is out of bounds "
+                            f"for line {y} with length {line_length}"
                         )
                     elif on_out_of_bounds == "clamp":
-                        clamped_x = max(0, min(x, line_end - line_start - 1))
+                        if line_length == 0:
+                            continue
+                        clamped_x = max(0, min(x, line_length - 1))
                         index = line_start + clamped_x
                         slices.append((index, index + 1))
             else:
@@ -1180,21 +1183,27 @@ class ANSIString(str):
 
                     line_start = line_starts[y]
                     line_end = line_starts[y + 1] - 1 if y + 1 < height else len(self)
-                    if 0 <= x < line_end - line_start:
+                    line_length = line_end - line_start
+
+                    if 0 <= x < line_length:
                         index = line_start + x
                         group.append((index, index + 1))
                     else:
                         if on_out_of_bounds == "raise":
                             raise IndexError(
                                 f"X coordinate {x} is out of bounds "
-                                f"for line {y} with length {line_end - line_start}"
+                                f"for line {y} with length {line_length}"
                             )
                         elif on_out_of_bounds == "clamp":
-                            clamped_x = max(0, min(x, line_end - line_start - 1))
+                            if line_length == 0:
+                                continue
+                            clamped_x = max(0, min(x, line_length - 1))
                             index = line_start + clamped_x
                             group.append((index, index + 1))
 
-                if group:
+                if len(group) == 1:
+                    slices.append(group[0])
+                elif len(group) > 1:
                     slices.append(tuple(group))
 
         if not slices:
