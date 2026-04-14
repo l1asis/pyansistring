@@ -1,8 +1,9 @@
 __all__ = ["Color"]
 
+from bisect import bisect_left as _bisect_left
 from colorsys import hls_to_rgb as _hls_to_rgb, rgb_to_hls as _rgb_to_hls
 from math import trunc as _trunc
-from typing import Any as _Any, Literal as _Literal
+from typing import Any as _Any, Literal as _Literal, Mapping as _Mapping
 
 from ._frozen import FrozenMeta as _FrozenMeta
 from ._helpers import clamp as _clamp
@@ -247,3 +248,100 @@ class ColorScale:
         if not self._rgb_stops:
             return Color.unset()
         return Color.from_24bit(*self.interpolate_rgb(t))
+
+
+class ColorMap:
+    """Color mapping for data values."""
+
+    __slots__ = ("scale", "vmin", "vmax", "under_color", "over_color")
+
+    def __init__(
+        self,
+        scale: ColorScale,
+        vmin: int | float,
+        vmax: int | float,
+        under_color: Color | tuple[int, int, int] | None = None,
+        over_color: Color | tuple[int, int, int] | None = None,
+    ) -> None:
+        self.scale = scale
+        self.vmin = vmin
+        self.vmax = vmax
+        self.under_color = (
+            under_color
+            if isinstance(under_color, Color)
+            else Color.from_24bit(*under_color)
+            if under_color
+            else None
+        )
+        self.over_color = (
+            over_color
+            if isinstance(over_color, Color)
+            else Color.from_24bit(*over_color)
+            if over_color
+            else None
+        )
+
+    def __repr__(self) -> str:
+        return (
+            f"ColorMap(scale={self.scale!r}, vmin={self.vmin!r}, vmax={self.vmax!r}, "
+            f"under_color={self.under_color!r}, over_color={self.over_color!r})"
+        )
+
+    def __call__(self, value: int | float) -> Color:
+        """Map a data value to a Color based on the scale and thresholds."""
+
+        if value < self.vmin and self.under_color:
+            return self.under_color
+        elif value > self.vmax and self.over_color:
+            return self.over_color
+        else:
+            if self.vmax == self.vmin:
+                return self.scale.interpolate(0.5)
+
+            t = _clamp((value - self.vmin) / (self.vmax - self.vmin), 0.0, 1.0)
+            return self.scale.interpolate(t)
+
+
+class SegmentedColorMap:
+    """Discrete color mapping for data values based on thresholds."""
+
+    __slots__ = ("_boundaries", "_colors", "over_color")
+
+    def __init__(
+        self,
+        segments: _Mapping[int | float, Color | tuple[int, int, int]],
+        over_color: Color | tuple[int, int, int] | None = None,
+    ) -> None:
+        sorted_segments = sorted(segments.items())
+        self._boundaries = [threshold for threshold, _ in sorted_segments]
+        self._colors = [
+            color if isinstance(color, Color) else Color.from_24bit(*color)
+            for _, color in sorted_segments
+        ]
+
+        self.over_color = (
+            over_color
+            if isinstance(over_color, Color)
+            else Color.from_24bit(*over_color)
+            if over_color
+            else None
+        )
+
+    def __repr__(self) -> str:
+        segments = dict(zip(self._boundaries, self._colors))
+        if self.over_color:
+            return f"SegmentedColorMap({segments!r}, over_color={self.over_color!r})"
+        return f"SegmentedColorMap({segments!r})"
+
+    def __call__(self, value: int | float) -> Color:
+        """Map a data value to a Color using binary search."""
+
+        idx = _bisect_left(self._boundaries, value)
+
+        if idx < len(self._boundaries):
+            return self._colors[idx]
+
+        if self.over_color:
+            return self.over_color
+
+        return self._colors[-1]
