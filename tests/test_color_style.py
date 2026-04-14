@@ -5,7 +5,7 @@ from typing import Any, Callable, Literal
 
 import pytest
 
-from pyansistring.color import Color, ColorScale
+from pyansistring.color import Color, ColorMap, ColorScale, SegmentedColorMap
 from pyansistring.constants import SGR, Background, Foreground, Underline, UnderlineMode
 from pyansistring.style import Style
 
@@ -308,6 +308,152 @@ class TestColorScale:
     def test_interpolate_rgb_matches_interpolate(self, space: str, t: float):
         scale = ColorScale([(255, 0, 0), (0, 255, 0), (0, 0, 255)], space)  # type: ignore[arg-type]
         assert scale.interpolate_rgb(t) == scale.interpolate(t).to_rgb()
+
+
+class TestColorMap:
+    """ColorMap.__call__ behavior, boundaries, and constructor coercion."""
+
+    @staticmethod
+    def _scale() -> ColorScale:
+        return ColorScale([(255, 0, 0), (0, 0, 255)], "rgb")
+
+    def test_under_color_applied_below_vmin(self):
+        cmap = ColorMap(
+            self._scale(),
+            vmin=0,
+            vmax=10,
+            under_color=(1, 2, 3),
+        )
+        assert cmap(-0.01) == Color.from_24bit(1, 2, 3)
+
+    def test_over_color_applied_above_vmax(self):
+        cmap = ColorMap(
+            self._scale(),
+            vmin=0,
+            vmax=10,
+            over_color=Color.from_24bit(9, 8, 7),
+        )
+        assert cmap(10.01) == Color.from_24bit(9, 8, 7)
+
+    @pytest.mark.parametrize(
+        "value, expected",
+        [
+            pytest.param(0, (255, 0, 0), id="at-vmin"),
+            pytest.param(2.5, (191, 0, 64), id="quarter"),
+            pytest.param(5, (128, 0, 128), id="mid"),
+            pytest.param(7.5, (64, 0, 191), id="three-quarters"),
+            pytest.param(10, (0, 0, 255), id="at-vmax"),
+        ],
+    )
+    def test_linear_mapping_within_range(
+        self, value: float, expected: tuple[int, int, int]
+    ):
+        cmap = ColorMap(self._scale(), vmin=0, vmax=10)
+        assert cmap(value).value == expected
+
+    @pytest.mark.parametrize(
+        "value, expected",
+        [
+            pytest.param(-999, (255, 0, 0), id="below-without-under"),
+            pytest.param(999, (0, 0, 255), id="above-without-over"),
+        ],
+    )
+    def test_out_of_range_clamps_when_no_under_or_over(
+        self, value: float, expected: tuple[int, int, int]
+    ):
+        cmap = ColorMap(self._scale(), vmin=0, vmax=10)
+        assert cmap(value).value == expected
+
+    def test_equal_vmin_vmax_returns_midpoint_without_under_or_over(self):
+        cmap = ColorMap(self._scale(), vmin=5, vmax=5)
+        assert cmap(5).value == (128, 0, 128)
+        assert cmap(-100).value == (128, 0, 128)
+        assert cmap(100).value == (128, 0, 128)
+
+    def test_equal_vmin_vmax_still_honors_under_and_over(self):
+        cmap = ColorMap(
+            self._scale(),
+            vmin=5,
+            vmax=5,
+            under_color=(1, 1, 1),
+            over_color=(2, 2, 2),
+        )
+        assert cmap(4) == Color.from_24bit(1, 1, 1)
+        assert cmap(6) == Color.from_24bit(2, 2, 2)
+        assert cmap(5).value == (128, 0, 128)
+
+    def test_constructor_coerces_tuple_under_and_over_colors(self):
+        cmap = ColorMap(
+            self._scale(),
+            vmin=0,
+            vmax=1,
+            under_color=(10, 20, 30),
+            over_color=(40, 50, 60),
+        )
+        assert cmap.under_color == Color.from_24bit(10, 20, 30)
+        assert cmap.over_color == Color.from_24bit(40, 50, 60)
+
+
+class TestSegmentedColorMap:
+    """SegmentedColorMap threshold behavior and edge cases."""
+
+    @pytest.mark.parametrize(
+        "value, expected",
+        [
+            pytest.param(-1, (255, 0, 0), id="below-first-threshold"),
+            pytest.param(10, (255, 0, 0), id="exact-first-threshold"),
+            pytest.param(15, (0, 255, 0), id="between-first-and-second"),
+            pytest.param(20, (0, 255, 0), id="exact-second-threshold"),
+            pytest.param(29.9, (0, 0, 255), id="before-third-threshold"),
+            pytest.param(30, (0, 0, 255), id="exact-third-threshold"),
+            pytest.param(31, (0, 0, 255), id="above-last-no-over"),
+        ],
+    )
+    def test_threshold_mapping_with_bisect_left_semantics(
+        self, value: float, expected: tuple[int, int, int]
+    ):
+        cmap = SegmentedColorMap(
+            {
+                10: (255, 0, 0),
+                20: (0, 255, 0),
+                30: (0, 0, 255),
+            }
+        )
+        assert cmap(value).value == expected
+
+    def test_unsorted_input_segments_are_sorted_internally(self):
+        cmap = SegmentedColorMap(
+            {
+                30: (0, 0, 255),
+                10: (255, 0, 0),
+                20: (0, 255, 0),
+            }
+        )
+        assert cmap(15).value == (0, 255, 0)
+
+    def test_over_color_is_used_above_last_threshold(self):
+        cmap = SegmentedColorMap(
+            {10: (255, 0, 0), 20: (0, 255, 0)},
+            over_color=(12, 34, 56),
+        )
+        assert cmap(999) == Color.from_24bit(12, 34, 56)
+
+    def test_constructor_coerces_segment_and_over_colors(self):
+        cmap = SegmentedColorMap(
+            {
+                0: Color.from_24bit(1, 2, 3),
+                1: (4, 5, 6),
+            },
+            over_color=(7, 8, 9),
+        )
+        assert cmap(0) == Color.from_24bit(1, 2, 3)
+        assert cmap(1) == Color.from_24bit(4, 5, 6)
+        assert cmap.over_color == Color.from_24bit(7, 8, 9)
+
+    def test_empty_segments_raises_index_error_on_call(self):
+        cmap = SegmentedColorMap({})
+        with pytest.raises(IndexError):
+            cmap(0)
 
 
 class TestStyleConstruction:
