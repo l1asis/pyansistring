@@ -69,7 +69,7 @@ class Color(metaclass=_FrozenMeta):
         return True if (self.depth and self.value) else False
 
     def __repr__(self) -> str:
-        return f"Color(mode={self.depth!r}, value={self.value!r})"
+        return f"Color(depth={self.depth!r}, value={self.value!r})"
 
     def __hash__(self) -> int:
         return hash((self.depth, self.value))
