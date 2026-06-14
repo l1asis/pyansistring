@@ -10,7 +10,11 @@ __all__ = [
 ]
 
 import re as _re
-from collections.abc import Iterable as _Iterable, Sequence as _Sequence
+from collections.abc import (
+    Callable as _Callable,
+    Iterable as _Iterable,
+    Sequence as _Sequence,
+)
 from pathlib import Path as _Path
 from typing import (
     TYPE_CHECKING,
@@ -62,7 +66,7 @@ if is_fonttools_available or TYPE_CHECKING:
         tspan as _tspan,
     )
 
-from .color import Color, ColorScale
+from .color import Color, ColorMap, ColorScale, SegmentedColorMap
 from .constants import (
     SGR,
     WHITESPACE,
@@ -1328,6 +1332,137 @@ class ANSIString(str):
             ul=ul,
             space=space,
         )
+
+    def colormap_pattern(
+        self,
+        cmap: ColorMap | SegmentedColorMap,
+        pattern: str | _re.Pattern[str] = r"[-+]?(?:\d*\.\d+|\d+)",
+        parser: _Callable[[_re.Match[str]], int | float] = lambda m: float(m.group(0)),
+        flags: int | _re.RegexFlag = 0,
+        fg: bool = False,
+        bg: bool = False,
+        ul: bool = False,
+    ) -> _Self:
+        """Apply a colormap to substrings matching a regular expression.
+
+        Parameters
+        ----------
+        cmap : ColorMap | SegmentedColorMap
+            The colormap used to resolve numerical values to Colors.
+        pattern : str | re.Pattern[str]
+            The regex pattern to locate targets in the plain text.
+            Defaults to extracting basic integers and floats.
+        parser : Callable[[re.Match[str]], int | float]
+            A function that takes the regex Match object and returns a
+            number for the colormap. Defaults to casting the full match to float.
+        flags : int | re.RegexFlag
+            Regex flags to apply if `pattern` is provided as a string.
+        fg : bool
+            Apply colors to the foreground channel.
+        bg : bool
+            Apply colors to the background channel.
+        ul : bool
+            Apply colors to the underline channel.
+
+        Returns
+        -------
+        Self
+            This ANSIString instance, modified in place.
+        """
+        if not (fg or bg or ul):
+            fg = True
+
+        if isinstance(pattern, str):
+            pattern = _re.compile(pattern, flags)
+
+        for match in pattern.finditer(self.plain_text):
+            try:
+                value = parser(match)
+            except (ValueError, TypeError):
+                continue
+
+            color = cmap(value)
+            r, g, b = color.to_rgb()
+            span = match.span()
+
+            if fg:
+                self.fg_24b(r, g, b, span)
+            if bg:
+                self.bg_24b(r, g, b, span)
+            if ul:
+                self.ul_24b(r, g, b, span)
+
+        return self
+
+    def colormap_slices(
+        self,
+        cmap: ColorMap | SegmentedColorMap,
+        values: _Sequence[int | float],
+        *slices: SliceGroup,
+        skip_whitespace: bool = False,
+        fg: bool = False,
+        bg: bool = False,
+        ul: bool = False,
+    ) -> "ANSIString":
+        """Apply a colormap to slices based on a corresponding sequence of values.
+
+        Parameters
+        ----------
+        cmap : ColorMap | SegmentedColorMap
+            The colormap used to resolve numerical values to Colors.
+        values : Sequence[int | float]
+            The numbers that will be used for the interpolation.
+        *slices : SliceGroup
+            Target slices to color. Each item can be a single slice spec
+            ``(start, stop[, step])`` or a tuple of slice specs to receive the
+            same interpolated color.
+        skip_whitespace : bool
+            When ``True``, matched spans containing only whitespace are ignored.
+        fg : bool
+            Apply colors to the foreground channel.
+        bg : bool
+            Apply colors to the background channel.
+        ul : bool
+            Apply colors to the underline channel.
+
+        Returns
+        -------
+        Self
+            This ANSIString instance, modified in place.
+        """
+        if not slices:
+            slices = tuple(
+                (index, index + 1)
+                for index, char in enumerate(self.plain_text)
+                if not (skip_whitespace and char in WHITESPACE)
+            )
+
+        if not (fg or bg or ul):
+            fg = True
+
+        for slice_item, value in zip(slices, values):
+            r, g, b = cmap(value)
+            if isinstance(slice_item, slice) or isinstance(slice_item[0], int):
+                # Assume it's a slice or a tuple of (start, end, [step])
+                slice_item = _cast(SliceSpec, slice_item)
+                if fg:
+                    self.fg_24b(r, g, b, slice_item)
+                if bg:
+                    self.bg_24b(r, g, b, slice_item)
+                if ul:
+                    self.ul_24b(r, g, b, slice_item)
+            else:
+                # Assume it's a group of slice specs to be applied with the same color
+                slice_item = _cast(tuple[SliceSpec, ...], slice_item)
+                for sub_item in slice_item:
+                    if fg:
+                        self.fg_24b(r, g, b, sub_item)
+                    if bg:
+                        self.bg_24b(r, g, b, sub_item)
+                    if ul:
+                        self.ul_24b(r, g, b, sub_item)
+
+        return self
 
     def join(self, iterable: _Iterable[str], /) -> "ANSIString":
         strings = list(iterable)
