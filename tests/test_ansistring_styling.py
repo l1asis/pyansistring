@@ -5,6 +5,7 @@ from typing import Any
 import pytest
 
 from pyansistring import ANSIString
+from pyansistring.color import ColorMap, ColorScale, SegmentedColorMap
 from pyansistring.constants import SGR, Background, Foreground, Underline, UnderlineMode
 from pyansistring.style import Style
 from tests.conftest import RESET, ansi_wrap, style_ansi
@@ -587,3 +588,160 @@ class TestRainbow:
             },
         )
         assert str(s) == str(expected), "Rainbow palette must match known output"
+
+
+class TestColorMap:
+    @staticmethod
+    def _cmap() -> ColorMap:
+        return ColorMap(
+            scale=ColorScale([(255, 0, 0), (0, 255, 0)], "rgb"),
+            vmin=0,
+            vmax=10,
+            under_color=(128, 128, 128),
+            over_color=(0, 0, 255),
+        )
+
+    def test_int_numbers_colored(self):
+        s = ANSIString("0, 3, 9").colormap_pattern(self._cmap())
+        expected = (
+            ansi_wrap("0", "\x1b[38:2::255:0:0m")
+            + ", "
+            + ansi_wrap("3", "\x1b[38:2::178:76:0m")
+            + ", "
+            + ansi_wrap("9", "\x1b[38:2::26:230:0m")
+        )
+        assert str(s) == expected
+
+    def test_float_numbers_colored(self):
+        s = ANSIString("0.0, 3.14, 9.123").colormap_pattern(self._cmap())
+        expected = (
+            ansi_wrap("0.0", "\x1b[38:2::255:0:0m")
+            + ", "
+            + ansi_wrap("3.14", "\x1b[38:2::175:80:0m")
+            + ", "
+            + ansi_wrap("9.123", "\x1b[38:2::22:233:0m")
+        )
+        assert str(s) == expected
+
+    def test_float_trailing_decimal_point(self):
+        s = ANSIString("0., 3., 9.").colormap_pattern(self._cmap())
+        expected = (
+            ansi_wrap("0", "\x1b[38:2::255:0:0m")
+            + "., "
+            + ansi_wrap("3", "\x1b[38:2::178:76:0m")
+            + "., "
+            + ansi_wrap("9", "\x1b[38:2::26:230:0m")
+            + "."
+        )
+        assert str(s) == expected
+
+    def test_values_overflow(self):
+        s = ANSIString("0, -3.14, 10.123").colormap_pattern(self._cmap())
+        expected = (
+            ansi_wrap("0", "\x1b[38:2::255:0:0m")
+            + ", "
+            + ansi_wrap("-3.14", "\x1b[38:2::128:128:128m")
+            + ", "
+            + ansi_wrap("10.123", "\x1b[38:2::0:0:255m")
+            + ""
+        )
+        assert str(s) == expected
+
+    def test_slices_colored(self):
+        s = ANSIString("Ready | Go! | Steady? | Go! | Oh, wait...").colormap_slices(
+            self._cmap(),
+            (0, 10, 5, 10, -999),
+            (0, 5),
+            (8, 11),
+            (14, 21),
+            (24, 27),
+            (30, 41),
+        )
+        expected = (
+            ansi_wrap("Ready", "\x1b[38:2::255:0:0m")
+            + " | "
+            + ansi_wrap("Go!", "\x1b[38:2::0:255:0m")
+            + " | "
+            + ansi_wrap("Steady?", "\x1b[38:2::128:128:0m")
+            + " | "
+            + ansi_wrap("Go!", "\x1b[38:2::0:255:0m")
+            + " | "
+            + ansi_wrap("Oh, wait...", "\x1b[38:2::128:128:128m")
+        )
+        assert str(s) == expected
+
+    def test_custom_parser_and_pattern(self):
+        s = ANSIString("CPU: 4%, RAM: 8%").colormap_pattern(
+            self._cmap(), pattern=r"(\d+)%", parser=lambda m: float(m.group(1))
+        )
+        expected = (
+            "CPU: "
+            + ansi_wrap("4%", "\x1b[38:2::153:102:0m")
+            + ", "
+            + "RAM: "
+            + ansi_wrap("8%", "\x1b[38:2::51:204:0m")
+        )
+        assert str(s) == expected
+
+    def test_bg_and_ul_flags(self):
+        s = ANSIString("5").colormap_pattern(self._cmap(), fg=False, bg=True, ul=True)
+        expected = ansi_wrap("5", "\x1b[48:2::128:128:0m\x1b[4:1m\x1b[58:2::128:128:0m")
+        assert str(s) == expected
+
+
+class TestSegmentedColorMap:
+    @staticmethod
+    def _cmap() -> SegmentedColorMap:
+        return SegmentedColorMap(
+            segments={
+                0: (0, 255, 0),
+                50: (255, 255, 0),
+                90: (255, 0, 0),
+            },
+            over_color=(255, 0, 255),
+        )
+
+    def test_segmented_exact_boundaries(self):
+        s = ANSIString("0, 50, 90").colormap_pattern(self._cmap())
+        expected = (
+            ansi_wrap("0", "\x1b[38:2::0:255:0m")
+            + ", "
+            + ansi_wrap("50", "\x1b[38:2::255:255:0m")
+            + ", "
+            + ansi_wrap("90", "\x1b[38:2::255:0:0m")
+        )
+        assert str(s) == expected
+
+    def test_segmented_between_boundaries(self):
+        s = ANSIString("-10, 25, 75").colormap_pattern(self._cmap())
+        expected = (
+            ansi_wrap("-10", "\x1b[38:2::0:255:0m")
+            + ", "
+            + ansi_wrap("25", "\x1b[38:2::255:255:0m")
+            + ", "
+            + ansi_wrap("75", "\x1b[38:2::255:0:0m")
+        )
+        assert str(s) == expected
+
+    def test_segmented_over_color(self):
+        s = ANSIString("91, 999").colormap_pattern(self._cmap())
+        expected = (
+            ansi_wrap("91", "\x1b[38:2::255:0:255m")
+            + ", "
+            + ansi_wrap("999", "\x1b[38:2::255:0:255m")
+        )
+        assert str(s) == expected
+
+    def test_segmented_slices_colored(self):
+        """Verify colormap_slices integration with SegmentedColorMap."""
+        s = ANSIString("OK | WARN | CRIT").colormap_slices(
+            self._cmap(), (0, 45, 85), (0, 2), (5, 9), (12, 16)
+        )
+        expected = (
+            ansi_wrap("OK", "\x1b[38:2::0:255:0m")
+            + " | "
+            + ansi_wrap("WARN", "\x1b[38:2::255:255:0m")
+            + " | "
+            + ansi_wrap("CRIT", "\x1b[38:2::255:0:0m")
+        )
+        assert str(s) == expected
