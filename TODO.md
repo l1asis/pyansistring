@@ -1,11 +1,15 @@
-> [!NOTE]
+# pyansistring TODO
+
+> [!NOTE] Status
+>
 > - [X] — Overridden (custom implementation)
 > - [D] — Delegated (wrapped via `__getattribute__`)
 > - [\*] — Skipped (should not be implemented)
 > - [ ] — Planned
 > - ~~text~~ — Cancelled
 
-### `str` magic or dunder methods
+## `str` magic or dunder methods
+
 - [X] `__add__`
 - [\*] `__class__`
 - [X] `__contains__`
@@ -42,7 +46,8 @@
 - [X] `__str__`
 - [\*] `__subclasshook__`
 
-### `str` public methods (overridden)
+## `str` public methods (overridden)
+
 - [X] `casefold`
 - [X] `center`
 - [X] `encode`
@@ -73,7 +78,8 @@
 - [X] `translate`
 - [X] `zfill`
 
-### `str` public methods (delegated)
+## `str` public methods (delegated)
+
 - [D] `capitalize`
 - [D] `count`
 - [D] `endswith`
@@ -99,7 +105,7 @@
 - [D] `title`
 - [D] `upper`
 
-### `ANSIString` featured methods (magic, private and public)
+## `ANSIString` featured methods (magic, private and public)
 
 - [ ] `__copy__`
 - [ ] `__deepcopy__`
