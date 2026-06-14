@@ -150,7 +150,7 @@
 - [X] `gradient` (apply a color gradient across the string)
 - [X] `gradient_words` (apply a color gradient across each word)
 - [X] `gradient_coordinates` (apply a color gradient based on coordinates)
-- [ ] `colormap` (apply a specific predefined coloring)
+- [X] `colormap` (apply a specific predefined coloring)
 - [X] `rainbow` (apply rainbow coloring (using a separate algorithm))
 - [ ] `random_art` (return random color art)
 - [X] `from_ansi` (create `ANSIString` from plain `str` with ANSI escape sequences)
