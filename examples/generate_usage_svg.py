@@ -13,13 +13,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
 from fontTools.ttLib import TTFont  # type: ignore
 
-from pyansistring import (
-    ANSIString,
-    ArtRegistry,
-    ColorGeneratorContext,
-    register_color_generator,
-    unregister_color_generator,
-)
+from pyansistring import ANSIString
 from pyansistring.constants import SGR, Background, Foreground, UnderlineMode
 
 # ── Font paths (Consolas family, standard Windows location) ────────────────
@@ -53,22 +47,6 @@ def write(name: str, svg: str) -> None:
 
 def add(name: str, s: ANSIString):
     examples[name] = s
-
-
-def zigzag_generator(context: ColorGeneratorContext) -> list[tuple[int, int, int]]:
-    """Return a mirrored zigzag palette sized to the requested step count."""
-    palette = [
-        (84, 161, 255),
-        (255, 99, 71),
-        (255, 215, 0),
-        (120, 220, 160),
-    ]
-    out: list[tuple[int, int, int]] = []
-    for index in range(max(2, context["step_count"])):
-        phase = (index // len(palette)) % 2
-        slot = index % len(palette)
-        out.append(palette[slot] if phase == 0 else palette[-slot - 1])
-    return out
 
 
 # ── Unstyled text ─────────────────────────────────────────────────────────
@@ -181,31 +159,6 @@ add(
         fg=True,
     ),
 )
-
-# ── ArtRegistry (custom generator) ───────────────────────────────────────
-register_color_generator("zigzag_usage_v1", zigzag_generator)
-try:
-    custom_registry = ArtRegistry()
-    custom_registry.register(
-        "ZIGZAG",
-        " /\\/\\/\\/\\\n \\/\\/\\/\\/",
-        colorings=(
-            {
-                "mode": "gradient",
-                "colors": {
-                    "generator": "zigzag_usage_v1",
-                    "mode": "seeded",
-                    "seed": 42,
-                },
-                "skip_whitespace": True,
-                "fg": True,
-            },
-        ),
-    )
-    add("art_registry_zigzag.svg", custom_registry.get_colored_art("ZIGZAG"))
-finally:
-    unregister_color_generator("zigzag_usage_v1")
-
 
 # ── Generate all SVGs ─────────────────────────────────────────────────────
 print(f"Generating {len(examples)} SVG examples in {OUT}:")

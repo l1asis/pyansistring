@@ -10,16 +10,7 @@
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](https://opensource.org/licenses/MIT)
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 
-ANSI-aware string formatting for Python CLIs.
-
-`pyansistring` gives you a string type that keeps styling attached while you keep using familiar string operations. You can color text, apply SGR attributes, generate gradients, color ASCII art, and export styled output to SVG.
-
-## Why pyansistring
-
-- Keeps styling aligned with text during common string operations.
-- Supports 4-bit, 8-bit, and 24-bit (truecolor) foreground/background/underline colors.
-- Works well for CLI tools, logs, dashboards, and terminal UX.
-- Includes practical APIs for gradients, ASCII art coloring, and SVG export.
+`pyansistring` gives you a string type that keeps styling securely attached while you use familiar, native Python string operations. Whether you are building a simple CLI tool, visualizing data in a complex terminal dashboard, or exporting styled output to the web, `pyansistring` handles the math and formatting for you.
 
 ## Features
 
@@ -30,12 +21,8 @@ ANSI-aware string formatting for Python CLIs.
 - **Targeting modes:** apply to full strings, slice ranges, or word matches (case-sensitive or insensitive).
 - **Gradient engine:** RGB or HSL interpolation, coordinate-based gradients for multiline text, and out-of-bounds handling.
 - **SVG export:** render text or path modes with per-character coloring and optional custom fonts.
-- **Art registries:** built-in ASCII art, load from TOML, custom color generators, and an optional cowsay adapter.
 - **ANSI parsing:** convert raw ANSI-encoded strings back into `ANSIString` instances with styles intact.
 - **Large constants base:** extensive predefined color constants and palettes, plus SGR/regex helpers for easy access.
-- **Terminal-oriented formatting controls:** supports modern and compatibility SGR formatting modes to improve behavior across ANSI-capable terminals.
-- **Performance-minded internals:** cached line-start indexing, style object caching, and change-tracked re-rendering to reduce repeated work.
-- **Comprehensive test suite** covering edge cases around string operations, style preservation, gradient calculations, and terminal rendering.
 
 ## Requirements
 
@@ -53,9 +40,7 @@ Install extras when needed:
 
 ```bash
 pip install pyansistring[img]            # For SVG export (installs fontTools)
-pip install pyansistring[adapter-cowsay] # For the cowsay adapter
-pip install pyansistring[adapters]       # All adapters
-pip install pyansistring[all]            # Install everything
+pip install pyansistring[all]            # Install everything (currently only [img])
 ```
 
 ## Quick Start
@@ -215,53 +200,6 @@ print(
 ![gradient_words](https://raw.githubusercontent.com/l1asis/pyansistring/refs/heads/main/images/usage/gradient_words.svg)  
 ![gradient_coordinates](https://raw.githubusercontent.com/l1asis/pyansistring/refs/heads/main/images/usage/gradient_coordinates.svg)
 
-### ArtRegistry and custom generators
-
-```python
-from pyansistring import (
-    ArtRegistry,
-    ColorGeneratorContext,
-    register_color_generator,
-    unregister_color_generator,
-)
-
-
-def zigzag_generator(context: ColorGeneratorContext) -> list[tuple[int, int, int]]:
-    palette = [
-        (84, 161, 255),
-        (255, 99, 71),
-        (255, 215, 0),
-        (120, 220, 160),
-    ]
-    return [palette[i % len(palette)] for i in range(max(2, context["step_count"]))]
-
-
-register_color_generator("zigzag_readme_v1", zigzag_generator)
-try:
-    registry = ArtRegistry()
-    registry.register(
-        "ZIGZAG",
-        " /\\/\\/\\/\\\n \\/\\/\\/\\/",
-        colorings=(
-            {
-                "mode": "gradient",
-                "colors": {
-                    "generator": "zigzag_readme_v1",
-                    "mode": "seeded",
-                    "seed": 42,
-                },
-                "skip_whitespace": True,
-                "fg": True,
-            },
-        ),
-    )
-    print(registry.get_colored_art("ZIGZAG"))
-finally:
-    unregister_color_generator("zigzag_readme_v1")
-```
-
-![art_registry_zigzag](https://raw.githubusercontent.com/l1asis/pyansistring/refs/heads/main/images/usage/art_registry_zigzag.svg)
-
 ### Parse ANSI text back into ANSIString
 
 ```python
@@ -291,16 +229,15 @@ svg_code = styled.to_svg(
 ```
 
 For a complete terminal tour, run [examples/showcase.py](examples/showcase.py).  
-For a focused ArtRegistry walkthrough, run [examples/art_registry_demo.py](examples/art_registry_demo.py).
 
 ## Contributing
 
 Contributions are what make the open source community such an amazing place to learn, inspire, and create. Any contributions you make are **greatly appreciated**.
 
 1. Fork the Project
-2. Create your Feature Branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your Changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the Branch (`git push origin feature/AmazingFeature`)
+2. Create your Feature Branch (`git checkout -b feat/amazing-feature`)
+3. Commit your Changes (`git commit -m 'Add some amazing-feature'`)
+4. Push to the Branch (`git push origin feat/amazing-feature`)
 5. Open a Pull Request
 
 > [!IMPORTANT]

@@ -10,16 +10,16 @@ requires-python = ">=3.11"
 authors = [
   {name="Volodymyr Horshenin"},
 ]
-description = "A powerful Python library for terminal string styling, ANSI color manipulation, ASCII art generation, and SVG terminal rendering."
+description = "A powerful Python library for terminal string styling, advanced ANSI color manipulation, and SVG terminal rendering."
 readme = "README.md"
 license = "MIT"
 license-files = ["LICEN[CS]E*"]
 keywords = [
-  "ansi", "terminal", "console", "cli", "tui",
-  "ansi-colors", "ansi-escape-codes", "terminal-colors", 
-  "text-formatting", "string-styling", "colorize",
-  "logging", "debugging", "rich-text", 
-  "ascii-art", "svg-rendering", "terminal-graphics", "cowsay"
+    "ansi", "terminal", "console", "cli", "tui",
+    "ansi-colors", "ansi-escape-codes", "terminal-colors", 
+    "text-formatting", "string-styling", "colorize", "rich-text",
+    "colormap", "gradients", "svg", "terminal-graphics",
+    "data-visualization", "logging", "debugging"
 ]
 classifiers = [
   "Development Status :: 4 - Beta",
@@ -39,16 +39,10 @@ classifiers = [
 
 [project.optional-dependencies]
 all = [
-  "pyansistring[img,adapters]",
+  "pyansistring[img]",
 ]
 img = [
   "fonttools",
-]
-adapter-cowsay = [
-  "cowsay>=6.1",
-]
-adapters = [
-  "pyansistring[adapter-cowsay]",
 ]
 
 [project.urls]

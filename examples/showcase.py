@@ -5,13 +5,7 @@ Run with:
     python examples/showcase.py
 """
 
-from pyansistring import (
-    ANSIString,
-    ArtRegistry,
-    ColorGeneratorContext,
-    register_color_generator,
-    unregister_color_generator,
-)
+from pyansistring import ANSIString
 from pyansistring.constants import (
     SGR,
     Background,
@@ -38,31 +32,15 @@ def show(label: str, value: ANSIString | str) -> None:
     print(f"  {label:<40} {WALL}{value}{WALL}")
 
 
-def zigzag_generator(context: ColorGeneratorContext) -> list[tuple[int, int, int]]:
-    """Return a mirrored zigzag palette sized to the requested step count."""
-    palette = [
-        (84, 161, 255),
-        (255, 99, 71),
-        (255, 215, 0),
-        (120, 220, 160),
-    ]
-    out: list[tuple[int, int, int]] = []
-    for index in range(max(2, context["step_count"])):
-        phase = (index // len(palette)) % 2
-        slot = index % len(palette)
-        out.append(palette[slot] if phase == 0 else palette[-slot - 1])
-    return out
-
-
 # ── Main showcase ─────────────────────────────────────────────────────────
 
 
 def main() -> None:
-    # ── 1. Plain text (no styling) ────────────────────────────────────────
+    # ── Plain text (no styling) ────────────────────────────────────────
     section("Plain text (no styling)")
     show("ANSIString('Hello, World!')", ANSIString("Hello, World!"))
 
-    # ── 2. SGR attributes ─────────────────────────────────────────────────
+    # ── SGR attributes ─────────────────────────────────────────────────
     section("SGR attributes via style()")
     attrs = {
         "BOLD": SGR.BOLD,
@@ -77,7 +55,7 @@ def main() -> None:
     for name, sgr in attrs.items():
         show(f".style(SGR.{name})", ANSIString("Hello, World!").style(sgr))
 
-    # ── 3. Stacking attributes ────────────────────────────────────────────
+    # ── Stacking attributes ────────────────────────────────────────────
     section("Stacking multiple attributes")
     show(
         ".style(BOLD).style(ITALIC).style(UNDERLINE)",
@@ -87,7 +65,7 @@ def main() -> None:
         .style(SGR.UNDERLINE),
     )
 
-    # ── 4. 4-bit foreground ───────────────────────────────────────────────
+    # ── 4-bit foreground ───────────────────────────────────────────────
     section("4-bit foreground colours")
     colors_4bit = [
         ("BLACK", Foreground.BLACK),
@@ -110,7 +88,7 @@ def main() -> None:
     for name, color in colors_4bit:
         show(f".fg_4b(Foreground.{name})", ANSIString("Hello, World!").fg_4b(color))
 
-    # ── 5. 4-bit background ───────────────────────────────────────────────
+    # ── 4-bit background ───────────────────────────────────────────────
     section("4-bit background colours")
     bg_colors = [
         ("RED", Background.RED),
@@ -122,7 +100,7 @@ def main() -> None:
     for name, color in bg_colors:
         show(f".bg_4b(Background.{name})", ANSIString("Hello, World!").bg_4b(color))
 
-    # ── 6. 8-bit colours ─────────────────────────────────────────────────
+    # ── 8-bit colours ─────────────────────────────────────────────────
     section("8-bit foreground colours (sample)")
     for n in (21, 46, 82, 135, 196, 208, 226):
         show(f".fg_8b({n})", ANSIString("Hello, World!").fg_8b(n))
@@ -131,7 +109,7 @@ def main() -> None:
     for n in (17, 52, 94, 130, 202):
         show(f".bg_8b({n})", ANSIString("Hello, World!").bg_8b(n))
 
-    # ── 7. 24-bit (true colour) ──────────────────────────────────────────
+    # ── 24-bit (true colour) ──────────────────────────────────────────
     section("24-bit (true colour) foreground")
     show(
         ".fg_24b(0, 128, 255)",
@@ -148,7 +126,7 @@ def main() -> None:
         ANSIString("Hello, World!").bg_24b(40, 40, 40),
     )
 
-    # ── 8. Per-range / per-word styling ──────────────────────────────────
+    # ── Per-range / per-word styling ──────────────────────────────────
     section("Per-range styling")
     show(
         "fg_24b blue(0,5) + yellow(7,12)",
@@ -173,7 +151,7 @@ def main() -> None:
         .bg_4b_words(Background.BRIGHT_YELLOW, "World"),
     )
 
-    # ── 9. Underline colours & modes ──────────────────────────────────────
+    # ── Underline colours & modes ──────────────────────────────────────
     section("Underline colours and modes")
     show(
         ".ul_8b(135)",
@@ -196,7 +174,7 @@ def main() -> None:
             ANSIString("Hello, World!").ul_24b(255, 100, 0).style(mode),
         )
 
-    # ── 10. Removing styles ───────────────────────────────────────────────
+    # ── Removing styles ───────────────────────────────────────────────
     section("Removing styles (unstyle / unstyle_words)")
     show(
         ".style(BOLD).unstyle()",
@@ -213,7 +191,7 @@ def main() -> None:
         .unstyle_words("Hello"),
     )
 
-    # ── 11. Rainbow ───────────────────────────────────────────────────────
+    # ── Rainbow ───────────────────────────────────────────────────────
     section("Rainbow effect")
     show(
         ".rainbow()",
@@ -228,7 +206,7 @@ def main() -> None:
         ANSIString("Hello, World! Rainbow text!").rainbow(skip_whitespace=True),
     )
 
-    # ── 12. Gradient API ──────────────────────────────────────────────────
+    # ── Gradient API ──────────────────────────────────────────────────
     section("Gradients (gradient, gradient_words, gradient_coordinates)")
     show(
         ".gradient([(84,161,255),(255,255,255)])",
@@ -266,36 +244,7 @@ def main() -> None:
         ),
     )
 
-    # ── 13. Art registry and generators ───────────────────────────────────
-    section("ArtRegistry and custom generators")
-
-    register_color_generator("zigzag_showcase_v1", zigzag_generator)
-    try:
-        custom_registry = ArtRegistry()
-        custom_registry.register(
-            "ZIGZAG",
-            " /\\/\\/\\/\\\n \\/\\/\\/\\/",
-            colorings=(
-                {
-                    "mode": "gradient",
-                    "colors": {
-                        "generator": "zigzag_showcase_v1",
-                        "mode": "seeded",
-                        "seed": 7,
-                    },
-                    "skip_whitespace": True,
-                    "fg": True,
-                },
-            ),
-        )
-        show(
-            "Custom ArtRegistry + zigzag generator",
-            custom_registry.get_colored_art("ZIGZAG"),
-        )
-    finally:
-        unregister_color_generator("zigzag_showcase_v1")
-
-    # ── 14. String operations preserve styles ─────────────────────────────
+    # ── String operations preserve styles ─────────────────────────────
     section("String operations that preserve styles")
 
     styled = ANSIString("Hello, World!").fg_24b(0, 128, 255)
@@ -327,14 +276,14 @@ def main() -> None:
     joined = ANSIString(" + ").style(SGR.BOLD).join(parts)
     show(".join(parts)", joined)
 
-    # ── 15. f-string support ──────────────────────────────────────────────
+    # ── f-string support ──────────────────────────────────────────────
     section("f-string support")
     s = ANSIString("Hi").fg_4b(Foreground.RED)
     show("f'{s}'", f"{s}")
     show("f'{s:>5}'", f"{s:>5}")
     show("f'{s:^10}'", f"{s:^10}")
 
-    # ── 16. from_ansi parsing ─────────────────────────────────────────────
+    # ── from_ansi parsing ─────────────────────────────────────────────
     section("from_ansi — parse raw ANSI back to ANSIString")
     raw = "\x1b[38;2;0;128;255mHello\x1b[0m, \x1b[1mWorld!\x1b[0m"
     parsed = ANSIString.from_ansi(raw)
