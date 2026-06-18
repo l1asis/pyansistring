@@ -1,6 +1,7 @@
 __all__ = ["Color"]
 
 from bisect import bisect_left as _bisect_left
+from collections.abc import Sequence as _Sequence
 from colorsys import hls_to_rgb as _hls_to_rgb, rgb_to_hls as _rgb_to_hls
 from math import trunc as _trunc
 from typing import Any as _Any, Literal as _Literal, Mapping as _Mapping
@@ -173,7 +174,9 @@ class ColorScale:
     __slots__ = ("colors", "space", "_rgb_stops", "_hsl_stops")
 
     def __init__(
-        self, colors: list[Color | tuple[int, int, int]], space: _Literal["rgb", "hsl"]
+        self,
+        colors: _Sequence[Color | tuple[int, int, int]],
+        space: _Literal["rgb", "hsl"],
     ) -> None:
         self.colors = list(colors)
         self.space = space
