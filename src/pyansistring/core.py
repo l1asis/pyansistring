@@ -15,7 +15,6 @@ from collections.abc import (
     Iterable as _Iterable,
     Sequence as _Sequence,
 )
-from functools import cached_property as _cached_property
 from pathlib import Path as _Path
 from typing import (
     TYPE_CHECKING,
@@ -85,6 +84,7 @@ class ANSIString(str):
 
     _style_manager: StyleManager
     _styled_text: str
+    _line_starts: tuple[int, ...] | None
 
     # str method names that have explicit overrides and must NOT be
     # auto-delegated by __getattribute__.
@@ -150,6 +150,7 @@ class ANSIString(str):
         else:
             instance._style_manager = StyleManager()
         instance._styled_text = cls._render(instance)
+        instance._line_starts_cache = None
         return instance
 
     @property
@@ -173,18 +174,6 @@ class ANSIString(str):
     def styled_length(self) -> int:
         """The length including ANSI escape codes."""
         return len(self.styled_text)
-
-    @_cached_property
-    def line_starts(self) -> tuple[int, ...]:
-        """The line start indices for plain text coordinates."""
-        return (
-            0,
-            *(
-                index + 1
-                for index, char in enumerate(self.plain_text)
-                if char == "\n" and index + 1 < len(self)
-            ),
-        )
 
     def __str__(self) -> str:
         """Return the styled text."""
@@ -425,6 +414,19 @@ class ANSIString(str):
         else:
             start, stop, step = slice(*slice_).indices(len(self))
         return start, stop, step
+
+    def _get_line_starts(self) -> tuple[int, ...]:
+        """Return cached line start indices for plain text coordinates."""
+        if self._line_starts is None:
+            self._line_starts = (
+                0,
+                *(
+                    index + 1
+                    for index, char in enumerate(self.plain_text)
+                    if char == "\n" and index + 1 < len(self)
+                ),
+            )
+        return self._line_starts
 
     def _search_spans(
         self, *words: str, case_sensitive: bool = True
@@ -1228,8 +1230,9 @@ class ANSIString(str):
             If *on_out_of_bounds* is ``"raise"`` and a coordinate falls outside
             available text bounds.
         """
+        line_starts = self._get_line_starts()
 
-        height = len(self.line_starts)
+        height = len(line_starts)
 
         slices: list[SliceGroup] = []
 
@@ -1253,8 +1256,8 @@ class ANSIString(str):
                     else:
                         continue
 
-                line_start = self.line_starts[y]
-                line_end = self.line_starts[y + 1] - 1 if y + 1 < height else len(self)
+                line_start = line_starts[y]
+                line_end = line_starts[y + 1] - 1 if y + 1 < height else len(self)
                 line_length = line_end - line_start
 
                 if 0 <= x < line_length:
@@ -1293,10 +1296,8 @@ class ANSIString(str):
                         else:
                             continue
 
-                    line_start = self.line_starts[y]
-                    line_end = (
-                        self.line_starts[y + 1] - 1 if y + 1 < height else len(self)
-                    )
+                    line_start = line_starts[y]
+                    line_end = line_starts[y + 1] - 1 if y + 1 < height else len(self)
                     line_length = line_end - line_start
 
                     if 0 <= x < line_length:
