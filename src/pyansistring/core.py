@@ -49,7 +49,7 @@ from ._helpers import (
     rsearch_separators as _rsearch_separators,
     search_separators as _search_separators,
 )
-from ._types import Coordinate, CoordinateGroup, SliceGroup, SliceSpec
+from ._types import ColorStop, Coordinate, CoordinateGroup, SliceGroup, SliceSpec
 
 if is_fonttools_available or TYPE_CHECKING:
     from ._svg import (
@@ -66,7 +66,7 @@ if is_fonttools_available or TYPE_CHECKING:
         tspan as _tspan,
     )
 
-from .color import Color, ColorMap, ColorScale, SegmentedColorMap
+from .color import ColorMap, ColorScale, SegmentedColorMap
 from .constants import (
     SGR,
     WHITESPACE,
@@ -1041,7 +1041,7 @@ class ANSIString(str):
 
     def gradient(
         self,
-        colors: ColorScale | list[Color | tuple[int, int, int]],
+        colors: ColorScale | _Sequence[ColorStop],
         *slices: SliceGroup,
         skip_whitespace: bool = False,
         fg: bool = False,
@@ -1053,7 +1053,7 @@ class ANSIString(str):
 
         Parameters
         ----------
-        colors : ColorScale | list[Color | tuple[int, int, int]]
+        colors : ColorScale | Sequence[ColorStop]
             Gradient stops used for interpolation. When a list is provided, it is
             converted to :class:`ColorScale` using *space*.
         *slices : SliceGroup
@@ -1078,7 +1078,7 @@ class ANSIString(str):
             This ANSIString instance, modified in place.
         """
 
-        if isinstance(colors, list):
+        if not isinstance(colors, ColorScale):
             colors = ColorScale(colors, space)
 
         if not (fg or bg or ul):
@@ -1122,7 +1122,7 @@ class ANSIString(str):
 
     def gradient_words(
         self,
-        colors: ColorScale | list[Color | tuple[int, int, int]],
+        colors: ColorScale | _Sequence[ColorStop],
         *words: str,
         case_sensitive: bool = True,
         skip_whitespace: bool = False,
@@ -1135,7 +1135,7 @@ class ANSIString(str):
 
         Parameters
         ----------
-        colors : ColorScale | list[Color | tuple[int, int, int]]
+        colors : ColorScale | Sequence[ColorStop]
             Gradient stops used for interpolation.
         *words : str
             Words to search for and color.
@@ -1180,7 +1180,7 @@ class ANSIString(str):
 
     def gradient_coordinates(
         self,
-        colors: ColorScale | list[Color | tuple[int, int, int]],
+        colors: ColorScale | _Sequence[ColorStop],
         *coordinates: CoordinateGroup,
         fg: bool = False,
         bg: bool = False,
@@ -1195,7 +1195,7 @@ class ANSIString(str):
 
         Parameters
         ----------
-        colors : ColorScale | list[Color | tuple[int, int, int]]
+        colors : ColorScale | Sequence[ColorStop]
             Gradient stops used for interpolation.
         *coordinates : CoordinateGroup
             Coordinate targets. Each item can be a single coordinate ``(x, y)`` or
