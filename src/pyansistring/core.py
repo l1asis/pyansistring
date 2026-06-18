@@ -85,7 +85,7 @@ class ANSIString(str):
     __slots__ = (
         "_style_manager",
         "_styled_text",
-        "_line_starts_cache",
+        "_line_starts",
     )
 
     _style_manager: StyleManager
