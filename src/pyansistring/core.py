@@ -82,6 +82,12 @@ from .style import Style, StyleManager
 class ANSIString(str):
     """Subclass of ``str`` that supports ANSI styling via a :class:`StyleManager`."""
 
+    __slots__ = (
+        "_style_manager",
+        "_styled_text",
+        "_line_starts_cache",
+    )
+
     _style_manager: StyleManager
     _styled_text: str
     _line_starts: tuple[int, ...] | None
@@ -150,7 +156,7 @@ class ANSIString(str):
         else:
             instance._style_manager = StyleManager()
         instance._styled_text = cls._render(instance)
-        instance._line_starts_cache = None
+        instance._line_starts = None
         return instance
 
     @property
