@@ -134,7 +134,7 @@ class FakeTTFont(_TTFontBase):
 @pytest.fixture
 def fake_font() -> FakeTTFont:
     """Return a *FakeTTFont* instance and enable the fonttools guard."""
-    pas.is_fonttools_available = True
+    pas._IS_FONTTOOLS_AVAILABLE = True  # type: ignore
     return FakeTTFont()
 
 

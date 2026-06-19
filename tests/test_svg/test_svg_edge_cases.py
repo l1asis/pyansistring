@@ -10,7 +10,7 @@ from tests.test_svg.conftest import FakeTTFont
 
 @pytest.fixture
 def fake_font():
-    pas.is_fonttools_available = True
+    pas._IS_FONTTOOLS_AVAILABLE = True
     return FakeTTFont()
 
 
@@ -111,7 +111,7 @@ class TestNestedStyles:
 
 class TestFonttoolsGuard:
     def test_raises_when_fonttools_disabled(self):
-        pas.is_fonttools_available = False
+        pas._IS_FONTTOOLS_AVAILABLE = False  # # type: ignore
         s = ANSIString("Hi")
         with pytest.raises(ImportError):
             s.to_svg(None, font_size_px=16)  # type: ignore[arg-type]

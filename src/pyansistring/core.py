@@ -31,13 +31,13 @@ if not TYPE_CHECKING:
     try:
         from fontTools.ttLib import TTFont as _TTFont
 
-        is_fonttools_available = True
+        _IS_FONTTOOLS_AVAILABLE = True
     except Exception:
-        is_fonttools_available = False
+        _IS_FONTTOOLS_AVAILABLE = False
 else:
     from fontTools.ttLib import TTFont as _TTFont  # type: ignore[import]
 
-    is_fonttools_available = True
+    _IS_FONTTOOLS_AVAILABLE = True
 
 from ._format import (
     FMT as _FMT,
@@ -51,7 +51,7 @@ from ._helpers import (
 )
 from ._types import ColorStop, Coordinate, CoordinateGroup, SliceGroup, SliceSpec
 
-if is_fonttools_available or TYPE_CHECKING:
+if _IS_FONTTOOLS_AVAILABLE or TYPE_CHECKING:
     from ._svg import (
         SVG_ESCAPE as _SVG_ESCAPE,
         UNDERLINE_CSS as _UNDERLINE_CSS,
@@ -819,7 +819,7 @@ class ANSIString(str):
         svg_content : str
             The generated SVG content as a string.
         """
-        if not is_fonttools_available:
+        if not _IS_FONTTOOLS_AVAILABLE:
             raise ImportError(
                 "The 'fontTools' package is required to use the 'to_svg' method. "
                 "Please install it using 'pip install fonttools'."

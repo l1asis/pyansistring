@@ -105,7 +105,7 @@ class TrackingVariableFont(FakeTTFont):
 @pytest.fixture(autouse=True)
 def _enable_fonttools() -> None:  # pyright: ignore[reportUnusedFunction]
     """Ensure fonttools guard is enabled for every test in this module."""
-    pas.is_fonttools_available = True
+    pas._IS_FONTTOOLS_AVAILABLE = True  # type: ignore
 
 
 @pytest.fixture
