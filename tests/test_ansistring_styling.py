@@ -1,6 +1,7 @@
 """Tests for ANSIString styling methods (style, unstyle, fg_*, bg_*, ul_*, rainbow)."""
 
-from typing import Any
+import importlib.util
+from typing import TYPE_CHECKING, Any
 
 import pytest
 
@@ -9,6 +10,18 @@ from pyansistring.color import ColorMap, ColorScale, SegmentedColorMap
 from pyansistring.constants import SGR, Background, Foreground, Underline, UnderlineMode
 from pyansistring.style import Style
 from tests.conftest import RESET, ansi_wrap, style_ansi
+
+if not TYPE_CHECKING:
+    if importlib.util.find_spec("emoji") is not None:
+        HAS_EMOJI = True
+    else:
+        HAS_EMOJI = False
+else:
+    HAS_EMOJI = True
+
+requires_emoji = pytest.mark.skipif(
+    not HAS_EMOJI, reason="Requires optional 'emoji' package"
+)
 
 
 class TestStyle:
@@ -351,6 +364,36 @@ class TestGradient:
         assert s.style_manager[2].foreground.to_rgb() == (255, 0, 0)
         assert s.style_manager[1].foreground.to_rgb() == (0, 0, 255)
 
+    @requires_emoji
+    def test_emojis_colored_as_single_block(self):
+        """
+        Verify emojis are treated as a single styling block to protect ZWJ sequences.
+        """
+        s = ANSIString("a👩‍🚀b").gradient([(255, 0, 0), (0, 0, 255)], space="rgb")
+
+        assert s.style_manager[0].foreground.to_rgb() == (255, 0, 0)
+        assert s.style_manager[1].foreground.to_rgb() == (128, 0, 128)
+        assert s.style_manager[2].foreground.to_rgb() == (128, 0, 128)
+        assert s.style_manager[3].foreground.to_rgb() == (128, 0, 128)
+        assert s.style_manager[4].foreground.to_rgb() == (0, 0, 255)
+
+    @requires_emoji
+    def test_skip_emojis_flag(self):
+        """Verify skip_emojis=True drops the emoji indices entirely."""
+        s = ANSIString("a👩‍🚀b").gradient(
+            [(255, 0, 0), (0, 0, 255)], skip_emojis=True, space="rgb"
+        )
+
+        assert 0 in s.style_manager
+        assert s.style_manager[0].foreground.to_rgb() == (255, 0, 0)
+
+        assert 1 not in s.style_manager
+        assert 2 not in s.style_manager
+        assert 3 not in s.style_manager
+
+        assert 4 in s.style_manager
+        assert s.style_manager[4].foreground.to_rgb() == (0, 0, 255)
+
     @pytest.mark.parametrize(
         "plain_text, words, colors, options, "
         "expected_fg, expected_bg, expected_ul, absent",
@@ -553,6 +596,14 @@ class TestRainbow:
             f"Index {ws_index} (whitespace) should be skipped"
         )
 
+    @requires_emoji
+    def test_skip_emojis(self):
+        s = ANSIString("a👍🏽b").rainbow(skip_emojis=True)
+        assert 0 in s.style_manager
+        assert 1 not in s.style_manager  # 👍
+        assert 2 not in s.style_manager  # 🏽
+        assert 3 in s.style_manager
+
     def test_rainbow_matches_expected_palette(self):
         """Verify a known output for the builtin rainbow on the alphabet."""
         s = ANSIString("abcdefghijklmnopqrstuvwxyz").rainbow(skip_whitespace=True)
@@ -687,6 +738,19 @@ class TestColorMap:
         s = ANSIString("5").colormap_pattern(self._cmap(), fg=False, bg=True, ul=True)
         expected = ansi_wrap("5", "\x1b[48:2::128:128:0m\x1b[4:1m\x1b[58:2::128:128:0m")
         assert str(s) == expected
+
+    @requires_emoji
+    def test_colormap_slices_with_emojis(self):
+        """Verify automatic slice generation respects emojis."""
+        s = ANSIString("1️⃣2️⃣").colormap_slices(self._cmap(), (0, 10))
+
+        assert s.style_manager[0].foreground.to_rgb() == (255, 0, 0)
+        assert s.style_manager[1].foreground.to_rgb() == (255, 0, 0)
+        assert s.style_manager[2].foreground.to_rgb() == (255, 0, 0)
+
+        assert s.style_manager[3].foreground.to_rgb() == (0, 255, 0)
+        assert s.style_manager[4].foreground.to_rgb() == (0, 255, 0)
+        assert s.style_manager[5].foreground.to_rgb() == (0, 255, 0)
 
 
 class TestSegmentedColorMap:
