@@ -31,48 +31,48 @@ def style_ansi(style_enum: Any, *args: int) -> str:
 
 
 @pytest.fixture
-def hello_world():
+def hello_world() -> ANSIString:
     """A plain ANSIString `'Hello, World!'`."""
     return ANSIString("Hello, World!")
 
 
 @pytest.fixture
-def bold_hello_world():
+def bold_hello_world() -> ANSIString:
     """`'Hello, World!'` fully formatted with BOLD."""
     return ANSIString("Hello, World!").style(SGR.BOLD)
 
 
 @pytest.fixture
-def bold_code():
+def bold_code() -> str:
     """ANSI escape sequence for BOLD."""
     return style_ansi(SGR.BOLD)
 
 
 @pytest.fixture
-def italic_code():
+def italic_code() -> str:
     """ANSI escape sequence for ITALIC."""
     return style_ansi(SGR.ITALIC)
 
 
 @pytest.fixture
-def empty_style():
+def empty_style() -> Style:
     """An empty `Style()` instance."""
     return Style()
 
 
 @pytest.fixture
-def bold_style():
+def bold_style() -> Style:
     """`Style(attributes=frozenset({SGR.BOLD}))`."""
     return Style(attributes=frozenset({SGR.BOLD}))
 
 
 @pytest.fixture
-def red_fg_style():
+def red_fg_style() -> Style:
     """Style with 4-bit red foreground."""
     return Style(foreground=Color.from_4bit(Foreground.RED))
 
 
 @pytest.fixture
-def empty_style_manager():
+def empty_style_manager() -> StyleManager:
     """An empty `StyleManager()`."""
     return StyleManager()

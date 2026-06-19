@@ -45,6 +45,7 @@ from ._format import (
     remap_format as _remap_format,
 )
 from ._helpers import (
+    get_grapheme_spans as _get_grapheme_spans,
     hsl_to_rgb as _hsl_to_rgb,
     rsearch_separators as _rsearch_separators,
     search_separators as _search_separators,
@@ -731,17 +732,16 @@ class ANSIString(str):
         self,
         *slices: _Sequence[int] | slice,
         skip_whitespace: bool = False,
+        skip_emojis: bool = False,
         fg: bool = False,
         bg: bool = False,
         ul: bool = False,
     ) -> _Self:
         """Apply a rainbow effect to the string in a specified range."""
+
         if not slices:
-            slices = tuple(
-                (index, index + 1)
-                for index, char in enumerate(self.plain_text)
-                if not (skip_whitespace and char in WHITESPACE)
-            )
+            slices = _get_grapheme_spans(self.plain_text, skip_emojis, skip_whitespace)
+
         if not (fg or bg or ul):
             fg = True
         length = len(slices)
@@ -822,7 +822,7 @@ class ANSIString(str):
         if not _IS_FONTTOOLS_AVAILABLE:
             raise ImportError(
                 "The 'fontTools' package is required to use the 'to_svg' method. "
-                "Please install it using 'pip install fonttools'."
+                "Install it using 'pip install fonttools'."
             )
         font = _load_font(font)
 
@@ -1050,6 +1050,7 @@ class ANSIString(str):
         colors: ColorScale | _Sequence[ColorStop],
         *slices: SliceGroup,
         skip_whitespace: bool = False,
+        skip_emojis: bool = False,
         fg: bool = False,
         bg: bool = False,
         ul: bool = False,
@@ -1068,6 +1069,9 @@ class ANSIString(str):
             same interpolated color.
         skip_whitespace : bool
             When ``True`` and no explicit *slices* are passed, whitespace
+            characters are skipped while building per-character slices.
+        skip_emojis : bool
+            When ``True`` and no explicit *slices* are passed, emoji
             characters are skipped while building per-character slices.
         fg : bool
             Apply colors to the foreground channel.
@@ -1091,11 +1095,7 @@ class ANSIString(str):
             fg = True
 
         if not slices:
-            slices = tuple(
-                (index, index + 1)
-                for index, char in enumerate(self.plain_text)
-                if not (skip_whitespace and char.isspace())
-            )
+            slices = _get_grapheme_spans(self.plain_text, skip_emojis, skip_whitespace)
             if not slices:
                 return self
 
@@ -1131,7 +1131,6 @@ class ANSIString(str):
         colors: ColorScale | _Sequence[ColorStop],
         *words: str,
         case_sensitive: bool = True,
-        skip_whitespace: bool = False,
         fg: bool = False,
         bg: bool = False,
         ul: bool = False,
@@ -1147,8 +1146,6 @@ class ANSIString(str):
             Words to search for and color.
         case_sensitive : bool
             When ``True``, matches are case-sensitive.
-        skip_whitespace : bool
-            When ``True``, matched spans containing only whitespace are ignored.
         fg : bool
             Apply colors to the foreground channel.
         bg : bool
@@ -1164,12 +1161,6 @@ class ANSIString(str):
             This ANSIString instance, modified in place.
         """
         spans = self._search_spans(*words, case_sensitive=case_sensitive)
-        if skip_whitespace:
-            spans = tuple(
-                span
-                for span in spans
-                if not all(self.plain_text[i].isspace() for i in range(*span))
-            )
 
         if not spans:
             return self
@@ -1177,7 +1168,6 @@ class ANSIString(str):
         return self.gradient(
             colors,
             *spans,
-            skip_whitespace=skip_whitespace,
             fg=fg,
             bg=bg,
             ul=ul,
@@ -1406,6 +1396,7 @@ class ANSIString(str):
         values: _Sequence[int | float],
         *slices: SliceGroup,
         skip_whitespace: bool = False,
+        skip_emojis: bool = False,
         fg: bool = False,
         bg: bool = False,
         ul: bool = False,
@@ -1423,7 +1414,11 @@ class ANSIString(str):
             ``(start, stop[, step])`` or a tuple of slice specs to receive the
             same interpolated color.
         skip_whitespace : bool
-            When ``True``, matched spans containing only whitespace are ignored.
+            When ``True`` and no explicit *slices* are passed, whitespace
+            characters are skipped while building per-character slices.
+        skip_emojis : bool
+            When ``True`` and no explicit *slices* are passed, emoji
+            characters are skipped while building per-character slices.
         fg : bool
             Apply colors to the foreground channel.
         bg : bool
@@ -1437,11 +1432,7 @@ class ANSIString(str):
             This ANSIString instance, modified in place.
         """
         if not slices:
-            slices = tuple(
-                (index, index + 1)
-                for index, char in enumerate(self.plain_text)
-                if not (skip_whitespace and char in WHITESPACE)
-            )
+            slices = _get_grapheme_spans(self.plain_text, skip_emojis, skip_whitespace)
 
         if not (fg or bg or ul):
             fg = True
