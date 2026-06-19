@@ -1,10 +1,13 @@
 """Tests for pyansistring.helpers utility functions."""
 
+from unittest.mock import patch
+
 import pytest
 
 from pyansistring._helpers import (
     clamp,
     find_spans,
+    get_grapheme_spans,
     hsl_to_rgb,
     rsearch_separators,
     search_separators,
@@ -134,3 +137,100 @@ class TestHslToRgb:
         assert all(isinstance(value, int) for value in (r, g, b)), (
             "hsl_to_rgb must return ints"
         )
+
+
+class TestGetGraphemeSpans:
+    def test_standard_text(self):
+        """Standard 1-to-1 character iteration."""
+        text = "abc"
+        spans = get_grapheme_spans(text, skip_emojis=False, skip_whitespace=False)
+        assert spans == ((0, 1), (1, 2), (2, 3))
+
+    def test_simple_emoji(self):
+        """Simple emojis count as exactly 1 Python string index."""
+        text = "a😀b"
+        spans = get_grapheme_spans(text, skip_emojis=False, skip_whitespace=False)
+        assert spans == ((0, 1), (1, 2), (2, 3))
+
+    def test_zwj_sequence(self):
+        """ZWJ sequences (like female astronaut) are 3 code points glued together."""
+        text = "👩‍🚀!"
+        # 👩(1) + ZWJ(1) + 🚀(1) = length 3 -> span(0, 3)
+        spans = get_grapheme_spans(text, skip_emojis=False, skip_whitespace=False)
+        assert spans == ((0, 3), (3, 4))
+
+    def test_modifier_sequence(self):
+        """Skin tone modifiers are 2 code points glued together."""
+        text = "👍🏽"
+        # 👍(1) + 🏽(1) = length 2 -> span(0, 2)
+        spans = get_grapheme_spans(text, skip_emojis=False, skip_whitespace=False)
+        assert spans == ((0, 2),)
+
+    def test_variation_selector(self):
+        """
+        Standard text characters forced into emoji rendering via Variation Selector-16.
+        """
+        text = "☁️"
+        # ☁ (U+2601) + VS16 (U+FE0F) = length 2
+        spans = get_grapheme_spans(text, skip_emojis=False, skip_whitespace=False)
+        assert spans == ((0, 2),)
+
+    def test_regional_indicator_flag(self):
+        """Flags are made of two Regional Indicator characters."""
+        text = "🇩🇪"
+        # 🇩(1) + 🇪(1) = length 2
+        spans = get_grapheme_spans(text, skip_emojis=False, skip_whitespace=False)
+        assert spans == ((0, 2),)
+
+    def test_multiple_simple_emojis(self):
+        """Consecutive emojis without joiners should be split."""
+        text = "😀😁"
+        spans = get_grapheme_spans(text, skip_emojis=False, skip_whitespace=False)
+        assert spans == ((0, 1), (1, 2))
+
+    def test_consecutive_complex_emojis(self):
+        """Mixed complex emojis and text should maintain perfect index tracking."""
+        text = "a👩‍🚀👍🏽b"
+        spans = get_grapheme_spans(text, skip_emojis=False, skip_whitespace=False)
+        assert spans == ((0, 1), (1, 4), (4, 6), (6, 7))
+
+    def test_empty(self):
+        """An empty string should return an empty tuple."""
+        spans = get_grapheme_spans("", skip_emojis=False, skip_whitespace=False)
+        assert spans == ()
+
+    def test_skip_whitespace(self):
+        """Verify spaces, tabs, and newlines are skipped correctly."""
+        text = "a \t\n b"
+        spans = get_grapheme_spans(text, skip_emojis=False, skip_whitespace=True)
+        assert spans == ((0, 1), (5, 6))
+
+    def test_skip_emojis(self):
+        """Verify all types of emojis are skipped."""
+        text = "a👩‍🚀b👍🏽c"
+        spans = get_grapheme_spans(text, skip_emojis=True, skip_whitespace=False)
+        assert spans == ((0, 1), (4, 5), (7, 8))
+
+    def test_skip_emojis_and_whitespace(self):
+        """Verify dual filtering works concurrently."""
+        text = "a 👩‍🚀 b"
+        spans = get_grapheme_spans(text, skip_emojis=True, skip_whitespace=True)
+        assert spans == ((0, 1), (6, 7))
+
+    @patch("pyansistring._helpers._IS_EMOJI_AVAILABLE", False)
+    def test_fallback_no_emoji_package(self):
+        """
+        If emoji package is missing and skip_emojis is False, fallback to enumerate.
+        """
+        text = "a b"
+        spans = get_grapheme_spans(text, skip_emojis=False, skip_whitespace=True)
+        assert spans == ((0, 1), (2, 3))
+
+    @patch("pyansistring._helpers._IS_EMOJI_AVAILABLE", False)
+    def test_raise_on_skip_emojis_without_package(self):
+        """
+        If user wants to skip emojis but the package is missing, raise ImportError.
+        """
+        text = "abc"
+        with pytest.raises(ImportError, match="The 'emoji' package is required"):
+            get_grapheme_spans(text, skip_emojis=True, skip_whitespace=False)
