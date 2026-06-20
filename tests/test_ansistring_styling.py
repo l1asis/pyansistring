@@ -699,7 +699,7 @@ class TestColorMap:
         assert str(s) == expected
 
     def test_slices_colored(self):
-        s = ANSIString("Ready | Go! | Steady? | Go! | Oh, wait...").colormap_slices(
+        s = ANSIString("Ready | Go! | Steady? | Go! | Oh, wait...").colormap(
             self._cmap(),
             (0, 10, 5, 10, -999),
             (0, 5),
@@ -742,7 +742,7 @@ class TestColorMap:
     @requires_emoji
     def test_colormap_slices_with_emojis(self):
         """Verify automatic slice generation respects emojis."""
-        s = ANSIString("1️⃣2️⃣").colormap_slices(self._cmap(), (0, 10))
+        s = ANSIString("1️⃣2️⃣").colormap(self._cmap(), (0, 10))
 
         assert s.style_manager[0].foreground.to_rgb() == (255, 0, 0)
         assert s.style_manager[1].foreground.to_rgb() == (255, 0, 0)
@@ -798,7 +798,7 @@ class TestSegmentedColorMap:
 
     def test_segmented_slices_colored(self):
         """Verify colormap_slices integration with SegmentedColorMap."""
-        s = ANSIString("OK | WARN | CRIT").colormap_slices(
+        s = ANSIString("OK | WARN | CRIT").colormap(
             self._cmap(), (0, 45, 85), (0, 2), (5, 9), (12, 16)
         )
         expected = (

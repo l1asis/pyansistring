@@ -1390,7 +1390,7 @@ class ANSIString(str):
 
         return self
 
-    def colormap_slices(
+    def colormap(
         self,
         cmap: ColorMap | SegmentedColorMap,
         values: _Sequence[int | float],
