@@ -575,6 +575,26 @@ class TestGradient:
         )
         assert not s.style_manager
 
+    @requires_emoji
+    def test_coordinates_emojis_colored_as_single_block(self):
+        """Verify gradient_coordinates does not slice emojis in half."""
+        s = ANSIString("a👩‍🚀b").gradient_coordinates(
+            [(255, 0, 0), (0, 0, 255)], (1, 0), space="rgb"
+        )
+
+        msg = "'a' (index 0) was not targeted, should be unstyled"
+        assert 0 not in s.style_manager, msg
+
+        msg = "The engine must expand coordinate x=1 to the full grapheme span (1, 4)"
+        assert 1 in s.style_manager, msg
+        assert 2 in s.style_manager, msg
+        assert 3 in s.style_manager, msg
+
+        msg = "The whole emoji must share the exact same color to not break the ZWJ"
+        color = s.style_manager[1].foreground.to_rgb()
+        assert s.style_manager[2].foreground.to_rgb() == color, msg
+        assert s.style_manager[3].foreground.to_rgb() == color, msg
+
 
 class TestRainbow:
     def test_fg_rainbow_styles_all_chars(self):
