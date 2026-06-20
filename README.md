@@ -39,8 +39,7 @@ pip install pyansistring
 Install extras when needed:
 
 ```bash
-pip install pyansistring[img]            # For SVG export (installs fontTools)
-pip install pyansistring[emoji]          # For skipping emoji styling (installs emoji)
+pip install pyansistring[svg]            # For SVG export
 pip install pyansistring[all]            # Install all optional dependencies
 ```
 

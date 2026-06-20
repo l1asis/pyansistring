@@ -1,7 +1,5 @@
 """Tests for pyansistring.helpers utility functions."""
 
-from unittest.mock import patch
-
 import pytest
 
 from pyansistring._helpers import (
@@ -216,21 +214,3 @@ class TestGetGraphemeSpans:
         text = "a 👩‍🚀 b"
         spans = get_grapheme_spans(text, skip_emojis=True, skip_whitespace=True)
         assert spans == ((0, 1), (6, 7))
-
-    @patch("pyansistring._helpers._IS_EMOJI_AVAILABLE", False)
-    def test_fallback_no_emoji_package(self):
-        """
-        If emoji package is missing and skip_emojis is False, fallback to enumerate.
-        """
-        text = "a b"
-        spans = get_grapheme_spans(text, skip_emojis=False, skip_whitespace=True)
-        assert spans == ((0, 1), (2, 3))
-
-    @patch("pyansistring._helpers._IS_EMOJI_AVAILABLE", False)
-    def test_raise_on_skip_emojis_without_package(self):
-        """
-        If user wants to skip emojis but the package is missing, raise ImportError.
-        """
-        text = "abc"
-        with pytest.raises(ImportError, match="The 'emoji' package is required"):
-            get_grapheme_spans(text, skip_emojis=True, skip_whitespace=False)

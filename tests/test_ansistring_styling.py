@@ -1,7 +1,6 @@
 """Tests for ANSIString styling methods (style, unstyle, fg_*, bg_*, ul_*, rainbow)."""
 
-import importlib.util
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 import pytest
 
@@ -10,18 +9,6 @@ from pyansistring.color import ColorMap, ColorScale, SegmentedColorMap
 from pyansistring.constants import SGR, Background, Foreground, Underline, UnderlineMode
 from pyansistring.style import Style
 from tests.conftest import RESET, ansi_wrap, style_ansi
-
-if not TYPE_CHECKING:
-    if importlib.util.find_spec("emoji") is not None:
-        HAS_EMOJI = True
-    else:
-        HAS_EMOJI = False
-else:
-    HAS_EMOJI = True
-
-requires_emoji = pytest.mark.skipif(
-    not HAS_EMOJI, reason="Requires optional 'emoji' package"
-)
 
 
 class TestStyle:
@@ -364,7 +351,6 @@ class TestGradient:
         assert s.style_manager[2].foreground.to_rgb() == (255, 0, 0)
         assert s.style_manager[1].foreground.to_rgb() == (0, 0, 255)
 
-    @requires_emoji
     def test_emojis_colored_as_single_block(self):
         """
         Verify emojis are treated as a single styling block to protect ZWJ sequences.
@@ -377,7 +363,6 @@ class TestGradient:
         assert s.style_manager[3].foreground.to_rgb() == (128, 0, 128)
         assert s.style_manager[4].foreground.to_rgb() == (0, 0, 255)
 
-    @requires_emoji
     def test_skip_emojis_flag(self):
         """Verify skip_emojis=True drops the emoji indices entirely."""
         s = ANSIString("a👩‍🚀b").gradient(
@@ -575,7 +560,6 @@ class TestGradient:
         )
         assert not s.style_manager
 
-    @requires_emoji
     def test_coordinates_emojis_colored_as_single_block(self):
         """Verify gradient_coordinates does not slice emojis in half."""
         s = ANSIString("a👩‍🚀b").gradient_coordinates(
@@ -616,7 +600,6 @@ class TestRainbow:
             f"Index {ws_index} (whitespace) should be skipped"
         )
 
-    @requires_emoji
     def test_skip_emojis(self):
         s = ANSIString("a👍🏽b").rainbow(skip_emojis=True)
         assert 0 in s.style_manager
@@ -759,7 +742,6 @@ class TestColorMap:
         expected = ansi_wrap("5", "\x1b[48:2::128:128:0m\x1b[4:1m\x1b[58:2::128:128:0m")
         assert str(s) == expected
 
-    @requires_emoji
     def test_colormap_slices_with_emojis(self):
         """Verify automatic slice generation respects emojis."""
         s = ANSIString("1️⃣2️⃣").colormap(self._cmap(), (0, 10))

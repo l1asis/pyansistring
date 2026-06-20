@@ -8,21 +8,10 @@ __all__ = [
 
 from collections.abc import Generator as _Generator
 from colorsys import hls_to_rgb as _hls_to_rgb
-from typing import TYPE_CHECKING
+
+from emoji import analyze as _emoji_analyze
 
 from pyansistring.constants import WHITESPACE
-
-if not TYPE_CHECKING:
-    try:
-        from emoji import analyze as _emoji_analyze
-
-        _IS_EMOJI_AVAILABLE = True
-    except ImportError:
-        _IS_EMOJI_AVAILABLE = False
-else:
-    from emoji import analyze as _emoji_analyze
-
-    _IS_EMOJI_AVAILABLE = True
 
 
 def find_spans(string: str, substring: str) -> _Generator[tuple[int, int], None, None]:
@@ -82,37 +71,23 @@ def get_grapheme_spans(
     text: str, skip_emojis: bool, skip_whitespace: bool
 ) -> tuple[tuple[int, int], ...]:
     """Build slices that respect Unicode grapheme clusters (emojis)."""
+    spans: list[tuple[int, int]] = []
+    current_idx = 0
 
-    if skip_emojis and not _IS_EMOJI_AVAILABLE:
-        raise ImportError(
-            "The 'emoji' package is required to use 'skip_emojis=True'. "
-            "Install it using 'pip install emoji'."
-        )
+    for token in _emoji_analyze(text, non_emoji=True):
+        chars = token.chars
+        token_len = len(chars)
 
-    if _IS_EMOJI_AVAILABLE:
-        spans: list[tuple[int, int]] = []
-        current_idx = 0
+        start = current_idx
+        end = current_idx + token_len
 
-        for token in _emoji_analyze(text, non_emoji=True):
-            chars = token.chars
-            token_len = len(chars)
+        current_idx = end
 
-            start = current_idx
-            end = current_idx + token_len
+        if skip_emojis and not isinstance(token.value, str):
+            continue
+        if skip_whitespace and chars.isspace():
+            continue
 
-            current_idx = end
+        spans.append((start, end))
 
-            if skip_emojis and not isinstance(token.value, str):
-                continue
-            if skip_whitespace and chars.isspace():
-                continue
-
-            spans.append((start, end))
-
-        return tuple(spans)
-
-    return tuple(
-        (index, index + 1)
-        for index, char in enumerate(text)
-        if not (skip_whitespace and char.isspace())
-    )
+    return tuple(spans)
