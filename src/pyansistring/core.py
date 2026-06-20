@@ -1227,90 +1227,68 @@ class ANSIString(str):
             available text bounds.
         """
         line_starts = self._get_line_starts()
-
         height = len(line_starts)
-
         slices: list[SliceGroup] = []
+
+        index_to_span = {
+            i: span
+            for span in _get_grapheme_spans(
+                self.plain_text, skip_emojis=False, skip_whitespace=False
+            )
+            if span[1] - span[0] > 1
+            for i in range(*span)
+        }
+
+        def _resolve_coord(cx: int, cy: int) -> tuple[int, int] | None:
+            cx = cx - index_base + origin[0]
+
+            if system == "terminal":
+                cy = cy - index_base + origin[1]
+            elif system == "cartesian":
+                cy = height - (cy - index_base + origin[1]) - 1
+
+            if not (0 <= cy < height):
+                if on_out_of_bounds == "raise":
+                    raise IndexError(
+                        f"Y coordinate {cy} is out of bounds for height {height}"
+                    )
+                elif on_out_of_bounds == "clamp":
+                    cy = max(0, min(cy, height - 1))
+                else:
+                    return None
+
+            line_start = line_starts[cy]
+            line_end = line_starts[cy + 1] - 1 if cy + 1 < height else len(self)
+            line_length = line_end - line_start
+
+            if 0 <= cx < line_length:
+                index = line_start + cx
+                return index_to_span.get(index, (index, index + 1))
+            else:
+                if on_out_of_bounds == "raise":
+                    raise IndexError(
+                        f"X coordinate {cx} is out of bounds "
+                        f"for line {cy} with length {line_length}"
+                    )
+                elif on_out_of_bounds == "clamp":
+                    if line_length == 0:
+                        return None
+                    clamped_x = max(0, min(cx, line_length - 1))
+                    index = line_start + clamped_x
+                    return index_to_span.get(index, (index, index + 1))
+            return None
 
         for item in coordinates:
             if len(item) == 2 and isinstance(item[0], int):
-                # Assume it's a single coordinate (x, y)
-                x, y = _cast(Coordinate, item)
-                x = x - index_base + origin[0]
-                if system == "terminal":
-                    y = y - index_base + origin[1]
-                elif system == "cartesian":
-                    y = height - (y - index_base + origin[1]) - 1
-
-                if not (0 <= y < height):
-                    if on_out_of_bounds == "raise":
-                        raise IndexError(
-                            f"Y coordinate {y} is out of bounds for height {height}"
-                        )
-                    elif on_out_of_bounds == "clamp":
-                        y = max(0, min(y, height - 1))
-                    else:
-                        continue
-
-                line_start = line_starts[y]
-                line_end = line_starts[y + 1] - 1 if y + 1 < height else len(self)
-                line_length = line_end - line_start
-
-                if 0 <= x < line_length:
-                    index = line_start + x
-                    slices.append((index, index + 1))
-                else:
-                    if on_out_of_bounds == "raise":
-                        raise IndexError(
-                            f"X coordinate {x} is out of bounds "
-                            f"for line {y} with length {line_length}"
-                        )
-                    elif on_out_of_bounds == "clamp":
-                        if line_length == 0:
-                            continue
-                        clamped_x = max(0, min(x, line_length - 1))
-                        index = line_start + clamped_x
-                        slices.append((index, index + 1))
+                span = _resolve_coord(*_cast(Coordinate, item))
+                if span:
+                    slices.append(span)
             else:
-                # Assume it's a group of coordinates to be applied with the same color
-                group: list[Coordinate] = []
+                group: list[SliceSpec] = []
                 for sub_item in _cast(tuple[Coordinate, ...], item):
-                    x, y = sub_item
-                    x = x - index_base + origin[0]
-                    if system == "terminal":
-                        y = y - index_base + origin[1]
-                    elif system == "cartesian":
-                        y = height - (y - index_base + origin[1]) - 1
-
-                    if not (0 <= y < height):
-                        if on_out_of_bounds == "raise":
-                            raise IndexError(
-                                f"Y coordinate {y} is out of bounds for height {height}"
-                            )
-                        elif on_out_of_bounds == "clamp":
-                            y = max(0, min(y, height - 1))
-                        else:
-                            continue
-
-                    line_start = line_starts[y]
-                    line_end = line_starts[y + 1] - 1 if y + 1 < height else len(self)
-                    line_length = line_end - line_start
-
-                    if 0 <= x < line_length:
-                        index = line_start + x
-                        group.append((index, index + 1))
-                    else:
-                        if on_out_of_bounds == "raise":
-                            raise IndexError(
-                                f"X coordinate {x} is out of bounds "
-                                f"for line {y} with length {line_length}"
-                            )
-                        elif on_out_of_bounds == "clamp":
-                            if line_length == 0:
-                                continue
-                            clamped_x = max(0, min(x, line_length - 1))
-                            index = line_start + clamped_x
-                            group.append((index, index + 1))
+                    span = _resolve_coord(*sub_item)
+                    if span:
+                        group.append(span)
 
                 if len(group) == 1:
                     slices.append(group[0])
