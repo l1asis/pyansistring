@@ -16,6 +16,7 @@ except PackageNotFoundError:
     __version__ = "unknown"
 
 from .color import Color
+from .config import Config, config
 from .constants import (
     COLOR_THEMES,
     COLORS_8BIT,
@@ -26,18 +27,23 @@ from .constants import (
     UNIVERSAL_NEWLINES,
     WHITESPACE,
     Background,
+    Channel,
     ColorDepth,
     Foreground,
+    NamedColors,
     Regex,
     Underline,
     UnderlineMode,
 )
 from .core import ANSIString, Coordinate, CoordinateGroup, SliceGroup, SliceSpec
 from .style import Style, StyleManager
+from .targets import Chars, Coords, Pattern, Words
 
 __all__ = [
+    "__version__",
     "ANSIString",
     "Color",
+    "Channel",
     "Style",
     "StyleManager",
     "ColorDepth",
@@ -46,6 +52,7 @@ __all__ = [
     "Underline",
     "UnderlineMode",
     "SGR",
+    "NamedColors",
     "COLORS_8BIT",
     "COLOR_THEMES",
     "DEFAULT_THEME",
@@ -58,4 +65,10 @@ __all__ = [
     "SliceGroup",
     "Coordinate",
     "CoordinateGroup",
+    "Chars",
+    "Coords",
+    "Pattern",
+    "Words",
+    "Config",
+    "config",
 ]
