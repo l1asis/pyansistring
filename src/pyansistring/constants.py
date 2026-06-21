@@ -3,12 +3,14 @@ __all__ = [
     "UNIVERSAL_NEWLINES",
     "PUNCTUATION",
     "PUNCTUATION_AND_WHITESPACE",
+    "Channel",
     "ColorDepth",
     "Foreground",
     "Background",
     "Underline",
     "UnderlineMode",
     "SGR",
+    "Palette8Bit",
     "COLORS_8BIT",
     "VGA_COLORS",
     "WINDOWS_XP_CONSOLE_COLORS",
@@ -30,7 +32,13 @@ __all__ = [
 
 import os as _os
 import sys as _sys
-from enum import Enum as _Enum, EnumMeta as _EnumMeta, IntEnum as _IntEnum
+from enum import (
+    Enum as _Enum,
+    EnumMeta as _EnumMeta,
+    Flag as _Flag,
+    IntEnum as _IntEnum,
+    auto as _auto,
+)
 from re import compile as _re_compile
 from typing import Literal as _Literal
 
@@ -81,6 +89,15 @@ class MetaEnum(_EnumMeta):
         return True
 
 
+class Channel(_Flag):
+    """Specifies which color channels should be styled."""
+
+    FG = _auto()
+    BG = _auto()
+    UL = _auto()
+    ALL = FG | BG | UL
+
+
 class ColorDepth(_IntEnum, metaclass=MetaEnum):
     PALETTE = 5  # 8-bit
     TRUE_COLOR = 2  # 24-bit
@@ -127,6 +144,267 @@ class Background(_IntEnum, metaclass=MetaEnum):
     BRIGHT_MAGENTA = 105
     BRIGHT_CYAN = 106
     BRIGHT_WHITE = 107
+
+
+class Palette8Bit(_IntEnum, metaclass=MetaEnum):
+    BLACK = 0
+    RED = 1
+    GREEN = 2
+    YELLOW = 3
+    BLUE = 4
+    MAGENTA = 5
+    CYAN = 6
+    WHITE_LIGHT_GRAY = 7
+    BRIGHT_BLACK_GRAY = 8
+    BRIGHT_RED = 9
+    BRIGHT_GREEN = 10
+    BRIGHT_YELLOW = 11
+    BRIGHT_BLUE = 12
+    BRIGHT_MAGENTA = 13
+    BRIGHT_CYAN = 14
+    BRIGHT_WHITE = 15
+    BLACK_CUBE = 16
+    VERY_DARK_BLUE = 17
+    DARK_BLUE = 18
+    MEDIUM_BLUE = 19
+    BRIGHT_BLUE_2 = 20
+    VIVID_BLUE = 21
+    VERY_DARK_GREEN = 22
+    VERY_DARK_CYAN_TEAL = 23
+    DARK_CYAN_TEAL = 24
+    CYAN_BLUE = 25
+    BRIGHT_CYAN_BLUE = 26
+    VIVID_CYAN_BLUE = 27
+    DARK_GREEN = 28
+    DARK_SEA_GREEN = 29
+    DARK_CYAN = 30
+    MEDIUM_CYAN = 31
+    BRIGHT_CYAN_2 = 32
+    VIVID_CYAN = 33
+    MEDIUM_GREEN = 34
+    MEDIUM_SEA_GREEN = 35
+    SEA_GREEN = 36
+    MEDIUM_AQUAMARINE = 37
+    BRIGHT_AQUAMARINE = 38
+    VIVID_AQUAMARINE = 39
+    BRIGHT_GREEN_2 = 40
+    BRIGHT_SEA_GREEN = 41
+    SPRING_GREEN = 42
+    MEDIUM_TURQUOISE = 43
+    BRIGHT_TURQUOISE = 44
+    VIVID_TURQUOISE = 45
+    VIVID_GREEN = 46
+    VIVID_SPRING_GREEN = 47
+    LIGHT_SPRING_GREEN = 48
+    MEDIUM_SPRING_GREEN = 49
+    LIGHT_TURQUOISE = 50
+    VIVID_CYAN_2 = 51
+    VERY_DARK_RED = 52
+    VERY_DARK_MAGENTA = 53
+    DARK_MAGENTA = 54
+    MEDIUM_PURPLE = 55
+    BRIGHT_PURPLE = 56
+    VIVID_PURPLE = 57
+    VERY_DARK_OLIVE = 58
+    VERY_DARK_GRAY = 59
+    VERY_DARK_SLATE_BLUE = 60
+    DARK_SLATE_BLUE = 61
+    SLATE_BLUE = 62
+    BRIGHT_SLATE_BLUE = 63
+    DARK_OLIVE_GREEN = 64
+    DARK_DESATURATED_GREEN = 65
+    DARK_DESATURATED_CYAN = 66
+    STEEL_BLUE_DARK = 67
+    STEEL_BLUE = 68
+    LIGHT_STEEL_BLUE = 69
+    OLIVE_GREEN = 70
+    MEDIUM_DESATURATED_GREEN = 71
+    MEDIUM_SEA_GREEN_2 = 72
+    CADET_BLUE = 73
+    SKY_BLUE_MUTED = 74
+    LIGHT_SKY_BLUE = 75
+    YELLOW_GREEN_OLIVE = 76
+    PALE_GREEN = 77
+    SEA_GREEN_LIGHT = 78
+    AQUAMARINE = 79
+    LIGHT_AQUAMARINE = 80
+    PALE_TURQUOISE = 81
+    CHARTREUSE = 82
+    LIGHT_GREEN = 83
+    MINT_GREEN = 84
+    AQUAMARINE_LIGHT = 85
+    TURQUOISE_LIGHT = 86
+    LIGHT_CYAN = 87
+    DARK_RED = 88
+    DARK_MAGENTA_RED_VIOLET = 89
+    MAGENTA_DARK = 90
+    PURPLE_DARK = 91
+    PURPLE_BRIGHT = 92
+    VIVID_VIOLET = 93
+    DARK_ORANGE_BROWN = 94
+    MUTED_RED_ROSE = 95
+    MUTED_MAGENTA = 96
+    MUTED_PURPLE = 97
+    LIGHT_PURPLE = 98
+    LAVENDER_VIVID = 99
+    DARK_YELLOW_OLIVE = 100
+    OLIVE_DRAB_DARK = 101
+    GRAY = 102
+    GRAYISH_SLATE_BLUE = 103
+    LIGHT_SLATE_BLUE = 104
+    PERIWINKLE = 105
+    OLIVE_GREEN_BRIGHTER = 106
+    SAGE_GREEN = 107
+    DESATURATED_GREEN = 108
+    DESATURATED_CYAN = 109
+    LIGHT_STEEL_BLUE_2 = 110
+    LIGHT_SKY_BLUE_BRIGHT = 111
+    YELLOW_GREEN = 112
+    LIGHT_YELLOW_GREEN = 113
+    PALE_GREEN_LIGHT = 114
+    AQUAMARINE_PALE = 115
+    PALE_CYAN = 116
+    POWDER_BLUE = 117
+    LIME_GREEN = 118
+    LIGHT_LIME_GREEN = 119
+    LIGHT_GREEN_PASTEL = 120
+    MINT_LIGHT = 121
+    LIGHT_TURQUOISE_PASTEL = 122
+    VERY_LIGHT_CYAN = 123
+    MEDIUM_RED = 124
+    CRIMSON_DARK = 125
+    MEDIUM_MAGENTA = 126
+    PURPLE = 127
+    VIVID_PURPLE_2 = 128
+    ELECTRIC_PURPLE = 129
+    BROWN_ORANGE_BROWN = 130
+    ROSY_BROWN = 131
+    ROSE = 132
+    ORCHID_MUTED = 133
+    MEDIUM_ORCHID = 134
+    LIGHT_ORCHID = 135
+    OLIVE_BROWNISH = 136
+    TAN = 137
+    ROSY_TAN = 138
+    THISTLE = 139
+    LIGHT_PURPLE_PASTEL = 140
+    LAVENDER_LIGHT = 141
+    YELLOW_MUTED = 142
+    KHAKI = 143
+    DARK_KHAKI = 144
+    LIGHT_GRAY = 145
+    LIGHT_PERIWINKLE = 146
+    VERY_LIGHT_PERIWINKLE = 147
+    YELLOW_GREEN_BRIGHT = 148
+    LIGHT_YELLOW_GREEN_2 = 149
+    PALE_YELLOW_GREEN = 150
+    PALE_GREEN_2 = 151
+    PALE_CYAN_MUTED = 152
+    VERY_LIGHT_SKY_BLUE = 153
+    CHARTREUSE_BRIGHT = 154
+    LIGHT_CHARTREUSE = 155
+    LIGHT_LIME = 156
+    MINT_PALE = 157
+    MINT_CREAM_TINTED = 158
+    VERY_LIGHT_CYAN_PALE = 159
+    BRIGHT_RED_2 = 160
+    BRIGHT_CRIMSON = 161
+    BRIGHT_MAGENTA_2 = 162
+    BRIGHT_PURPLE_MAGENTA = 163
+    MAGENTA_VIVID = 164
+    ELECTRIC_MAGENTA = 165
+    ORANGE = 166
+    LIGHT_CORAL = 167
+    LIGHT_CRIMSON = 168
+    ORCHID_LIGHT = 169
+    PLUM = 170
+    LIGHT_PLUM = 171
+    GOLDENROD_DARK = 172
+    SANDY_BROWN = 173
+    ROSY_BROWN_LIGHT = 174
+    THISTLE_LIGHT = 175
+    VIOLET_LIGHT = 176
+    LAVENDER_BRIGHT = 177
+    GOLDENROD = 178
+    TAN_LIGHT = 179
+    PEACH = 180
+    LIGHT_ROSY_BROWN = 181
+    MAUVE = 182
+    LAVENDER_BLUSH_TINTED = 183
+    YELLOW_2 = 184
+    LIGHT_KHAKI = 185
+    PALE_KHAKI = 186
+    VERY_LIGHT_KHAKI = 187
+    VERY_LIGHT_GRAY = 188
+    VERY_LIGHT_PERIWINKLE_COOL = 189
+    LIME_YELLOW = 190
+    LIGHT_LIME_YELLOW = 191
+    LIGHT_YELLOW_GREEN_PASTEL = 192
+    PALE_LIME = 193
+    MINT_CREAM = 194
+    VERY_PALE_CYAN = 195
+    VIVID_RED = 196
+    VIVID_CRIMSON = 197
+    VIVID_MAGENTA = 198
+    HOT_PINK_DEEP = 199
+    HOT_MAGENTA = 200
+    VIVID_MAGENTA_FUCHSIA = 201
+    VIVID_ORANGE = 202
+    LIGHT_SALMON = 203
+    LIGHT_CORAL_BRIGHT = 204
+    PINK_BRIGHT = 205
+    HOT_PINK = 206
+    PINK_VIVID = 207
+    ORANGE_BRIGHT = 208
+    LIGHT_ORANGE = 209
+    LIGHT_SALMON_SOFT = 210
+    LIGHT_PINK = 211
+    ORCHID_LIGHT_2 = 212
+    PINK_LIGHT_VIVID = 213
+    ORANGE_SOFT = 214
+    PEACH_BRIGHT = 215
+    PEACH_2 = 216
+    LIGHT_PINK_PALE = 217
+    PINK_PALE = 218
+    LIGHT_PINK_VERY_PALE = 219
+    GOLD = 220
+    LIGHT_GOLD = 221
+    LIGHT_GOLDENROD = 222
+    VERY_LIGHT_GOLDENROD = 223
+    VERY_LIGHT_PINK = 224
+    VERY_LIGHT_PINK_COOL = 225
+    YELLOW_VIVID = 226
+    LIGHT_YELLOW_VIVID = 227
+    LIGHT_YELLOW = 228
+    VERY_LIGHT_YELLOW = 229
+    IVORY_WARM = 230
+    WHITE = 231
+
+    # Grayscale ramp
+    GREY3 = 232  # (8, 8, 8)
+    GREY7 = 233  # (18, 18, 18)
+    GREY11 = 234  # (28, 28, 28)
+    GREY15 = 235  # (38, 38, 38)
+    GREY19 = 236  # (48, 48, 48)
+    GREY23 = 237  # (58, 58, 58)
+    GREY27 = 238  # (68, 68, 68)
+    GREY30 = 239  # (78, 78, 78)
+    GREY35 = 240  # (88, 88, 88)
+    GREY39 = 241  # (98, 98, 98)
+    GREY42 = 242  # (108, 108, 108)
+    GREY46 = 243  # (118, 118, 118)
+    GREY50 = 244  # (128, 128, 128)
+    GREY54 = 245  # (138, 138, 138)
+    GREY58 = 246  # (148, 148, 148)
+    GREY62 = 247  # (158, 158, 158)
+    GREY66 = 248  # (168, 168, 168)
+    GREY70 = 249  # (178, 178, 178)
+    GREY74 = 250  # (188, 188, 188)
+    GREY78 = 251  # (198, 198, 198)
+    GREY82 = 252  # (208, 208, 208)
+    GREY85 = 253  # (218, 218, 218)
+    GREY89 = 254  # (228, 228, 228)
+    GREY93 = 255  # (238, 238, 238)
 
 
 class Underline(_IntEnum, metaclass=MetaEnum):
@@ -1714,265 +1992,263 @@ class NamedColors(_Enum, metaclass=MetaEnum):
 
 
 # 8-bit to RGB mapping
-COLORS_8BIT = {
-    0: (0, 0, 0),  # Black
-    1: (205, 0, 0),  # Red
-    2: (0, 205, 0),  # Green
-    3: (205, 205, 0),  # Yellow
-    4: (0, 0, 238),  # Blue
-    5: (205, 0, 205),  # Magenta
-    6: (0, 205, 205),  # Cyan
-    7: (229, 229, 229),  # White (light gray)
-    8: (127, 127, 127),  # Bright Black (Gray)
-    9: (255, 0, 0),  # Bright Red
-    10: (0, 255, 0),  # Bright Green
-    11: (255, 255, 0),  # Bright Yellow
-    12: (92, 92, 255),  # Bright Blue
-    13: (255, 0, 255),  # Bright Magenta
-    14: (0, 255, 255),  # Bright Cyan
-    15: (255, 255, 255),  # Bright White
-    # 6x6x6 color cube (r,g,b ∈ {0,95,135,175,215,255})
-    16: (0, 0, 0),  # Black (cube)
-    17: (0, 0, 95),  # Very dark blue
-    18: (0, 0, 135),  # Dark blue
-    19: (0, 0, 175),  # Medium blue
-    20: (0, 0, 215),  # Bright blue
-    21: (0, 0, 255),  # Vivid blue
-    22: (0, 95, 0),  # Very dark green
-    23: (0, 95, 95),  # Very dark cyan (teal)
-    24: (0, 95, 135),  # Dark cyan (teal)
-    25: (0, 95, 175),  # Cyan-blue
-    26: (0, 95, 215),  # Bright cyan-blue
-    27: (0, 95, 255),  # Vivid cyan-blue
-    28: (0, 135, 0),  # Dark green
-    29: (0, 135, 95),  # Dark sea green
-    30: (0, 135, 135),  # Dark cyan
-    31: (0, 135, 175),  # Medium cyan
-    32: (0, 135, 215),  # Bright cyan
-    33: (0, 135, 255),  # Vivid cyan
-    34: (0, 175, 0),  # Medium green
-    35: (0, 175, 95),  # Medium sea green
-    36: (0, 175, 135),  # Sea green
-    37: (0, 175, 175),  # Medium aquamarine
-    38: (0, 175, 215),  # Bright aquamarine
-    39: (0, 175, 255),  # Vivid aquamarine
-    40: (0, 215, 0),  # Bright green
-    41: (0, 215, 95),  # Bright sea green
-    42: (0, 215, 135),  # Spring green
-    43: (0, 215, 175),  # Medium turquoise
-    44: (0, 215, 215),  # Bright turquoise
-    45: (0, 215, 255),  # Vivid turquoise
-    46: (0, 255, 0),  # Vivid green
-    47: (0, 255, 95),  # Vivid spring green
-    48: (0, 255, 135),  # Light spring green
-    49: (0, 255, 175),  # Medium spring green
-    50: (0, 255, 215),  # Light turquoise
-    51: (0, 255, 255),  # Vivid cyan
-    52: (95, 0, 0),  # Very dark red
-    53: (95, 0, 95),  # Very dark magenta
-    54: (95, 0, 135),  # Dark magenta
-    55: (95, 0, 175),  # Medium purple
-    56: (95, 0, 215),  # Bright purple
-    57: (95, 0, 255),  # Vivid purple
-    58: (95, 95, 0),  # Very dark olive
-    59: (95, 95, 95),  # Very dark gray
-    60: (95, 95, 135),  # Very dark slate blue
-    61: (95, 95, 175),  # Dark slate blue
-    62: (95, 95, 215),  # Slate blue
-    63: (95, 95, 255),  # Bright slate blue
-    64: (95, 135, 0),  # Dark olive green
-    65: (95, 135, 95),  # Dark desaturated green
-    66: (95, 135, 135),  # Dark desaturated cyan
-    67: (95, 135, 175),  # Steel blue (dark)
-    68: (95, 135, 215),  # Steel blue
-    69: (95, 135, 255),  # Light steel blue
-    70: (95, 175, 0),  # Olive green
-    71: (95, 175, 95),  # Medium desaturated green
-    72: (95, 175, 135),  # Medium sea green
-    73: (95, 175, 175),  # Cadet blue
-    74: (95, 175, 215),  # Sky blue (muted)
-    75: (95, 175, 255),  # Light sky blue
-    76: (95, 215, 0),  # Yellow-green (olive)
-    77: (95, 215, 95),  # Pale green
-    78: (95, 215, 135),  # Sea green (light)
-    79: (95, 215, 175),  # Aquamarine
-    80: (95, 215, 215),  # Light aquamarine
-    81: (95, 215, 255),  # Pale turquoise
-    82: (95, 255, 0),  # Chartreuse
-    83: (95, 255, 95),  # Light green
-    84: (95, 255, 135),  # Mint green
-    85: (95, 255, 175),  # Aquamarine (light)
-    86: (95, 255, 215),  # Turquoise (light)
-    87: (95, 255, 255),  # Light cyan
-    88: (135, 0, 0),  # Dark red
-    89: (135, 0, 95),  # Dark magenta (red-violet)
-    90: (135, 0, 135),  # Magenta (dark)
-    91: (135, 0, 175),  # Purple (dark)
-    92: (135, 0, 215),  # Purple (bright)
-    93: (135, 0, 255),  # Vivid violet
-    94: (135, 95, 0),  # Dark orange-brown
-    95: (135, 95, 95),  # Muted red (rose)
-    96: (135, 95, 135),  # Muted magenta
-    97: (135, 95, 175),  # Muted purple
-    98: (135, 95, 215),  # Light purple
-    99: (135, 95, 255),  # Lavender (vivid)
-    100: (135, 135, 0),  # Dark yellow-olive
-    101: (135, 135, 95),  # Olive drab (dark)
-    102: (135, 135, 135),  # Gray
-    103: (135, 135, 175),  # Grayish slate blue
-    104: (135, 135, 215),  # Light slate blue
-    105: (135, 135, 255),  # Periwinkle
-    106: (135, 175, 0),  # Olive green (brighter)
-    107: (135, 175, 95),  # Sage green
-    108: (135, 175, 135),  # Desaturated green
-    109: (135, 175, 175),  # Desaturated cyan
-    110: (135, 175, 215),  # Light steel blue
-    111: (135, 175, 255),  # Light sky blue (bright)
-    112: (135, 215, 0),  # Yellow-green
-    113: (135, 215, 95),  # Light yellow-green
-    114: (135, 215, 135),  # Pale green (light)
-    115: (135, 215, 175),  # Aquamarine (pale)
-    116: (135, 215, 215),  # Pale cyan
-    117: (135, 215, 255),  # Powder blue
-    118: (135, 255, 0),  # Lime green
-    119: (135, 255, 95),  # Light lime green
-    120: (135, 255, 135),  # Light green (pastel)
-    121: (135, 255, 175),  # Mint (light)
-    122: (135, 255, 215),  # Light turquoise (pastel)
-    123: (135, 255, 255),  # Very light cyan
-    124: (175, 0, 0),  # Medium red
-    125: (175, 0, 95),  # Crimson (dark)
-    126: (175, 0, 135),  # Medium magenta
-    127: (175, 0, 175),  # Purple
-    128: (175, 0, 215),  # Vivid purple
-    129: (175, 0, 255),  # Electric purple
-    130: (175, 95, 0),  # Brown (orange-brown)
-    131: (175, 95, 95),  # Rosy brown
-    132: (175, 95, 135),  # Rose
-    133: (175, 95, 175),  # Orchid (muted)
-    134: (175, 95, 215),  # Medium orchid
-    135: (175, 95, 255),  # Light orchid
-    136: (175, 135, 0),  # Olive (brownish)
-    137: (175, 135, 95),  # Tan
-    138: (175, 135, 135),  # Rosy tan
-    139: (175, 135, 175),  # Thistle
-    140: (175, 135, 215),  # Light purple (pastel)
-    141: (175, 135, 255),  # Lavender (light)
-    142: (175, 175, 0),  # Yellow (muted)
-    143: (175, 175, 95),  # Khaki
-    144: (175, 175, 135),  # Dark khaki
-    145: (175, 175, 175),  # Light gray
-    146: (175, 175, 215),  # Light periwinkle
-    147: (175, 175, 255),  # Very light periwinkle
-    148: (175, 215, 0),  # Yellow-green (bright)
-    149: (175, 215, 95),  # Light yellow-green
-    150: (175, 215, 135),  # Pale yellow-green
-    151: (175, 215, 175),  # Pale green
-    152: (175, 215, 215),  # Pale cyan (muted)
-    153: (175, 215, 255),  # Very light sky blue
-    154: (175, 255, 0),  # Chartreuse (bright)
-    155: (175, 255, 95),  # Light chartreuse
-    156: (175, 255, 135),  # Light lime
-    157: (175, 255, 175),  # Mint (pale)
-    158: (175, 255, 215),  # Mint cream (tinted)
-    159: (175, 255, 255),  # Very light cyan (pale)
-    160: (215, 0, 0),  # Bright red
-    161: (215, 0, 95),  # Bright crimson
-    162: (215, 0, 135),  # Bright magenta
-    163: (215, 0, 175),  # Bright purple-magenta
-    164: (215, 0, 215),  # Magenta (vivid)
-    165: (215, 0, 255),  # Electric magenta
-    166: (215, 95, 0),  # Orange
-    167: (215, 95, 95),  # Light coral
-    168: (215, 95, 135),  # Light crimson
-    169: (215, 95, 175),  # Orchid (light)
-    170: (215, 95, 215),  # Plum
-    171: (215, 95, 255),  # Light plum
-    172: (215, 135, 0),  # Goldenrod (dark)
-    173: (215, 135, 95),  # Sandy brown
-    174: (215, 135, 135),  # Rosy brown (light)
-    175: (215, 135, 175),  # Thistle (light)
-    176: (215, 135, 215),  # Violet (light)
-    177: (215, 135, 255),  # Lavender (bright)
-    178: (215, 175, 0),  # Goldenrod
-    179: (215, 175, 95),  # Tan (light)
-    180: (215, 175, 135),  # Peach
-    181: (215, 175, 175),  # Light rosy brown
-    182: (215, 175, 215),  # Mauve
-    183: (215, 175, 255),  # Lavender blush (tinted)
-    184: (215, 215, 0),  # Yellow
-    185: (215, 215, 95),  # Light khaki
-    186: (215, 215, 135),  # Pale khaki
-    187: (215, 215, 175),  # Very light khaki
-    188: (215, 215, 215),  # Very light gray
-    189: (215, 215, 255),  # Very light periwinkle (cool)
-    190: (215, 255, 0),  # Lime-yellow
-    191: (215, 255, 95),  # Light lime-yellow
-    192: (215, 255, 135),  # Light yellow-green (pastel)
-    193: (215, 255, 175),  # Pale lime
-    194: (215, 255, 215),  # Mint cream
-    195: (215, 255, 255),  # Very pale cyan
-    196: (255, 0, 0),  # Vivid red
-    197: (255, 0, 95),  # Vivid crimson
-    198: (255, 0, 135),  # Vivid magenta
-    199: (255, 0, 175),  # Hot pink (deep)
-    200: (255, 0, 215),  # Hot magenta
-    201: (255, 0, 255),  # Vivid magenta (fuchsia)
-    202: (255, 95, 0),  # Vivid orange
-    203: (255, 95, 95),  # Light salmon
-    204: (255, 95, 135),  # Light coral (bright)
-    205: (255, 95, 175),  # Pink (bright)
-    206: (255, 95, 215),  # Hot pink
-    207: (255, 95, 255),  # Pink (vivid)
-    208: (255, 135, 0),  # Orange (bright)
-    209: (255, 135, 95),  # Light orange
-    210: (255, 135, 135),  # Light salmon (soft)
-    211: (255, 135, 175),  # Light pink
-    212: (255, 135, 215),  # Orchid (light)
-    213: (255, 135, 255),  # Pink (light vivid)
-    214: (255, 175, 0),  # Orange (soft)
-    215: (255, 175, 95),  # Peach (bright)
-    216: (255, 175, 135),  # Peach
-    217: (255, 175, 175),  # Light pink (pale)
-    218: (255, 175, 215),  # Pink (pale)
-    219: (255, 175, 255),  # Light pink (very pale)
-    220: (255, 215, 0),  # Gold
-    221: (255, 215, 95),  # Light gold
-    222: (255, 215, 135),  # Light goldenrod
-    223: (255, 215, 175),  # Very light goldenrod
-    224: (255, 215, 215),  # Very light pink
-    225: (255, 215, 255),  # Very light pink (cool)
-    226: (255, 255, 0),  # Yellow (vivid)
-    227: (255, 255, 95),  # Light yellow (vivid)
-    228: (255, 255, 135),  # Light yellow
-    229: (255, 255, 175),  # Very light yellow
-    230: (255, 255, 215),  # Ivory (warm)
-    231: (255, 255, 255),  # White
-    # Grayscale ramp
-    232: (8, 8, 8),  # Grey3
-    233: (18, 18, 18),  # Grey7
-    234: (28, 28, 28),  # Grey11
-    235: (38, 38, 38),  # Grey15
-    236: (48, 48, 48),  # Grey19
-    237: (58, 58, 58),  # Grey23
-    238: (68, 68, 68),  # Grey27
-    239: (78, 78, 78),  # Grey30
-    240: (88, 88, 88),  # Grey35
-    241: (98, 98, 98),  # Grey39
-    242: (108, 108, 108),  # Grey42
-    243: (118, 118, 118),  # Grey46
-    244: (128, 128, 128),  # Grey50
-    245: (138, 138, 138),  # Grey54
-    246: (148, 148, 148),  # Grey58
-    247: (158, 158, 158),  # Grey62
-    248: (168, 168, 168),  # Grey66
-    249: (178, 178, 178),  # Grey70
-    250: (188, 188, 188),  # Grey74
-    251: (198, 198, 198),  # Grey78
-    252: (208, 208, 208),  # Grey82
-    253: (218, 218, 218),  # Grey85
-    254: (228, 228, 228),  # Grey89
-    255: (238, 238, 238),  # Grey93
+COLORS_8BIT: dict[Palette8Bit | int, tuple[int, int, int]] = {
+    Palette8Bit.BLACK: (0, 0, 0),
+    Palette8Bit.RED: (205, 0, 0),
+    Palette8Bit.GREEN: (0, 205, 0),
+    Palette8Bit.YELLOW: (205, 205, 0),
+    Palette8Bit.BLUE: (0, 0, 238),
+    Palette8Bit.MAGENTA: (205, 0, 205),
+    Palette8Bit.CYAN: (0, 205, 205),
+    Palette8Bit.WHITE_LIGHT_GRAY: (229, 229, 229),
+    Palette8Bit.BRIGHT_BLACK_GRAY: (127, 127, 127),
+    Palette8Bit.BRIGHT_RED: (255, 0, 0),
+    Palette8Bit.BRIGHT_GREEN: (0, 255, 0),
+    Palette8Bit.BRIGHT_YELLOW: (255, 255, 0),
+    Palette8Bit.BRIGHT_BLUE: (92, 92, 255),
+    Palette8Bit.BRIGHT_MAGENTA: (255, 0, 255),
+    Palette8Bit.BRIGHT_CYAN: (0, 255, 255),
+    Palette8Bit.BRIGHT_WHITE: (255, 255, 255),
+    Palette8Bit.BLACK_CUBE: (0, 0, 0),
+    Palette8Bit.VERY_DARK_BLUE: (0, 0, 95),
+    Palette8Bit.DARK_BLUE: (0, 0, 135),
+    Palette8Bit.MEDIUM_BLUE: (0, 0, 175),
+    Palette8Bit.BRIGHT_BLUE_2: (0, 0, 215),
+    Palette8Bit.VIVID_BLUE: (0, 0, 255),
+    Palette8Bit.VERY_DARK_GREEN: (0, 95, 0),
+    Palette8Bit.VERY_DARK_CYAN_TEAL: (0, 95, 95),
+    Palette8Bit.DARK_CYAN_TEAL: (0, 95, 135),
+    Palette8Bit.CYAN_BLUE: (0, 95, 175),
+    Palette8Bit.BRIGHT_CYAN_BLUE: (0, 95, 215),
+    Palette8Bit.VIVID_CYAN_BLUE: (0, 95, 255),
+    Palette8Bit.DARK_GREEN: (0, 135, 0),
+    Palette8Bit.DARK_SEA_GREEN: (0, 135, 95),
+    Palette8Bit.DARK_CYAN: (0, 135, 135),
+    Palette8Bit.MEDIUM_CYAN: (0, 135, 175),
+    Palette8Bit.BRIGHT_CYAN_2: (0, 135, 215),
+    Palette8Bit.VIVID_CYAN: (0, 135, 255),
+    Palette8Bit.MEDIUM_GREEN: (0, 175, 0),
+    Palette8Bit.MEDIUM_SEA_GREEN: (0, 175, 95),
+    Palette8Bit.SEA_GREEN: (0, 175, 135),
+    Palette8Bit.MEDIUM_AQUAMARINE: (0, 175, 175),
+    Palette8Bit.BRIGHT_AQUAMARINE: (0, 175, 215),
+    Palette8Bit.VIVID_AQUAMARINE: (0, 175, 255),
+    Palette8Bit.BRIGHT_GREEN_2: (0, 215, 0),
+    Palette8Bit.BRIGHT_SEA_GREEN: (0, 215, 95),
+    Palette8Bit.SPRING_GREEN: (0, 215, 135),
+    Palette8Bit.MEDIUM_TURQUOISE: (0, 215, 175),
+    Palette8Bit.BRIGHT_TURQUOISE: (0, 215, 215),
+    Palette8Bit.VIVID_TURQUOISE: (0, 215, 255),
+    Palette8Bit.VIVID_GREEN: (0, 255, 0),
+    Palette8Bit.VIVID_SPRING_GREEN: (0, 255, 95),
+    Palette8Bit.LIGHT_SPRING_GREEN: (0, 255, 135),
+    Palette8Bit.MEDIUM_SPRING_GREEN: (0, 255, 175),
+    Palette8Bit.LIGHT_TURQUOISE: (0, 255, 215),
+    Palette8Bit.VIVID_CYAN_2: (0, 255, 255),
+    Palette8Bit.VERY_DARK_RED: (95, 0, 0),
+    Palette8Bit.VERY_DARK_MAGENTA: (95, 0, 95),
+    Palette8Bit.DARK_MAGENTA: (95, 0, 135),
+    Palette8Bit.MEDIUM_PURPLE: (95, 0, 175),
+    Palette8Bit.BRIGHT_PURPLE: (95, 0, 215),
+    Palette8Bit.VIVID_PURPLE: (95, 0, 255),
+    Palette8Bit.VERY_DARK_OLIVE: (95, 95, 0),
+    Palette8Bit.VERY_DARK_GRAY: (95, 95, 95),
+    Palette8Bit.VERY_DARK_SLATE_BLUE: (95, 95, 135),
+    Palette8Bit.DARK_SLATE_BLUE: (95, 95, 175),
+    Palette8Bit.SLATE_BLUE: (95, 95, 215),
+    Palette8Bit.BRIGHT_SLATE_BLUE: (95, 95, 255),
+    Palette8Bit.DARK_OLIVE_GREEN: (95, 135, 0),
+    Palette8Bit.DARK_DESATURATED_GREEN: (95, 135, 95),
+    Palette8Bit.DARK_DESATURATED_CYAN: (95, 135, 135),
+    Palette8Bit.STEEL_BLUE_DARK: (95, 135, 175),
+    Palette8Bit.STEEL_BLUE: (95, 135, 215),
+    Palette8Bit.LIGHT_STEEL_BLUE: (95, 135, 255),
+    Palette8Bit.OLIVE_GREEN: (95, 175, 0),
+    Palette8Bit.MEDIUM_DESATURATED_GREEN: (95, 175, 95),
+    Palette8Bit.MEDIUM_SEA_GREEN_2: (95, 175, 135),
+    Palette8Bit.CADET_BLUE: (95, 175, 175),
+    Palette8Bit.SKY_BLUE_MUTED: (95, 175, 215),
+    Palette8Bit.LIGHT_SKY_BLUE: (95, 175, 255),
+    Palette8Bit.YELLOW_GREEN_OLIVE: (95, 215, 0),
+    Palette8Bit.PALE_GREEN: (95, 215, 95),
+    Palette8Bit.SEA_GREEN_LIGHT: (95, 215, 135),
+    Palette8Bit.AQUAMARINE: (95, 215, 175),
+    Palette8Bit.LIGHT_AQUAMARINE: (95, 215, 215),
+    Palette8Bit.PALE_TURQUOISE: (95, 215, 255),
+    Palette8Bit.CHARTREUSE: (95, 255, 0),
+    Palette8Bit.LIGHT_GREEN: (95, 255, 95),
+    Palette8Bit.MINT_GREEN: (95, 255, 135),
+    Palette8Bit.AQUAMARINE_LIGHT: (95, 255, 175),
+    Palette8Bit.TURQUOISE_LIGHT: (95, 255, 215),
+    Palette8Bit.LIGHT_CYAN: (95, 255, 255),
+    Palette8Bit.DARK_RED: (135, 0, 0),
+    Palette8Bit.DARK_MAGENTA_RED_VIOLET: (135, 0, 95),
+    Palette8Bit.MAGENTA_DARK: (135, 0, 135),
+    Palette8Bit.PURPLE_DARK: (135, 0, 175),
+    Palette8Bit.PURPLE_BRIGHT: (135, 0, 215),
+    Palette8Bit.VIVID_VIOLET: (135, 0, 255),
+    Palette8Bit.DARK_ORANGE_BROWN: (135, 95, 0),
+    Palette8Bit.MUTED_RED_ROSE: (135, 95, 95),
+    Palette8Bit.MUTED_MAGENTA: (135, 95, 135),
+    Palette8Bit.MUTED_PURPLE: (135, 95, 175),
+    Palette8Bit.LIGHT_PURPLE: (135, 95, 215),
+    Palette8Bit.LAVENDER_VIVID: (135, 95, 255),
+    Palette8Bit.DARK_YELLOW_OLIVE: (135, 135, 0),
+    Palette8Bit.OLIVE_DRAB_DARK: (135, 135, 95),
+    Palette8Bit.GRAY: (135, 135, 135),
+    Palette8Bit.GRAYISH_SLATE_BLUE: (135, 135, 175),
+    Palette8Bit.LIGHT_SLATE_BLUE: (135, 135, 215),
+    Palette8Bit.PERIWINKLE: (135, 135, 255),
+    Palette8Bit.OLIVE_GREEN_BRIGHTER: (135, 175, 0),
+    Palette8Bit.SAGE_GREEN: (135, 175, 95),
+    Palette8Bit.DESATURATED_GREEN: (135, 175, 135),
+    Palette8Bit.DESATURATED_CYAN: (135, 175, 175),
+    Palette8Bit.LIGHT_STEEL_BLUE_2: (135, 175, 215),
+    Palette8Bit.LIGHT_SKY_BLUE_BRIGHT: (135, 175, 255),
+    Palette8Bit.YELLOW_GREEN: (135, 215, 0),
+    Palette8Bit.LIGHT_YELLOW_GREEN: (135, 215, 95),
+    Palette8Bit.PALE_GREEN_LIGHT: (135, 215, 135),
+    Palette8Bit.AQUAMARINE_PALE: (135, 215, 175),
+    Palette8Bit.PALE_CYAN: (135, 215, 215),
+    Palette8Bit.POWDER_BLUE: (135, 215, 255),
+    Palette8Bit.LIME_GREEN: (135, 255, 0),
+    Palette8Bit.LIGHT_LIME_GREEN: (135, 255, 95),
+    Palette8Bit.LIGHT_GREEN_PASTEL: (135, 255, 135),
+    Palette8Bit.MINT_LIGHT: (135, 255, 175),
+    Palette8Bit.LIGHT_TURQUOISE_PASTEL: (135, 255, 215),
+    Palette8Bit.VERY_LIGHT_CYAN: (135, 255, 255),
+    Palette8Bit.MEDIUM_RED: (175, 0, 0),
+    Palette8Bit.CRIMSON_DARK: (175, 0, 95),
+    Palette8Bit.MEDIUM_MAGENTA: (175, 0, 135),
+    Palette8Bit.PURPLE: (175, 0, 175),
+    Palette8Bit.VIVID_PURPLE_2: (175, 0, 215),
+    Palette8Bit.ELECTRIC_PURPLE: (175, 0, 255),
+    Palette8Bit.BROWN_ORANGE_BROWN: (175, 95, 0),
+    Palette8Bit.ROSY_BROWN: (175, 95, 95),
+    Palette8Bit.ROSE: (175, 95, 135),
+    Palette8Bit.ORCHID_MUTED: (175, 95, 175),
+    Palette8Bit.MEDIUM_ORCHID: (175, 95, 215),
+    Palette8Bit.LIGHT_ORCHID: (175, 95, 255),
+    Palette8Bit.OLIVE_BROWNISH: (175, 135, 0),
+    Palette8Bit.TAN: (175, 135, 95),
+    Palette8Bit.ROSY_TAN: (175, 135, 135),
+    Palette8Bit.THISTLE: (175, 135, 175),
+    Palette8Bit.LIGHT_PURPLE_PASTEL: (175, 135, 215),
+    Palette8Bit.LAVENDER_LIGHT: (175, 135, 255),
+    Palette8Bit.YELLOW_MUTED: (175, 175, 0),
+    Palette8Bit.KHAKI: (175, 175, 95),
+    Palette8Bit.DARK_KHAKI: (175, 175, 135),
+    Palette8Bit.LIGHT_GRAY: (175, 175, 175),
+    Palette8Bit.LIGHT_PERIWINKLE: (175, 175, 215),
+    Palette8Bit.VERY_LIGHT_PERIWINKLE: (175, 175, 255),
+    Palette8Bit.YELLOW_GREEN_BRIGHT: (175, 215, 0),
+    Palette8Bit.LIGHT_YELLOW_GREEN_2: (175, 215, 95),
+    Palette8Bit.PALE_YELLOW_GREEN: (175, 215, 135),
+    Palette8Bit.PALE_GREEN_2: (175, 215, 175),
+    Palette8Bit.PALE_CYAN_MUTED: (175, 215, 215),
+    Palette8Bit.VERY_LIGHT_SKY_BLUE: (175, 215, 255),
+    Palette8Bit.CHARTREUSE_BRIGHT: (175, 255, 0),
+    Palette8Bit.LIGHT_CHARTREUSE: (175, 255, 95),
+    Palette8Bit.LIGHT_LIME: (175, 255, 135),
+    Palette8Bit.MINT_PALE: (175, 255, 175),
+    Palette8Bit.MINT_CREAM_TINTED: (175, 255, 215),
+    Palette8Bit.VERY_LIGHT_CYAN_PALE: (175, 255, 255),
+    Palette8Bit.BRIGHT_RED_2: (215, 0, 0),
+    Palette8Bit.BRIGHT_CRIMSON: (215, 0, 95),
+    Palette8Bit.BRIGHT_MAGENTA_2: (215, 0, 135),
+    Palette8Bit.BRIGHT_PURPLE_MAGENTA: (215, 0, 175),
+    Palette8Bit.MAGENTA_VIVID: (215, 0, 215),
+    Palette8Bit.ELECTRIC_MAGENTA: (215, 0, 255),
+    Palette8Bit.ORANGE: (215, 95, 0),
+    Palette8Bit.LIGHT_CORAL: (215, 95, 95),
+    Palette8Bit.LIGHT_CRIMSON: (215, 95, 135),
+    Palette8Bit.ORCHID_LIGHT: (215, 95, 175),
+    Palette8Bit.PLUM: (215, 95, 215),
+    Palette8Bit.LIGHT_PLUM: (215, 95, 255),
+    Palette8Bit.GOLDENROD_DARK: (215, 135, 0),
+    Palette8Bit.SANDY_BROWN: (215, 135, 95),
+    Palette8Bit.ROSY_BROWN_LIGHT: (215, 135, 135),
+    Palette8Bit.THISTLE_LIGHT: (215, 135, 175),
+    Palette8Bit.VIOLET_LIGHT: (215, 135, 215),
+    Palette8Bit.LAVENDER_BRIGHT: (215, 135, 255),
+    Palette8Bit.GOLDENROD: (215, 175, 0),
+    Palette8Bit.TAN_LIGHT: (215, 175, 95),
+    Palette8Bit.PEACH: (215, 175, 135),
+    Palette8Bit.LIGHT_ROSY_BROWN: (215, 175, 175),
+    Palette8Bit.MAUVE: (215, 175, 215),
+    Palette8Bit.LAVENDER_BLUSH_TINTED: (215, 175, 255),
+    Palette8Bit.YELLOW_2: (215, 215, 0),
+    Palette8Bit.LIGHT_KHAKI: (215, 215, 95),
+    Palette8Bit.PALE_KHAKI: (215, 215, 135),
+    Palette8Bit.VERY_LIGHT_KHAKI: (215, 215, 175),
+    Palette8Bit.VERY_LIGHT_GRAY: (215, 215, 215),
+    Palette8Bit.VERY_LIGHT_PERIWINKLE_COOL: (215, 215, 255),
+    Palette8Bit.LIME_YELLOW: (215, 255, 0),
+    Palette8Bit.LIGHT_LIME_YELLOW: (215, 255, 95),
+    Palette8Bit.LIGHT_YELLOW_GREEN_PASTEL: (215, 255, 135),
+    Palette8Bit.PALE_LIME: (215, 255, 175),
+    Palette8Bit.MINT_CREAM: (215, 255, 215),
+    Palette8Bit.VERY_PALE_CYAN: (215, 255, 255),
+    Palette8Bit.VIVID_RED: (255, 0, 0),
+    Palette8Bit.VIVID_CRIMSON: (255, 0, 95),
+    Palette8Bit.VIVID_MAGENTA: (255, 0, 135),
+    Palette8Bit.HOT_PINK_DEEP: (255, 0, 175),
+    Palette8Bit.HOT_MAGENTA: (255, 0, 215),
+    Palette8Bit.VIVID_MAGENTA_FUCHSIA: (255, 0, 255),
+    Palette8Bit.VIVID_ORANGE: (255, 95, 0),
+    Palette8Bit.LIGHT_SALMON: (255, 95, 95),
+    Palette8Bit.LIGHT_CORAL_BRIGHT: (255, 95, 135),
+    Palette8Bit.PINK_BRIGHT: (255, 95, 175),
+    Palette8Bit.HOT_PINK: (255, 95, 215),
+    Palette8Bit.PINK_VIVID: (255, 95, 255),
+    Palette8Bit.ORANGE_BRIGHT: (255, 135, 0),
+    Palette8Bit.LIGHT_ORANGE: (255, 135, 95),
+    Palette8Bit.LIGHT_SALMON_SOFT: (255, 135, 135),
+    Palette8Bit.LIGHT_PINK: (255, 135, 175),
+    Palette8Bit.ORCHID_LIGHT_2: (255, 135, 215),
+    Palette8Bit.PINK_LIGHT_VIVID: (255, 135, 255),
+    Palette8Bit.ORANGE_SOFT: (255, 175, 0),
+    Palette8Bit.PEACH_BRIGHT: (255, 175, 95),
+    Palette8Bit.PEACH_2: (255, 175, 135),
+    Palette8Bit.LIGHT_PINK_PALE: (255, 175, 175),
+    Palette8Bit.PINK_PALE: (255, 175, 215),
+    Palette8Bit.LIGHT_PINK_VERY_PALE: (255, 175, 255),
+    Palette8Bit.GOLD: (255, 215, 0),
+    Palette8Bit.LIGHT_GOLD: (255, 215, 95),
+    Palette8Bit.LIGHT_GOLDENROD: (255, 215, 135),
+    Palette8Bit.VERY_LIGHT_GOLDENROD: (255, 215, 175),
+    Palette8Bit.VERY_LIGHT_PINK: (255, 215, 215),
+    Palette8Bit.VERY_LIGHT_PINK_COOL: (255, 215, 255),
+    Palette8Bit.YELLOW_VIVID: (255, 255, 0),
+    Palette8Bit.LIGHT_YELLOW_VIVID: (255, 255, 95),
+    Palette8Bit.LIGHT_YELLOW: (255, 255, 135),
+    Palette8Bit.VERY_LIGHT_YELLOW: (255, 255, 175),
+    Palette8Bit.IVORY_WARM: (255, 255, 215),
+    Palette8Bit.WHITE: (255, 255, 255),
+    Palette8Bit.GREY3: (8, 8, 8),
+    Palette8Bit.GREY7: (18, 18, 18),
+    Palette8Bit.GREY11: (28, 28, 28),
+    Palette8Bit.GREY15: (38, 38, 38),
+    Palette8Bit.GREY19: (48, 48, 48),
+    Palette8Bit.GREY23: (58, 58, 58),
+    Palette8Bit.GREY27: (68, 68, 68),
+    Palette8Bit.GREY30: (78, 78, 78),
+    Palette8Bit.GREY35: (88, 88, 88),
+    Palette8Bit.GREY39: (98, 98, 98),
+    Palette8Bit.GREY42: (108, 108, 108),
+    Palette8Bit.GREY46: (118, 118, 118),
+    Palette8Bit.GREY50: (128, 128, 128),
+    Palette8Bit.GREY54: (138, 138, 138),
+    Palette8Bit.GREY58: (148, 148, 148),
+    Palette8Bit.GREY62: (158, 158, 158),
+    Palette8Bit.GREY66: (168, 168, 168),
+    Palette8Bit.GREY70: (178, 178, 178),
+    Palette8Bit.GREY74: (188, 188, 188),
+    Palette8Bit.GREY78: (198, 198, 198),
+    Palette8Bit.GREY82: (208, 208, 208),
+    Palette8Bit.GREY85: (218, 218, 218),
+    Palette8Bit.GREY89: (228, 228, 228),
+    Palette8Bit.GREY93: (238, 238, 238),
 }
 
 # 4-bit to RGB mapping using themes
