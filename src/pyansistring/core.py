@@ -51,7 +51,17 @@ from ._helpers import (
     rsearch_separators as _rsearch_separators,
     search_separators as _search_separators,
 )
-from ._types import ColorStop, Coordinate, CoordinateGroup, SliceGroup, SliceSpec
+from ._types import (
+    BgInput,
+    ColorStop,
+    Coordinate,
+    CoordinateGroup,
+    FgInput,
+    SliceGroup,
+    SliceSpec,
+    UlInput,
+)
+from .targets import Chars, Coords, Pattern, Words
 
 if _IS_FONTTOOLS_AVAILABLE or TYPE_CHECKING:
     from ._svg import (
@@ -68,17 +78,35 @@ if _IS_FONTTOOLS_AVAILABLE or TYPE_CHECKING:
         tspan as _tspan,
     )
 
-from .color import ColorMap, ColorScale, SegmentedColorMap
+from .color import Color, ColorMap, ColorScale, SegmentedColorMap
 from .constants import (
     SGR,
     WHITESPACE,
     Background,
+    Channel,
     Foreground,
     Regex,
     Underline,
+    UnderlineMode,
     get_casefold_expansions,
 )
 from .style import Style, StyleManager
+
+
+def _resolve_color(color: _Any, enum_type: type) -> Color:
+    """Intelligently infer the color depth based on the input type."""
+    if isinstance(color, Color):
+        return color
+    if isinstance(color, enum_type):
+        return Color.from_4bit(color)
+    if isinstance(color, int):
+        return Color.from_8bit(color)
+    if isinstance(color, str):
+        return Color.from_hex(color)
+    if isinstance(color, tuple) and len(color) == 3:  # type: ignore
+        return Color.from_24bit(*color)  # type: ignore
+
+    raise TypeError(f"Invalid color format: {color!r}")
 
 
 class ANSIString(str):
@@ -437,10 +465,10 @@ class ANSIString(str):
         return self._line_starts
 
     def _search_spans(
-        self, *words: str, case_sensitive: bool = True
+        self, *words: str, ignore_case: bool = False
     ) -> tuple[tuple[int, int], ...]:
         """Search for words in the plain text and return their (start, end) spans."""
-        flags = 0 if case_sensitive else _re.IGNORECASE
+        flags = _re.IGNORECASE if ignore_case else 0
         joined_words = "|".join(_re.escape(word) for word in words)
         spans = (
             match.span(0)
@@ -540,6 +568,59 @@ class ANSIString(str):
         for match in pattern.finditer(self.plain_text):
             yield match
 
+    def _resolve_targets(self, targets: tuple[_Any, ...]) -> tuple[SliceGroup, ...]:
+        resolved: list[SliceGroup] = []
+        for target in targets:
+            if isinstance(target, Pattern):
+                for match in _cast(_re.Pattern[str], target.regex).finditer(
+                    self.plain_text
+                ):
+                    if target.span_parser:
+                        try:
+                            result = target.span_parser(match)
+                            if not result:
+                                continue
+
+                            if (
+                                isinstance(result, tuple)
+                                and len(result) >= 2
+                                and isinstance(result[0], int)
+                            ):
+                                resolved.append(result)
+                            else:
+                                resolved.extend(result)
+                        except Exception:
+                            continue
+                    else:
+                        try:
+                            span = match.span(target.group)
+                            if span != (-1, -1):
+                                resolved.append(span)
+                        except IndexError:
+                            continue
+            elif isinstance(target, Words):
+                spans = self._search_spans(
+                    *target.words, ignore_case=target.ignore_case
+                )
+                resolved.extend(spans)
+            elif isinstance(target, Coords):
+                slices = self._resolve_coordinates(
+                    target.points,
+                    target.index_base,
+                    target.origin,
+                    target.system,
+                    target.on_out_of_bounds,
+                )
+                resolved.extend(slices)
+            elif isinstance(target, Chars):
+                spans = _get_grapheme_spans(
+                    self.plain_text, target.skip_emojis, target.skip_whitespace
+                )
+                resolved.extend(spans)
+            else:
+                resolved.append(target)
+        return tuple(resolved)
+
     @staticmethod
     def from_ansi(plain: str) -> "ANSIString":
         """Create an ANSIString from a plain string containing ANSI escape sequences."""
@@ -584,607 +665,198 @@ class ANSIString(str):
 
     def style(
         self,
-        style_code: int | str,
-        *slices: SliceGroup,
+        style: Style
+        | Foreground
+        | Background
+        | Underline
+        | UnderlineMode
+        | SGR
+        | str
+        | int
+        | None,
+        *targets: SliceGroup | Pattern | Words | Coords | Chars,
     ) -> _Self:
-        """Apply a style to the string in a specified range."""
-        # TODO: forbid formatting above the length of the string
-        if style_code == SGR.RESET:
-            return self.unstyle(*slices)
-        style = Style().with_style(style_code)
-        if slices:
-            for slice_ in slices:
-                for index in range(*self._get_indices(slice_)):
-                    if index not in self.style_manager:
-                        self.style_manager[index] = style
-                    else:
-                        self.style_manager[index] = self.style_manager[index].merge(
-                            style
-                        )
-        else:
-            for index in range(0, len(self), 1):
+        """Apply a style to the string.
+        
+        Parameters
+        ----------
+        style : Style | Foreground | Background | Underline \
+                | UnderlineMode | SGR | str | int | None
+            The style to apply. Can be a pre-configured Style object \
+            or an individual attribute.
+        *targets : SliceGroup | Pattern | Words | Coords | Chars
+            Target selectors defining where the style should be applied. If none are 
+            provided, the style is applied to the entire string.
+            
+        Returns
+        -------
+        Self
+            This ANSIString instance, modified in place.
+        """
+        if style == SGR.RESET:
+            return self.unstyle(*targets)
+
+        if not isinstance(style, Style):
+            style = Style().with_style(style)
+
+        # User passed no targets -> e.g., text.style(SGR.BOLD)
+        if not targets:
+            for index in range(len(self)):
                 if index not in self.style_manager:
                     self.style_manager[index] = style
                 else:
                     self.style_manager[index] = self.style_manager[index].merge(style)
-        return self
+            return self
 
-    def style_words(
-        self, style_code: int | str, *words: str, case_sensitive: bool = True
-    ) -> _Self:
-        """Apply a style to matched words of the string."""
-        return self.style(
-            style_code, *self._search_spans(*words, case_sensitive=case_sensitive)
-        )
+        # User passed targets
+        slices = self._resolve_targets(targets)
 
-    def style_coordinates(
-        self,
-        style_code: int | str,
-        *coordinates: CoordinateGroup,
-        index_base: int = 0,
-        origin: tuple[int, int] = (0, 0),
-        system: _Literal["cartesian", "terminal"] = "terminal",
-        on_out_of_bounds: _Literal["ignore", "clamp", "raise"] = "raise",
-    ) -> _Self:
-        slices = self._resolve_coordinates(
-            coordinates, index_base, origin, system, on_out_of_bounds
-        )
+        # Targets were provided but matched nothing.
         if not slices:
             return self
-        return self.style(style_code, *slices)
 
-    def style_pattern(
-        self,
-        style_code: int,
-        pattern: str | _re.Pattern[str],
-        flags: int | _re.RegexFlag = 0,
-    ) -> _Self:
-        spans = tuple(match.span() for match in self._search_pattern(pattern, flags))
-        if not spans:
-            return self
-        return self.style(style_code, *spans)
+        for slice_ in slices:
+            for index in range(*self._get_indices(slice_)):
+                if index not in self.style_manager:
+                    self.style_manager[index] = style
+                else:
+                    self.style_manager[index] = self.style_manager[index].merge(style)
 
-    def unstyle(self, *slices: SliceGroup) -> _Self:
-        """Remove styling from the string in a specified range."""
-        if slices:
-            for slice_ in slices:
-                for index in range(*self._get_indices(slice_)):
-                    if index in self.style_manager:
-                        del self.style_manager[index]
-        else:
-            for index in range(0, len(self), 1):
+        return self
+
+    def unstyle(self, *targets: SliceGroup | Pattern | Words | Coords | Chars) -> _Self:
+        """Remove styling from the string.
+
+        Parameters
+        ----------
+        *targets : SliceGroup | Pattern | Words | Coords | Chars
+            Target selectors defining where the styling should be removed. If none are
+            provided, all styling is removed from the entire string.
+
+        Returns
+        -------
+        Self
+            This ANSIString instance, modified in place.
+        """
+
+        if not targets:
+            for index in range(len(self)):
                 if index in self.style_manager:
                     del self.style_manager[index]
+            return self
+
+        slices = self._resolve_targets(targets)
+
+        if not slices:
+            return self
+
+        for slice_ in slices:
+            for index in range(*self._get_indices(slice_)):
+                if index in self.style_manager:
+                    del self.style_manager[index]
+
         return self
 
-    def unstyle_words(self, *words: str, case_sensitive: bool = True) -> _Self:
-        """Remove styling from matched words of the string."""
-        return self.unstyle(*self._search_spans(*words, case_sensitive=case_sensitive))
-
-    def unstyle_coordinates(
-        self,
-        *coordinates: CoordinateGroup,
-        index_base: int = 0,
-        origin: tuple[int, int] = (0, 0),
-        system: _Literal["cartesian", "terminal"] = "terminal",
-        on_out_of_bounds: _Literal["ignore", "clamp", "raise"] = "raise",
+    def fg(
+        self, color: FgInput, *targets: SliceGroup | Pattern | Words | Coords | Chars
     ) -> _Self:
-        slices = self._resolve_coordinates(
-            coordinates, index_base, origin, system, on_out_of_bounds
-        )
-        if not slices:
-            return self
-        return self.unstyle(*slices)
+        """Apply a foreground color.
 
-    def unstyle_pattern(
-        self,
-        pattern: str | _re.Pattern[str],
-        flags: int | _re.RegexFlag = 0,
-    ) -> _Self:
-        spans = tuple(match.span() for match in self._search_pattern(pattern, flags))
-        if not spans:
-            return self
-        return self.unstyle(*spans)
+        Parameters
+        ----------
+        color : FgInput
+            The color to apply. Automatically infers 4-bit, 8-bit, or 24-bit depth.
+        *targets : SliceGroup | Pattern | Words | Coords | Chars
+            Target selectors defining where the color should be applied.
 
-    def fg_4b(
-        self,
-        color: Foreground,
-        *slices: SliceGroup,
-    ) -> _Self:
-        """Apply a 4-bit foreground color to the string in a specified range."""
-        return self.style(color, *slices)
+        Returns
+        -------
+        Self
+            This ANSIString instance, modified in place.
+        """
+        resolved = _resolve_color(color, Foreground)
+        return self.style(Style(foreground=resolved), *targets)
 
-    def fg_4b_words(
-        self,
-        color: Foreground,
-        *words: str,
-        case_sensitive: bool = True,
+    def bg(
+        self, color: BgInput, *targets: SliceGroup | Pattern | Words | Coords | Chars
     ) -> _Self:
-        """Apply a 4-bit foreground color to matched words of the string."""
-        return self.fg_4b(
-            color, *self._search_spans(*words, case_sensitive=case_sensitive)
-        )
+        """Apply a background color.
 
-    def fg_4b_coordinates(
-        self,
-        color: Foreground,
-        *coordinates: CoordinateGroup,
-        index_base: int = 0,
-        origin: tuple[int, int] = (0, 0),
-        system: _Literal["cartesian", "terminal"] = "terminal",
-        on_out_of_bounds: _Literal["ignore", "clamp", "raise"] = "raise",
-    ) -> _Self:
-        slices = self._resolve_coordinates(
-            coordinates, index_base, origin, system, on_out_of_bounds
-        )
-        if not slices:
-            return self
-        return self.fg_4b(color, *slices)
+        Parameters
+        ----------
+        color : BgInput
+            The color to apply. Automatically infers 4-bit, 8-bit, or 24-bit depth.
+        *targets : SliceGroup | Pattern | Words | Coords | Chars
+            Target selectors defining where the color should be applied.
 
-    def fg_4b_pattern(
-        self,
-        color: Foreground,
-        pattern: str | _re.Pattern[str],
-        flags: int | _re.RegexFlag = 0,
-    ) -> _Self:
-        spans = tuple(match.span() for match in self._search_pattern(pattern, flags))
-        if not spans:
-            return self
-        return self.fg_4b(color, *spans)
+        Returns
+        -------
+        Self
+            This ANSIString instance, modified in place.
+        """
+        resolved = _resolve_color(color, Background)
+        return self.style(Style(background=resolved), *targets)
 
-    def fg_8b(
+    def ul(
         self,
-        color_index: int,
-        *slices: SliceGroup,
+        color: UlInput = Underline.DEFAULT,
+        *targets: SliceGroup | Pattern | Words | Coords | Chars,
     ) -> _Self:
-        """Apply an 8-bit foreground color to the string in a specified range."""
-        style = f"\x1b[{Foreground.SET};5;{color_index}m"
-        return self.style(style, *slices)
+        """Apply a underline color.
 
-    def fg_8b_words(
-        self,
-        color_index: int,
-        *words: str,
-        case_sensitive: bool = True,
-    ) -> _Self:
-        """Apply an 8-bit foreground color to matched words of the string."""
-        return self.fg_8b(
-            color_index, *self._search_spans(*words, case_sensitive=case_sensitive)
-        )
+        Parameters
+        ----------
+        color : UlInput, default Underline.DEFAULT
+            The color to apply. Automatically infers 4-bit, 8-bit, or 24-bit depth.
+        *targets : SliceGroup | Pattern | Words | Coords | Chars
+            Target selectors defining where the color should be applied.
 
-    def fg_8b_coordinates(
-        self,
-        color_index: int,
-        *coordinates: CoordinateGroup,
-        index_base: int = 0,
-        origin: tuple[int, int] = (0, 0),
-        system: _Literal["cartesian", "terminal"] = "terminal",
-        on_out_of_bounds: _Literal["ignore", "clamp", "raise"] = "raise",
-    ) -> _Self:
-        slices = self._resolve_coordinates(
-            coordinates, index_base, origin, system, on_out_of_bounds
-        )
-        if not slices:
-            return self
-        return self.fg_8b(color_index, *slices)
-
-    def fg_8b_pattern(
-        self,
-        color_index: int,
-        pattern: str | _re.Pattern[str],
-        flags: int | _re.RegexFlag = 0,
-    ) -> _Self:
-        spans = tuple(match.span() for match in self._search_pattern(pattern, flags))
-        if not spans:
-            return self
-        return self.fg_8b(color_index, *spans)
-
-    def fg_24b(
-        self,
-        r: int,
-        g: int,
-        b: int,
-        *slices: SliceGroup,
-    ) -> _Self:
-        """Apply a 24-bit foreground color to the string in a specified range."""
-        style = f"\x1b[{Foreground.SET};2;{r};{g};{b}m"
-        return self.style(style, *slices)
-
-    def fg_24b_words(
-        self,
-        r: int,
-        g: int,
-        b: int,
-        *words: str,
-        case_sensitive: bool = True,
-    ) -> _Self:
-        """Apply a 24-bit foreground color to matched words of the string."""
-        return self.fg_24b(
-            r, g, b, *self._search_spans(*words, case_sensitive=case_sensitive)
-        )
-
-    def fg_24b_coordinates(
-        self,
-        r: int,
-        g: int,
-        b: int,
-        *coordinates: CoordinateGroup,
-        index_base: int = 0,
-        origin: tuple[int, int] = (0, 0),
-        system: _Literal["cartesian", "terminal"] = "terminal",
-        on_out_of_bounds: _Literal["ignore", "clamp", "raise"] = "raise",
-    ) -> _Self:
-        slices = self._resolve_coordinates(
-            coordinates, index_base, origin, system, on_out_of_bounds
-        )
-        if not slices:
-            return self
-        return self.fg_24b(r, g, b, *slices)
-
-    def fg_24b_pattern(
-        self,
-        r: int,
-        g: int,
-        b: int,
-        pattern: str | _re.Pattern[str],
-        flags: int | _re.RegexFlag = 0,
-    ) -> _Self:
-        spans = tuple(match.span() for match in self._search_pattern(pattern, flags))
-        if not spans:
-            return self
-        return self.fg_24b(r, g, b, *spans)
-
-    def bg_4b(
-        self,
-        color: Background,
-        *slices: SliceGroup,
-    ) -> _Self:
-        """Apply a 4-bit background color to the string in a specified range."""
-        return self.style(color, *slices)
-
-    def bg_4b_words(
-        self,
-        color: Background,
-        *words: str,
-        case_sensitive: bool = True,
-    ) -> _Self:
-        """Apply a 4-bit background color to matched words of the string."""
-        return self.bg_4b(
-            color, *self._search_spans(*words, case_sensitive=case_sensitive)
-        )
-
-    def bg_4b_coordinates(
-        self,
-        color: Background,
-        *coordinates: CoordinateGroup,
-        index_base: int = 0,
-        origin: tuple[int, int] = (0, 0),
-        system: _Literal["cartesian", "terminal"] = "terminal",
-        on_out_of_bounds: _Literal["ignore", "clamp", "raise"] = "raise",
-    ) -> _Self:
-        slices = self._resolve_coordinates(
-            coordinates, index_base, origin, system, on_out_of_bounds
-        )
-        if not slices:
-            return self
-        return self.bg_4b(color, *slices)
-
-    def bg_4b_pattern(
-        self,
-        color: Background,
-        pattern: str | _re.Pattern[str],
-        flags: int | _re.RegexFlag = 0,
-    ) -> _Self:
-        spans = tuple(match.span() for match in self._search_pattern(pattern, flags))
-        if not spans:
-            return self
-        return self.bg_4b(color, *spans)
-
-    def bg_8b(
-        self,
-        color_index: int,
-        *slices: SliceGroup,
-    ) -> _Self:
-        """Apply an 8-bit background color to the string in a specified range."""
-        style = f"\x1b[{Background.SET};5;{color_index}m"
-        return self.style(style, *slices)
-
-    def bg_8b_words(
-        self,
-        color_index: int,
-        *words: str,
-        case_sensitive: bool = True,
-    ) -> _Self:
-        """Apply an 8-bit background color to matched words of the string."""
-        return self.bg_8b(
-            color_index, *self._search_spans(*words, case_sensitive=case_sensitive)
-        )
-
-    def bg_8b_coordinates(
-        self,
-        color_index: int,
-        *coordinates: CoordinateGroup,
-        index_base: int = 0,
-        origin: tuple[int, int] = (0, 0),
-        system: _Literal["cartesian", "terminal"] = "terminal",
-        on_out_of_bounds: _Literal["ignore", "clamp", "raise"] = "raise",
-    ) -> _Self:
-        slices = self._resolve_coordinates(
-            coordinates, index_base, origin, system, on_out_of_bounds
-        )
-        if not slices:
-            return self
-        return self.bg_8b(color_index, *slices)
-
-    def bg_8b_pattern(
-        self,
-        color_index: int,
-        pattern: str | _re.Pattern[str],
-        flags: int | _re.RegexFlag = 0,
-    ) -> _Self:
-        spans = tuple(match.span() for match in self._search_pattern(pattern, flags))
-        if not spans:
-            return self
-        return self.bg_8b(color_index, *spans)
-
-    def bg_24b(
-        self,
-        r: int,
-        g: int,
-        b: int,
-        *slices: SliceGroup,
-    ) -> _Self:
-        """Apply a 24-bit background color to the string in a specified range."""
-        style = f"\x1b[{Background.SET};2;{r};{g};{b}m"
-        return self.style(style, *slices)
-
-    def bg_24b_words(
-        self,
-        r: int,
-        g: int,
-        b: int,
-        *words: str,
-        case_sensitive: bool = True,
-    ) -> _Self:
-        """Apply a 24-bit background color to matched words of the string."""
-        return self.bg_24b(
-            r, g, b, *self._search_spans(*words, case_sensitive=case_sensitive)
-        )
-
-    def bg_24b_coordinates(
-        self,
-        r: int,
-        g: int,
-        b: int,
-        *coordinates: CoordinateGroup,
-        index_base: int = 0,
-        origin: tuple[int, int] = (0, 0),
-        system: _Literal["cartesian", "terminal"] = "terminal",
-        on_out_of_bounds: _Literal["ignore", "clamp", "raise"] = "raise",
-    ) -> _Self:
-        slices = self._resolve_coordinates(
-            coordinates, index_base, origin, system, on_out_of_bounds
-        )
-        if not slices:
-            return self
-        return self.bg_24b(r, g, b, *slices)
-
-    def bg_24b_pattern(
-        self,
-        r: int,
-        g: int,
-        b: int,
-        pattern: str | _re.Pattern[str],
-        flags: int | _re.RegexFlag = 0,
-    ) -> _Self:
-        spans = tuple(match.span() for match in self._search_pattern(pattern, flags))
-        if not spans:
-            return self
-        return self.bg_24b(r, g, b, *spans)
-
-    def ul_default(
-        self,
-        *slices: SliceGroup,
-    ) -> _Self:
-        """Apply the default underline style to the string in a specified range."""
-        return self.style(Underline.DEFAULT, *slices)
-
-    def ul_default_words(
-        self,
-        *words: str,
-        case_sensitive: bool = True,
-    ) -> _Self:
-        """Apply the default underline style to matched words of the string."""
-        return self.ul_default(
-            *self._search_spans(*words, case_sensitive=case_sensitive)
-        )
-
-    def ul_default_coordinates(
-        self,
-        *coordinates: CoordinateGroup,
-        index_base: int = 0,
-        origin: tuple[int, int] = (0, 0),
-        system: _Literal["cartesian", "terminal"] = "terminal",
-        on_out_of_bounds: _Literal["ignore", "clamp", "raise"] = "raise",
-    ) -> _Self:
-        slices = self._resolve_coordinates(
-            coordinates, index_base, origin, system, on_out_of_bounds
-        )
-        if not slices:
-            return self
-        return self.ul_default(*slices)
-
-    def ul_default_pattern(
-        self,
-        pattern: str | _re.Pattern[str],
-        flags: int | _re.RegexFlag = 0,
-    ) -> _Self:
-        spans = tuple(match.span() for match in self._search_pattern(pattern, flags))
-        if not spans:
-            return self
-        return self.ul_default(*spans)
-
-    def ul_8b(
-        self,
-        color_index: int,
-        *slices: SliceGroup,
-    ) -> _Self:
-        """Apply an 8-bit underline color to the string in a specified range."""
-        style = f"\x1b[{Underline.SET}:5:{color_index}m"
-        return self.style(style, *slices)
-
-    def ul_8b_words(
-        self,
-        color_index: int,
-        *words: str,
-        case_sensitive: bool = True,
-    ) -> _Self:
-        """Apply an 8-bit underline color to matched words of the string."""
-        return self.ul_8b(
-            color_index, *self._search_spans(*words, case_sensitive=case_sensitive)
-        )
-
-    def ul_8b_coordinates(
-        self,
-        color_index: int,
-        *coordinates: CoordinateGroup,
-        index_base: int = 0,
-        origin: tuple[int, int] = (0, 0),
-        system: _Literal["cartesian", "terminal"] = "terminal",
-        on_out_of_bounds: _Literal["ignore", "clamp", "raise"] = "raise",
-    ) -> _Self:
-        slices = self._resolve_coordinates(
-            coordinates, index_base, origin, system, on_out_of_bounds
-        )
-        if not slices:
-            return self
-        return self.ul_8b(color_index, *slices)
-
-    def ul_8b_pattern(
-        self,
-        color_index: int,
-        pattern: str | _re.Pattern[str],
-        flags: int | _re.RegexFlag = 0,
-    ) -> _Self:
-        spans = tuple(match.span() for match in self._search_pattern(pattern, flags))
-        if not spans:
-            return self
-        return self.ul_8b(color_index, *spans)
-
-    def ul_24b(
-        self,
-        r: int,
-        g: int,
-        b: int,
-        *slices: SliceGroup,
-    ) -> _Self:
-        """Apply a 24-bit underline color to the string in a specified range."""
-        style = f"\x1b[{Underline.SET}:2::{r}:{g}:{b}m"
-        return self.style(style, *slices)
-
-    def ul_24b_words(
-        self,
-        r: int,
-        g: int,
-        b: int,
-        *words: str,
-        case_sensitive: bool = True,
-    ) -> _Self:
-        """Apply a 24-bit underline color to matched words of the string."""
-        return self.ul_24b(
-            r, g, b, *self._search_spans(*words, case_sensitive=case_sensitive)
-        )
-
-    def ul_24b_coordinates(
-        self,
-        r: int,
-        g: int,
-        b: int,
-        *coordinates: CoordinateGroup,
-        index_base: int = 0,
-        origin: tuple[int, int] = (0, 0),
-        system: _Literal["cartesian", "terminal"] = "terminal",
-        on_out_of_bounds: _Literal["ignore", "clamp", "raise"] = "raise",
-    ) -> _Self:
-        slices = self._resolve_coordinates(
-            coordinates, index_base, origin, system, on_out_of_bounds
-        )
-        if not slices:
-            return self
-        return self.ul_24b(r, g, b, *slices)
-
-    def ul_24b_pattern(
-        self,
-        r: int,
-        g: int,
-        b: int,
-        pattern: str | _re.Pattern[str],
-        flags: int | _re.RegexFlag = 0,
-    ) -> _Self:
-        spans = tuple(match.span() for match in self._search_pattern(pattern, flags))
-        if not spans:
-            return self
-        return self.ul_24b(r, g, b, *spans)
+        Returns
+        -------
+        Self
+            This ANSIString instance, modified in place.
+        """
+        resolved = _resolve_color(color, Underline)
+        return self.style(Style(underline=(resolved, UnderlineMode.SINGLE)), *targets)
 
     def rainbow(
         self,
-        *slices: SliceGroup,
-        skip_whitespace: bool = False,
-        skip_emojis: bool = False,
-        fg: bool = False,
-        bg: bool = False,
-        ul: bool = False,
+        *targets: SliceGroup | Pattern | Words | Coords | Chars,
+        channel: Channel = Channel.FG,
     ) -> _Self:
-        """Apply a rainbow effect to the string in a specified range."""
+        """Apply a rainbow effect to the string.
+
+        Parameters
+        ----------
+        *targets : SliceGroup | Pattern | Words | Coords | Chars
+            Target selectors defining where the rainbow should be applied.
+        channel : Channel, default Channel.FG
+            The color channel(s) to apply the effect to (e.g., FG, BG, UL).
+
+        Returns
+        -------
+        Self
+            This ANSIString instance, modified in place.
+        """
+
+        slices = self._resolve_targets(targets)
 
         if not slices:
-            slices = _get_grapheme_spans(self.plain_text, skip_emojis, skip_whitespace)
+            return self
 
-        if not (fg or bg or ul):
-            fg = True
         length = len(slices)
         denom = length - 1 if length > 1 else 1
+
         for index, slice_ in enumerate(slices):
             hue = round(index / denom * 360)
-            if fg:
-                self.fg_24b(*_hsl_to_rgb(hue), slice_)
-            if bg:
-                self.bg_24b(*_hsl_to_rgb(hue), slice_)
-            if ul:
-                self.ul_24b(*_hsl_to_rgb(hue), slice_)
+            if Channel.FG in channel:
+                self.fg(_hsl_to_rgb(hue), slice_)
+            if Channel.BG in channel:
+                self.bg(_hsl_to_rgb(hue), slice_)
+            if Channel.UL in channel:
+                self.ul(_hsl_to_rgb(hue), slice_)
+
         return self
-
-    def rainbow_words(
-        self,
-        *words: str,
-        case_sensitive: bool = True,
-    ) -> _Self:
-        return self.rainbow(*self._search_spans(*words, case_sensitive=case_sensitive))
-
-    def rainbow_coordinates(
-        self,
-        *coordinates: CoordinateGroup,
-        index_base: int = 0,
-        origin: tuple[int, int] = (0, 0),
-        system: _Literal["cartesian", "terminal"] = "terminal",
-        on_out_of_bounds: _Literal["ignore", "clamp", "raise"] = "raise",
-    ) -> _Self:
-        slices = self._resolve_coordinates(
-            coordinates, index_base, origin, system, on_out_of_bounds
-        )
-        if not slices:
-            return self
-        return self.rainbow(*slices)
-
-    def rainbow_pattern(
-        self,
-        pattern: str | _re.Pattern[str],
-        flags: int | _re.RegexFlag = 0,
-    ) -> _Self:
-        spans = tuple(match.span() for match in self._search_pattern(pattern, flags))
-        if not spans:
-            return self
-        return self.rainbow(*spans)
 
     def to_svg(
         self,
@@ -1478,39 +1150,25 @@ class ANSIString(str):
     def gradient(
         self,
         colors: ColorScale | _Sequence[ColorStop],
-        *slices: SliceGroup,
-        skip_whitespace: bool = False,
-        skip_emojis: bool = False,
-        fg: bool = False,
-        bg: bool = False,
-        ul: bool = False,
+        *targets: SliceGroup | Pattern | Words | Coords | Chars,
         space: _Literal["rgb", "hsl"] = "hsl",
+        channel: Channel = Channel.FG,
     ) -> _Self:
-        """Apply a gradient across slices of the string.
+        """Apply a gradient across targets of the string.
 
         Parameters
         ----------
         colors : ColorScale | Sequence[ColorStop]
             Gradient stops used for interpolation. When a list is provided, it is
-            converted to :class:`ColorScale` using *space*.
-        *slices : SliceGroup
-            Target slices to color. Each item can be a single slice spec
-            ``(start, stop[, step])`` or a tuple of slice specs to receive the
-            same interpolated color.
-        skip_whitespace : bool
-            When ``True`` and no explicit *slices* are passed, whitespace
-            characters are skipped while building per-character slices.
-        skip_emojis : bool
-            When ``True`` and no explicit *slices* are passed, emoji
-            characters are skipped while building per-character slices.
-        fg : bool
-            Apply colors to the foreground channel.
-        bg : bool
-            Apply colors to the background channel.
-        ul : bool
-            Apply colors to the underline channel.
-        space : Literal["rgb", "hsl"]
+            converted to a ColorScale using the `space` argument.
+        *targets : SliceGroup | Pattern | Words | Coords | Chars
+            Target selectors defining where the gradient should be applied. If no
+            targets are provided, defaults to individual characters
+            (skipping whitespace).
+        space : Literal["rgb", "hsl"], default "hsl"
             Color interpolation space used when *colors* is a list.
+        channel : Channel, default Channel.FG
+            The color channel(s) to apply the gradient to (e.g., FG, BG, UL).
 
         Returns
         -------
@@ -1521,306 +1179,132 @@ class ANSIString(str):
         if not isinstance(colors, ColorScale):
             colors = ColorScale(colors, space)
 
-        if not (fg or bg or ul):
-            fg = True
+        slices = self._resolve_targets(targets)
 
         if not slices:
-            slices = _get_grapheme_spans(self.plain_text, skip_emojis, skip_whitespace)
-            if not slices:
-                return self
+            return self
 
         length = len(slices)
         denom = length - 1 if length > 1 else 1
 
         for index, item in enumerate(slices):
-            r, g, b = colors.interpolate_rgb(index / denom)
+            color = colors.interpolate_rgb(index / denom)
             if isinstance(item, slice) or isinstance(item[0], int):
                 # Assume it's a slice or a tuple of (start, end, [step])
                 item = _cast(SliceSpec, item)
-                if fg:
-                    self.fg_24b(r, g, b, item)
-                if bg:
-                    self.bg_24b(r, g, b, item)
-                if ul:
-                    self.ul_24b(r, g, b, item)
+                if Channel.FG in channel:
+                    self.fg(color, item)
+                if Channel.BG in channel:
+                    self.bg(color, item)
+                if Channel.UL in channel:
+                    self.ul(color, item)
             else:
                 # Assume it's a group of slice specs to be applied with the same color
                 item = _cast(tuple[SliceSpec, ...], item)
                 for sub_item in item:
-                    if fg:
-                        self.fg_24b(r, g, b, sub_item)
-                    if bg:
-                        self.bg_24b(r, g, b, sub_item)
-                    if ul:
-                        self.ul_24b(r, g, b, sub_item)
-
-        return self
-
-    def gradient_words(
-        self,
-        colors: ColorScale | _Sequence[ColorStop],
-        *words: str,
-        case_sensitive: bool = True,
-        fg: bool = False,
-        bg: bool = False,
-        ul: bool = False,
-        space: _Literal["rgb", "hsl"] = "hsl",
-    ) -> _Self:
-        """Apply a gradient to matching word spans.
-
-        Parameters
-        ----------
-        colors : ColorScale | Sequence[ColorStop]
-            Gradient stops used for interpolation.
-        *words : str
-            Words to search for and color.
-        case_sensitive : bool
-            When ``True``, matches are case-sensitive.
-        fg : bool
-            Apply colors to the foreground channel.
-        bg : bool
-            Apply colors to the background channel.
-        ul : bool
-            Apply colors to the underline channel.
-        space : Literal["rgb", "hsl"]
-            Color interpolation space used when *colors* is a list.
-
-        Returns
-        -------
-        Self
-            This ANSIString instance, modified in place.
-        """
-        spans = self._search_spans(*words, case_sensitive=case_sensitive)
-
-        if not spans:
-            return self
-
-        return self.gradient(
-            colors,
-            *spans,
-            fg=fg,
-            bg=bg,
-            ul=ul,
-            space=space,
-        )
-
-    def gradient_coordinates(
-        self,
-        colors: ColorScale | _Sequence[ColorStop],
-        *coordinates: CoordinateGroup,
-        fg: bool = False,
-        bg: bool = False,
-        ul: bool = False,
-        space: _Literal["rgb", "hsl"] = "hsl",
-        index_base: int = 0,
-        origin: tuple[int, int] = (0, 0),
-        system: _Literal["cartesian", "terminal"] = "terminal",
-        on_out_of_bounds: _Literal["ignore", "clamp", "raise"] = "raise",
-    ) -> _Self:
-        """Apply a gradient to characters selected by 2D coordinates.
-
-        Parameters
-        ----------
-        colors : ColorScale | Sequence[ColorStop]
-            Gradient stops used for interpolation.
-        *coordinates : CoordinateGroup
-            Coordinate targets. Each item can be a single coordinate ``(x, y)`` or
-            a tuple of coordinates to receive the same interpolated color.
-        fg : bool
-            Apply colors to the foreground channel.
-        bg : bool
-            Apply colors to the background channel.
-        ul : bool
-            Apply colors to the underline channel.
-        space : Literal["rgb", "hsl"]
-            Color interpolation space used when *colors* is a list.
-        index_base : int
-            Coordinate indexing base (for example, ``0`` for zero-based and ``1``
-            for one-based coordinates).
-        origin : tuple[int, int]
-            Origin point for the input coordinate plane,
-            applied after index-base normalization.
-        system : Literal["cartesian", "terminal"]
-            Coordinate system interpretation for ``y`` values.
-        on_out_of_bounds : Literal["ignore", "clamp", "raise"]
-            Policy for out-of-range coordinates.
-
-        Returns
-        -------
-        Self
-            This ANSIString instance, modified in place.
-
-        Raises
-        ------
-        IndexError
-            If *on_out_of_bounds* is ``"raise"`` and a coordinate falls outside
-            available text bounds.
-        """
-
-        slices = self._resolve_coordinates(
-            coordinates, index_base, origin, system, on_out_of_bounds
-        )
-
-        if not slices:
-            return self
-
-        return self.gradient(
-            colors,
-            *slices,
-            fg=fg,
-            bg=bg,
-            ul=ul,
-            space=space,
-        )
-
-    def gradient_pattern(
-        self,
-        colors: ColorScale | _Sequence[ColorStop],
-        pattern: str | _re.Pattern[str],
-        fg: bool = False,
-        bg: bool = False,
-        ul: bool = False,
-        space: _Literal["rgb", "hsl"] = "hsl",
-        flags: int | _re.RegexFlag = 0,
-    ) -> _Self:
-        spans = tuple(match.span() for match in self._search_pattern(pattern, flags))
-        if not spans:
-            return self
-        return self.gradient(
-            colors,
-            *spans,
-            fg=fg,
-            bg=bg,
-            ul=ul,
-            space=space,
-        )
-
-    def colormap_pattern(
-        self,
-        cmap: ColorMap | SegmentedColorMap,
-        pattern: str | _re.Pattern[str] = r"[-+]?(?:\d*\.\d+|\d+)",
-        parser: _Callable[[_re.Match[str]], int | float] = lambda m: float(m.group(0)),
-        flags: int | _re.RegexFlag = 0,
-        fg: bool = False,
-        bg: bool = False,
-        ul: bool = False,
-    ) -> _Self:
-        """Apply a colormap to substrings matching a regular expression.
-
-        Parameters
-        ----------
-        cmap : ColorMap | SegmentedColorMap
-            The colormap used to resolve numerical values to Colors.
-        pattern : str | re.Pattern[str]
-            The regex pattern to locate targets in the plain text.
-            Defaults to extracting basic integers and floats.
-        parser : Callable[[re.Match[str]], int | float]
-            A function that takes the regex Match object and returns a
-            number for the colormap. Defaults to casting the full match to float.
-        flags : int | re.RegexFlag
-            Regex flags to apply if `pattern` is provided as a string.
-        fg : bool
-            Apply colors to the foreground channel.
-        bg : bool
-            Apply colors to the background channel.
-        ul : bool
-            Apply colors to the underline channel.
-
-        Returns
-        -------
-        Self
-            This ANSIString instance, modified in place.
-        """
-        if not (fg or bg or ul):
-            fg = True
-
-        for match in self._search_pattern(pattern, flags):
-            try:
-                value = parser(match)
-            except (ValueError, TypeError):
-                continue
-
-            color = cmap(value)
-            r, g, b = color.to_rgb()
-            span = match.span()
-
-            if fg:
-                self.fg_24b(r, g, b, span)
-            if bg:
-                self.bg_24b(r, g, b, span)
-            if ul:
-                self.ul_24b(r, g, b, span)
+                    if Channel.FG in channel:
+                        self.fg(color, sub_item)
+                    if Channel.BG in channel:
+                        self.bg(color, sub_item)
+                    if Channel.UL in channel:
+                        self.ul(color, sub_item)
 
         return self
 
     def colormap(
         self,
         cmap: ColorMap | SegmentedColorMap,
-        values: _Sequence[int | float],
-        *slices: SliceGroup,
-        skip_whitespace: bool = False,
-        skip_emojis: bool = False,
-        fg: bool = False,
-        bg: bool = False,
-        ul: bool = False,
+        *targets: SliceGroup | Pattern | Words | Coords | Chars,
+        values: _Sequence[int | float] | None = None,
+        to_value: _Callable[[str], int | float] = float,
+        channel: Channel = Channel.FG,
     ) -> "ANSIString":
-        """Apply a colormap to slices based on a corresponding sequence of values.
+        """Apply a colormap to targets based on a corresponding
+        sequence of values or text extraction.
 
         Parameters
         ----------
         cmap : ColorMap | SegmentedColorMap
             The colormap used to resolve numerical values to Colors.
-        values : Sequence[int | float]
-            The numbers that will be used for the interpolation.
-        *slices : SliceGroup
-            Target slices to color. Each item can be a single slice spec
-            ``(start, stop[, step])`` or a tuple of slice specs to receive the
-            same interpolated color.
-        skip_whitespace : bool
-            When ``True`` and no explicit *slices* are passed, whitespace
-            characters are skipped while building per-character slices.
-        skip_emojis : bool
-            When ``True`` and no explicit *slices* are passed, emoji
-            characters are skipped while building per-character slices.
-        fg : bool
-            Apply colors to the foreground channel.
-        bg : bool
-            Apply colors to the background channel.
-        ul : bool
-            Apply colors to the underline channel.
+        *targets : SliceGroup | Pattern | Words | Coords | Chars
+            Target selectors defining what substrings to evaluate. If no targets
+            are provided, defaults to evaluating every non-whitespace character.
+        values : Sequence[int | float] | None, default None
+            Explicit numerical values corresponding to the matched targets.
+            If not provided, the method extracts the text of each target
+            and parses it using `to_value`.
+        to_value : Callable[[str], int | float], default float
+            A parser function that converts the extracted target text into a number.
+            Only used if `values` is None.
+        channel : Channel, default Channel.FG
+            The color channel(s) to apply the colormap to (e.g., FG, BG, UL).
 
         Returns
         -------
         Self
             This ANSIString instance, modified in place.
         """
+
+        if not targets:
+            targets = (Chars(skip_whitespace=True),)
+
+        slices = self._resolve_targets(targets)
+
         if not slices:
-            slices = _get_grapheme_spans(self.plain_text, skip_emojis, skip_whitespace)
+            return self
 
-        if not (fg or bg or ul):
-            fg = True
+        if values is not None:
+            iterator = zip(slices, values)
 
-        for slice_item, value in zip(slices, values):
-            r, g, b = cmap(value)
+        else:
+            plain = self.plain_text
+
+            def _extract_and_parse():
+                for slice_item in slices:
+                    if isinstance(slice_item, tuple):
+                        if isinstance(slice_item[0], int):
+                            if len(slice_item) == 2:
+                                substring = plain[slice_item[0] : slice_item[1]]
+                            else:
+                                substring = plain[slice(*slice_item)]
+                        else:
+                            first = slice_item[0]
+                            if isinstance(first, slice):
+                                substring = plain[first]
+                            elif len(first) == 2:
+                                substring = plain[first[0] : first[1]]
+                            else:
+                                substring = plain[slice(*first)]
+                    else:
+                        substring = plain[slice_item]
+
+                    try:
+                        yield slice_item, to_value(substring)
+                    except (ValueError, TypeError):
+                        continue
+
+            iterator = _extract_and_parse()
+
+        for slice_item, value in iterator:
+            color = cmap(value).to_rgb()
+
             if isinstance(slice_item, slice) or isinstance(slice_item[0], int):
-                # Assume it's a slice or a tuple of (start, end, [step])
                 slice_item = _cast(SliceSpec, slice_item)
-                if fg:
-                    self.fg_24b(r, g, b, slice_item)
-                if bg:
-                    self.bg_24b(r, g, b, slice_item)
-                if ul:
-                    self.ul_24b(r, g, b, slice_item)
+                if Channel.FG in channel:
+                    self.fg(color, slice_item)
+                if Channel.BG in channel:
+                    self.bg(color, slice_item)
+                if Channel.UL in channel:
+                    self.ul(color, slice_item)
             else:
-                # Assume it's a group of slice specs to be applied with the same color
                 slice_item = _cast(tuple[SliceSpec, ...], slice_item)
                 for sub_item in slice_item:
-                    if fg:
-                        self.fg_24b(r, g, b, sub_item)
-                    if bg:
-                        self.bg_24b(r, g, b, sub_item)
-                    if ul:
-                        self.ul_24b(r, g, b, sub_item)
+                    if Channel.FG in channel:
+                        self.fg(color, sub_item)
+                    if Channel.BG in channel:
+                        self.bg(color, sub_item)
+                    if Channel.UL in channel:
+                        self.ul(color, sub_item)
 
         return self
 
