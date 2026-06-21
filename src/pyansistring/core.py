@@ -415,7 +415,7 @@ class ANSIString(str):
 
         return "".join(parts)
 
-    def _get_indices(self, slice_: _Sequence[int] | slice) -> tuple[int, int, int]:
+    def _get_indices(self, slice_: SliceGroup) -> tuple[int, int, int]:
         """Convert a slice or sequence of three integers to (start, stop, step)."""
         if isinstance(slice_, slice):
             start, stop, step = slice_.indices(len(self))
@@ -585,7 +585,7 @@ class ANSIString(str):
     def style(
         self,
         style_code: int | str,
-        *slices: _Sequence[int] | slice,
+        *slices: SliceGroup,
     ) -> _Self:
         """Apply a style to the string in a specified range."""
         # TODO: forbid formatting above the length of the string
@@ -617,7 +617,34 @@ class ANSIString(str):
             style_code, *self._search_spans(*words, case_sensitive=case_sensitive)
         )
 
-    def unstyle(self, *slices: _Sequence[int] | slice) -> _Self:
+    def style_coordinates(
+        self,
+        style_code: int | str,
+        *coordinates: CoordinateGroup,
+        index_base: int = 0,
+        origin: tuple[int, int] = (0, 0),
+        system: _Literal["cartesian", "terminal"] = "terminal",
+        on_out_of_bounds: _Literal["ignore", "clamp", "raise"] = "raise",
+    ) -> _Self:
+        slices = self._resolve_coordinates(
+            coordinates, index_base, origin, system, on_out_of_bounds
+        )
+        if not slices:
+            return self
+        return self.style(style_code, *slices)
+
+    def style_pattern(
+        self,
+        style_code: int,
+        pattern: str | _re.Pattern[str],
+        flags: int | _re.RegexFlag = 0,
+    ) -> _Self:
+        spans = tuple(match.span() for match in self._search_pattern(pattern, flags))
+        if not spans:
+            return self
+        return self.style(style_code, *spans)
+
+    def unstyle(self, *slices: SliceGroup) -> _Self:
         """Remove styling from the string in a specified range."""
         if slices:
             for slice_ in slices:
@@ -634,10 +661,35 @@ class ANSIString(str):
         """Remove styling from matched words of the string."""
         return self.unstyle(*self._search_spans(*words, case_sensitive=case_sensitive))
 
+    def unstyle_coordinates(
+        self,
+        *coordinates: CoordinateGroup,
+        index_base: int = 0,
+        origin: tuple[int, int] = (0, 0),
+        system: _Literal["cartesian", "terminal"] = "terminal",
+        on_out_of_bounds: _Literal["ignore", "clamp", "raise"] = "raise",
+    ) -> _Self:
+        slices = self._resolve_coordinates(
+            coordinates, index_base, origin, system, on_out_of_bounds
+        )
+        if not slices:
+            return self
+        return self.unstyle(*slices)
+
+    def unstyle_pattern(
+        self,
+        pattern: str | _re.Pattern[str],
+        flags: int | _re.RegexFlag = 0,
+    ) -> _Self:
+        spans = tuple(match.span() for match in self._search_pattern(pattern, flags))
+        if not spans:
+            return self
+        return self.unstyle(*spans)
+
     def fg_4b(
         self,
         color: Foreground,
-        *slices: _Sequence[int] | slice,
+        *slices: SliceGroup,
     ) -> _Self:
         """Apply a 4-bit foreground color to the string in a specified range."""
         return self.style(color, *slices)
@@ -653,10 +705,37 @@ class ANSIString(str):
             color, *self._search_spans(*words, case_sensitive=case_sensitive)
         )
 
+    def fg_4b_coordinates(
+        self,
+        color: Foreground,
+        *coordinates: CoordinateGroup,
+        index_base: int = 0,
+        origin: tuple[int, int] = (0, 0),
+        system: _Literal["cartesian", "terminal"] = "terminal",
+        on_out_of_bounds: _Literal["ignore", "clamp", "raise"] = "raise",
+    ) -> _Self:
+        slices = self._resolve_coordinates(
+            coordinates, index_base, origin, system, on_out_of_bounds
+        )
+        if not slices:
+            return self
+        return self.fg_4b(color, *slices)
+
+    def fg_4b_pattern(
+        self,
+        color: Foreground,
+        pattern: str | _re.Pattern[str],
+        flags: int | _re.RegexFlag = 0,
+    ) -> _Self:
+        spans = tuple(match.span() for match in self._search_pattern(pattern, flags))
+        if not spans:
+            return self
+        return self.fg_4b(color, *spans)
+
     def fg_8b(
         self,
         color_index: int,
-        *slices: _Sequence[int] | slice,
+        *slices: SliceGroup,
     ) -> _Self:
         """Apply an 8-bit foreground color to the string in a specified range."""
         style = f"\x1b[{Foreground.SET};5;{color_index}m"
@@ -673,12 +752,39 @@ class ANSIString(str):
             color_index, *self._search_spans(*words, case_sensitive=case_sensitive)
         )
 
+    def fg_8b_coordinates(
+        self,
+        color_index: int,
+        *coordinates: CoordinateGroup,
+        index_base: int = 0,
+        origin: tuple[int, int] = (0, 0),
+        system: _Literal["cartesian", "terminal"] = "terminal",
+        on_out_of_bounds: _Literal["ignore", "clamp", "raise"] = "raise",
+    ) -> _Self:
+        slices = self._resolve_coordinates(
+            coordinates, index_base, origin, system, on_out_of_bounds
+        )
+        if not slices:
+            return self
+        return self.fg_8b(color_index, *slices)
+
+    def fg_8b_pattern(
+        self,
+        color_index: int,
+        pattern: str | _re.Pattern[str],
+        flags: int | _re.RegexFlag = 0,
+    ) -> _Self:
+        spans = tuple(match.span() for match in self._search_pattern(pattern, flags))
+        if not spans:
+            return self
+        return self.fg_8b(color_index, *spans)
+
     def fg_24b(
         self,
         r: int,
         g: int,
         b: int,
-        *slices: _Sequence[int] | slice,
+        *slices: SliceGroup,
     ) -> _Self:
         """Apply a 24-bit foreground color to the string in a specified range."""
         style = f"\x1b[{Foreground.SET};2;{r};{g};{b}m"
@@ -697,10 +803,41 @@ class ANSIString(str):
             r, g, b, *self._search_spans(*words, case_sensitive=case_sensitive)
         )
 
+    def fg_24b_coordinates(
+        self,
+        r: int,
+        g: int,
+        b: int,
+        *coordinates: CoordinateGroup,
+        index_base: int = 0,
+        origin: tuple[int, int] = (0, 0),
+        system: _Literal["cartesian", "terminal"] = "terminal",
+        on_out_of_bounds: _Literal["ignore", "clamp", "raise"] = "raise",
+    ) -> _Self:
+        slices = self._resolve_coordinates(
+            coordinates, index_base, origin, system, on_out_of_bounds
+        )
+        if not slices:
+            return self
+        return self.fg_24b(r, g, b, *slices)
+
+    def fg_24b_pattern(
+        self,
+        r: int,
+        g: int,
+        b: int,
+        pattern: str | _re.Pattern[str],
+        flags: int | _re.RegexFlag = 0,
+    ) -> _Self:
+        spans = tuple(match.span() for match in self._search_pattern(pattern, flags))
+        if not spans:
+            return self
+        return self.fg_24b(r, g, b, *spans)
+
     def bg_4b(
         self,
         color: Background,
-        *slices: _Sequence[int] | slice,
+        *slices: SliceGroup,
     ) -> _Self:
         """Apply a 4-bit background color to the string in a specified range."""
         return self.style(color, *slices)
@@ -716,10 +853,37 @@ class ANSIString(str):
             color, *self._search_spans(*words, case_sensitive=case_sensitive)
         )
 
+    def bg_4b_coordinates(
+        self,
+        color: Background,
+        *coordinates: CoordinateGroup,
+        index_base: int = 0,
+        origin: tuple[int, int] = (0, 0),
+        system: _Literal["cartesian", "terminal"] = "terminal",
+        on_out_of_bounds: _Literal["ignore", "clamp", "raise"] = "raise",
+    ) -> _Self:
+        slices = self._resolve_coordinates(
+            coordinates, index_base, origin, system, on_out_of_bounds
+        )
+        if not slices:
+            return self
+        return self.bg_4b(color, *slices)
+
+    def bg_4b_pattern(
+        self,
+        color: Background,
+        pattern: str | _re.Pattern[str],
+        flags: int | _re.RegexFlag = 0,
+    ) -> _Self:
+        spans = tuple(match.span() for match in self._search_pattern(pattern, flags))
+        if not spans:
+            return self
+        return self.bg_4b(color, *spans)
+
     def bg_8b(
         self,
         color_index: int,
-        *slices: _Sequence[int] | slice,
+        *slices: SliceGroup,
     ) -> _Self:
         """Apply an 8-bit background color to the string in a specified range."""
         style = f"\x1b[{Background.SET};5;{color_index}m"
@@ -736,12 +900,39 @@ class ANSIString(str):
             color_index, *self._search_spans(*words, case_sensitive=case_sensitive)
         )
 
+    def bg_8b_coordinates(
+        self,
+        color_index: int,
+        *coordinates: CoordinateGroup,
+        index_base: int = 0,
+        origin: tuple[int, int] = (0, 0),
+        system: _Literal["cartesian", "terminal"] = "terminal",
+        on_out_of_bounds: _Literal["ignore", "clamp", "raise"] = "raise",
+    ) -> _Self:
+        slices = self._resolve_coordinates(
+            coordinates, index_base, origin, system, on_out_of_bounds
+        )
+        if not slices:
+            return self
+        return self.bg_8b(color_index, *slices)
+
+    def bg_8b_pattern(
+        self,
+        color_index: int,
+        pattern: str | _re.Pattern[str],
+        flags: int | _re.RegexFlag = 0,
+    ) -> _Self:
+        spans = tuple(match.span() for match in self._search_pattern(pattern, flags))
+        if not spans:
+            return self
+        return self.bg_8b(color_index, *spans)
+
     def bg_24b(
         self,
         r: int,
         g: int,
         b: int,
-        *slices: _Sequence[int] | slice,
+        *slices: SliceGroup,
     ) -> _Self:
         """Apply a 24-bit background color to the string in a specified range."""
         style = f"\x1b[{Background.SET};2;{r};{g};{b}m"
@@ -760,9 +951,40 @@ class ANSIString(str):
             r, g, b, *self._search_spans(*words, case_sensitive=case_sensitive)
         )
 
+    def bg_24b_coordinates(
+        self,
+        r: int,
+        g: int,
+        b: int,
+        *coordinates: CoordinateGroup,
+        index_base: int = 0,
+        origin: tuple[int, int] = (0, 0),
+        system: _Literal["cartesian", "terminal"] = "terminal",
+        on_out_of_bounds: _Literal["ignore", "clamp", "raise"] = "raise",
+    ) -> _Self:
+        slices = self._resolve_coordinates(
+            coordinates, index_base, origin, system, on_out_of_bounds
+        )
+        if not slices:
+            return self
+        return self.bg_24b(r, g, b, *slices)
+
+    def bg_24b_pattern(
+        self,
+        r: int,
+        g: int,
+        b: int,
+        pattern: str | _re.Pattern[str],
+        flags: int | _re.RegexFlag = 0,
+    ) -> _Self:
+        spans = tuple(match.span() for match in self._search_pattern(pattern, flags))
+        if not spans:
+            return self
+        return self.bg_24b(r, g, b, *spans)
+
     def ul_default(
         self,
-        *slices: _Sequence[int] | slice,
+        *slices: SliceGroup,
     ) -> _Self:
         """Apply the default underline style to the string in a specified range."""
         return self.style(Underline.DEFAULT, *slices)
@@ -777,10 +999,35 @@ class ANSIString(str):
             *self._search_spans(*words, case_sensitive=case_sensitive)
         )
 
+    def ul_default_coordinates(
+        self,
+        *coordinates: CoordinateGroup,
+        index_base: int = 0,
+        origin: tuple[int, int] = (0, 0),
+        system: _Literal["cartesian", "terminal"] = "terminal",
+        on_out_of_bounds: _Literal["ignore", "clamp", "raise"] = "raise",
+    ) -> _Self:
+        slices = self._resolve_coordinates(
+            coordinates, index_base, origin, system, on_out_of_bounds
+        )
+        if not slices:
+            return self
+        return self.ul_default(*slices)
+
+    def ul_default_pattern(
+        self,
+        pattern: str | _re.Pattern[str],
+        flags: int | _re.RegexFlag = 0,
+    ) -> _Self:
+        spans = tuple(match.span() for match in self._search_pattern(pattern, flags))
+        if not spans:
+            return self
+        return self.ul_default(*spans)
+
     def ul_8b(
         self,
         color_index: int,
-        *slices: _Sequence[int] | slice,
+        *slices: SliceGroup,
     ) -> _Self:
         """Apply an 8-bit underline color to the string in a specified range."""
         style = f"\x1b[{Underline.SET}:5:{color_index}m"
@@ -797,12 +1044,39 @@ class ANSIString(str):
             color_index, *self._search_spans(*words, case_sensitive=case_sensitive)
         )
 
+    def ul_8b_coordinates(
+        self,
+        color_index: int,
+        *coordinates: CoordinateGroup,
+        index_base: int = 0,
+        origin: tuple[int, int] = (0, 0),
+        system: _Literal["cartesian", "terminal"] = "terminal",
+        on_out_of_bounds: _Literal["ignore", "clamp", "raise"] = "raise",
+    ) -> _Self:
+        slices = self._resolve_coordinates(
+            coordinates, index_base, origin, system, on_out_of_bounds
+        )
+        if not slices:
+            return self
+        return self.ul_8b(color_index, *slices)
+
+    def ul_8b_pattern(
+        self,
+        color_index: int,
+        pattern: str | _re.Pattern[str],
+        flags: int | _re.RegexFlag = 0,
+    ) -> _Self:
+        spans = tuple(match.span() for match in self._search_pattern(pattern, flags))
+        if not spans:
+            return self
+        return self.ul_8b(color_index, *spans)
+
     def ul_24b(
         self,
         r: int,
         g: int,
         b: int,
-        *slices: _Sequence[int] | slice,
+        *slices: SliceGroup,
     ) -> _Self:
         """Apply a 24-bit underline color to the string in a specified range."""
         style = f"\x1b[{Underline.SET}:2::{r}:{g}:{b}m"
@@ -821,9 +1095,40 @@ class ANSIString(str):
             r, g, b, *self._search_spans(*words, case_sensitive=case_sensitive)
         )
 
+    def ul_24b_coordinates(
+        self,
+        r: int,
+        g: int,
+        b: int,
+        *coordinates: CoordinateGroup,
+        index_base: int = 0,
+        origin: tuple[int, int] = (0, 0),
+        system: _Literal["cartesian", "terminal"] = "terminal",
+        on_out_of_bounds: _Literal["ignore", "clamp", "raise"] = "raise",
+    ) -> _Self:
+        slices = self._resolve_coordinates(
+            coordinates, index_base, origin, system, on_out_of_bounds
+        )
+        if not slices:
+            return self
+        return self.ul_24b(r, g, b, *slices)
+
+    def ul_24b_pattern(
+        self,
+        r: int,
+        g: int,
+        b: int,
+        pattern: str | _re.Pattern[str],
+        flags: int | _re.RegexFlag = 0,
+    ) -> _Self:
+        spans = tuple(match.span() for match in self._search_pattern(pattern, flags))
+        if not spans:
+            return self
+        return self.ul_24b(r, g, b, *spans)
+
     def rainbow(
         self,
-        *slices: _Sequence[int] | slice,
+        *slices: SliceGroup,
         skip_whitespace: bool = False,
         skip_emojis: bool = False,
         fg: bool = False,
@@ -848,6 +1153,38 @@ class ANSIString(str):
             if ul:
                 self.ul_24b(*_hsl_to_rgb(hue), slice_)
         return self
+
+    def rainbow_words(
+        self,
+        *words: str,
+        case_sensitive: bool = True,
+    ) -> _Self:
+        return self.rainbow(*self._search_spans(*words, case_sensitive=case_sensitive))
+
+    def rainbow_coordinates(
+        self,
+        *coordinates: CoordinateGroup,
+        index_base: int = 0,
+        origin: tuple[int, int] = (0, 0),
+        system: _Literal["cartesian", "terminal"] = "terminal",
+        on_out_of_bounds: _Literal["ignore", "clamp", "raise"] = "raise",
+    ) -> _Self:
+        slices = self._resolve_coordinates(
+            coordinates, index_base, origin, system, on_out_of_bounds
+        )
+        if not slices:
+            return self
+        return self.rainbow(*slices)
+
+    def rainbow_pattern(
+        self,
+        pattern: str | _re.Pattern[str],
+        flags: int | _re.RegexFlag = 0,
+    ) -> _Self:
+        spans = tuple(match.span() for match in self._search_pattern(pattern, flags))
+        if not spans:
+            return self
+        return self.rainbow(*spans)
 
     def to_svg(
         self,
@@ -1330,6 +1667,28 @@ class ANSIString(str):
         return self.gradient(
             colors,
             *slices,
+            fg=fg,
+            bg=bg,
+            ul=ul,
+            space=space,
+        )
+
+    def gradient_pattern(
+        self,
+        colors: ColorScale | _Sequence[ColorStop],
+        pattern: str | _re.Pattern[str],
+        fg: bool = False,
+        bg: bool = False,
+        ul: bool = False,
+        space: _Literal["rgb", "hsl"] = "hsl",
+        flags: int | _re.RegexFlag = 0,
+    ) -> _Self:
+        spans = tuple(match.span() for match in self._search_pattern(pattern, flags))
+        if not spans:
+            return self
+        return self.gradient(
+            colors,
+            *spans,
             fg=fg,
             bg=bg,
             ul=ul,
