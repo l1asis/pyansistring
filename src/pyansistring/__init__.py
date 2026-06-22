@@ -19,7 +19,7 @@ from .color import Color
 from .config import Config, config
 from .constants import (
     COLOR_THEMES,
-    COLORS_8BIT,
+    COLORS_256,
     DEFAULT_THEME,
     PUNCTUATION,
     PUNCTUATION_AND_WHITESPACE,
@@ -31,6 +31,7 @@ from .constants import (
     ColorDepth,
     Foreground,
     NamedColors,
+    Palette256,
     Regex,
     Underline,
     UnderlineMode,
@@ -53,7 +54,8 @@ __all__ = [
     "UnderlineMode",
     "SGR",
     "NamedColors",
-    "COLORS_8BIT",
+    "Palette256",
+    "COLORS_256",
     "COLOR_THEMES",
     "DEFAULT_THEME",
     "WHITESPACE",

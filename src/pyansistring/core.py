@@ -52,14 +52,11 @@ from ._helpers import (
     search_separators as _search_separators,
 )
 from ._types import (
-    BgInput,
     ColorStop,
     Coordinate,
     CoordinateGroup,
-    FgInput,
     SliceGroup,
     SliceSpec,
-    UlInput,
 )
 from .targets import Chars, Coords, Pattern, Words
 
@@ -85,6 +82,7 @@ from .constants import (
     Background,
     Channel,
     Foreground,
+    Palette256,
     Regex,
     Underline,
     UnderlineMode,
@@ -758,13 +756,15 @@ class ANSIString(str):
         return self
 
     def fg(
-        self, color: FgInput, *targets: SliceGroup | Pattern | Words | Coords | Chars
+        self,
+        color: Foreground | Palette256 | Color | tuple[int, int, int] | str | int,
+        *targets: SliceGroup | Pattern | Words | Coords | Chars,
     ) -> _Self:
         """Apply a foreground color.
 
         Parameters
         ----------
-        color : FgInput
+        color : Foreground | Palette256 | Color | tuple[int, int, int] | str | int
             The color to apply. Automatically infers 4-bit, 8-bit, or 24-bit depth.
         *targets : SliceGroup | Pattern | Words | Coords | Chars
             Target selectors defining where the color should be applied.
@@ -778,13 +778,15 @@ class ANSIString(str):
         return self.style(Style(foreground=resolved), *targets)
 
     def bg(
-        self, color: BgInput, *targets: SliceGroup | Pattern | Words | Coords | Chars
+        self,
+        color: Background | Palette256 | Color | tuple[int, int, int] | str | int,
+        *targets: SliceGroup | Pattern | Words | Coords | Chars,
     ) -> _Self:
         """Apply a background color.
 
         Parameters
         ----------
-        color : BgInput
+        color : Background | Palette256 | Color | tuple[int, int, int] | str | int
             The color to apply. Automatically infers 4-bit, 8-bit, or 24-bit depth.
         *targets : SliceGroup | Pattern | Words | Coords | Chars
             Target selectors defining where the color should be applied.
@@ -799,14 +801,20 @@ class ANSIString(str):
 
     def ul(
         self,
-        color: UlInput = Underline.DEFAULT,
+        color: Underline
+        | Palette256
+        | Color
+        | tuple[int, int, int]
+        | str
+        | int = Underline.DEFAULT,
         *targets: SliceGroup | Pattern | Words | Coords | Chars,
     ) -> _Self:
         """Apply a underline color.
 
         Parameters
         ----------
-        color : UlInput, default Underline.DEFAULT
+        color : Underline | Palette256 | Color | tuple[int, int, int] | str | int, \
+                default Underline.DEFAULT
             The color to apply. Automatically infers 4-bit, 8-bit, or 24-bit depth.
         *targets : SliceGroup | Pattern | Words | Coords | Chars
             Target selectors defining where the color should be applied.

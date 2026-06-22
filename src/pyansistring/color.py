@@ -11,7 +11,7 @@ from ._helpers import clamp as _clamp
 from .config import config as _config
 from .constants import (
     COLOR_THEMES,
-    COLORS_8BIT,
+    COLORS_256,
     DEFAULT_THEME,
     Background,
     Foreground,
@@ -184,7 +184,7 @@ class Color(metaclass=_FrozenMeta):
             return self.value
         elif self.depth == "8bit":
             assert isinstance(self.value, int)
-            return COLORS_8BIT[self.value]
+            return COLORS_256[self.value]
         elif self.depth == "4bit":
             assert isinstance(self.value, int)
             return COLOR_THEMES[theme][self.value]
