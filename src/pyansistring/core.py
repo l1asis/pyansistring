@@ -847,6 +847,9 @@ class ANSIString(str):
             This ANSIString instance, modified in place.
         """
 
+        if not targets:
+            targets = (Chars(skip_whitespace=True),)
+
         slices = self._resolve_targets(targets)
 
         if not slices:
@@ -1186,6 +1189,9 @@ class ANSIString(str):
 
         if not isinstance(colors, ColorScale):
             colors = ColorScale(colors, space)
+
+        if not targets:
+            targets = (Chars(skip_whitespace=True),)
 
         slices = self._resolve_targets(targets)
 
