@@ -5,31 +5,40 @@ Run with:
     python examples/showcase.py
 """
 
-from pyansistring import ANSIString
+from pyansistring import (
+    ANSIString,
+    Channel,
+    Chars,
+    Coords,
+    Pattern,
+    Words,
+)
+from pyansistring.color import ColorMap, ColorScale, SegmentedColorMap
 from pyansistring.constants import (
     SGR,
     Background,
     Foreground,
+    NamedColors,
     UnderlineMode,
 )
 
 # ── Helpers ───────────────────────────────────────────────────────────────
 
 DIVIDER_CHAR = "─"
-DIVIDER_LEN = 72
+DIVIDER_LEN = 80
 WALL = "\x1b[100m \x1b[0m"
 
 
 def section(title: str) -> None:
     """Print a section header."""
     line = ANSIString(f" {title} ".center(DIVIDER_LEN, DIVIDER_CHAR))
-    line.fg_24b(180, 180, 180)
+    line.fg((180, 180, 180))
     print(f"\n{line}\n")
 
 
 def show(label: str, value: ANSIString | str) -> None:
     """Print a labelled example with visual framing."""
-    print(f"  {label:<40} {WALL}{value}{WALL}")
+    print(f"  {label:<48} {WALL}{value}{WALL}")
 
 
 # ── Main showcase ─────────────────────────────────────────────────────────
@@ -65,102 +74,57 @@ def main() -> None:
         .style(SGR.UNDERLINE),
     )
 
-    # ── 4-bit foreground ───────────────────────────────────────────────
-    section("4-bit foreground colours")
-    colors_4bit = [
-        ("BLACK", Foreground.BLACK),
-        ("RED", Foreground.RED),
-        ("GREEN", Foreground.GREEN),
-        ("YELLOW", Foreground.YELLOW),
-        ("BLUE", Foreground.BLUE),
-        ("MAGENTA", Foreground.MAGENTA),
-        ("CYAN", Foreground.CYAN),
-        ("WHITE", Foreground.WHITE),
-        ("BRIGHT_BLACK", Foreground.BRIGHT_BLACK),
-        ("BRIGHT_RED", Foreground.BRIGHT_RED),
-        ("BRIGHT_GREEN", Foreground.BRIGHT_GREEN),
-        ("BRIGHT_YELLOW", Foreground.BRIGHT_YELLOW),
-        ("BRIGHT_BLUE", Foreground.BRIGHT_BLUE),
-        ("BRIGHT_MAGENTA", Foreground.BRIGHT_MAGENTA),
-        ("BRIGHT_CYAN", Foreground.BRIGHT_CYAN),
-        ("BRIGHT_WHITE", Foreground.BRIGHT_WHITE),
-    ]
-    for name, color in colors_4bit:
-        show(f".fg_4b(Foreground.{name})", ANSIString("Hello, World!").fg_4b(color))
+    # ── Unified Foreground / Background ────────────────────────────────
+    section("Unified Color Routing (Infers depth automatically)")
 
-    # ── 4-bit background ───────────────────────────────────────────────
-    section("4-bit background colours")
-    bg_colors = [
-        ("RED", Background.RED),
-        ("GREEN", Background.GREEN),
-        ("BLUE", Background.BLUE),
-        ("YELLOW", Background.YELLOW),
-        ("BRIGHT_WHITE", Background.BRIGHT_WHITE),
-    ]
-    for name, color in bg_colors:
-        show(f".bg_4b(Background.{name})", ANSIString("Hello, World!").bg_4b(color))
-
-    # ── 8-bit colours ─────────────────────────────────────────────────
-    section("8-bit foreground colours (sample)")
-    for n in (21, 46, 82, 135, 196, 208, 226):
-        show(f".fg_8b({n})", ANSIString("Hello, World!").fg_8b(n))
-
-    section("8-bit background colours (sample)")
-    for n in (17, 52, 94, 130, 202):
-        show(f".bg_8b({n})", ANSIString("Hello, World!").bg_8b(n))
-
-    # ── 24-bit (true colour) ──────────────────────────────────────────
-    section("24-bit (true colour) foreground")
+    # 4-bit (Enums)
     show(
-        ".fg_24b(0, 128, 255)",
-        ANSIString("Hello, World!").fg_24b(0, 128, 255),
+        ".fg(Foreground.BRIGHT_RED)",
+        ANSIString("Hello, World!").fg(Foreground.BRIGHT_RED),
     )
+    show(".bg(Background.BLUE)", ANSIString("Hello, World!").bg(Background.BLUE))
+
+    # 8-bit (Integers)
+    show(".fg(135)", ANSIString("Hello, World!").fg(135))
+    show(".bg(202)", ANSIString("Hello, World!").bg(202))
+
+    # 24-bit (Tuples & Hex Strings)
+    show(".fg((0, 128, 255))", ANSIString("Hello, World!").fg((0, 128, 255)))
+    show(".bg('#15202B')", ANSIString("Hello, World!").bg("#15202B"))
+
+    # ── Target Selectors ───────────────────────────────────────────────
+    section("Precision Targeting with Selectors")
+
     show(
-        ".fg_24b(255, 64, 0)",
-        ANSIString("Hello, World!").fg_24b(255, 64, 0),
+        "Slices: .fg((0, 255, 0), (7, 12))",
+        ANSIString("Hello, World!").fg((0, 255, 0), (7, 12)),
     )
 
-    section("24-bit (true colour) background")
     show(
-        ".bg_24b(40, 40, 40)",
-        ANSIString("Hello, World!").bg_24b(40, 40, 40),
+        "Words:  .fg(RED, Words(('Hello',)))",
+        ANSIString("Hello, World!").fg(Foreground.BRIGHT_RED, Words(("Hello",))),
     )
 
-    # ── Per-range / per-word styling ──────────────────────────────────
-    section("Per-range styling")
     show(
-        "fg_24b blue(0,5) + yellow(7,12)",
-        ANSIString("Hello, World!")
-        .fg_24b(0, 0, 255, (0, 5))
-        .fg_24b(255, 255, 0, (7, 12)),
+        "Pattern: .style(BOLD, Pattern(r'\\d+'))",
+        ANSIString("Error 404: Not Found!")
+        .fg((255, 50, 50), Pattern(r"\d+"))
+        .style(SGR.BOLD),
     )
 
-    section("Per-word styling (_w methods)")
     show(
-        ".fg_4b_words(BLUE, 'Hello')",
-        ANSIString("Hello, World!").fg_4b_words(Foreground.BRIGHT_BLUE, "Hello"),
-    )
-    show(
-        ".style_words(BOLD, 'World')",
-        ANSIString("Hello, World!").style_words(SGR.BOLD, "World"),
-    )
-    show(
-        ".fg_4b_words(CYAN) + .bg_4b_words(YELLOW)",
-        ANSIString("Hello, World!")
-        .fg_4b_words(Foreground.BRIGHT_CYAN, "Hello")
-        .bg_4b_words(Background.BRIGHT_YELLOW, "World"),
+        "",
+        ANSIString("Login: [WARN] User 'admin' failed from 192.168.1.50")
+        .fg(Foreground.YELLOW, Pattern(r"\[WARN\]"))
+        .fg(Foreground.CYAN, Pattern(r"'.*?'"))
+        .style(SGR.UNDERLINE, Pattern(r"\b\d{1,3}(?:\.\d{1,3}){3}\b")),
     )
 
     # ── Underline colours & modes ──────────────────────────────────────
     section("Underline colours and modes")
-    show(
-        ".ul_8b(135)",
-        ANSIString("Hello, World!").ul_8b(135),
-    )
-    show(
-        ".ul_24b(0, 200, 100)",
-        ANSIString("Hello, World!").ul_24b(0, 200, 100),
-    )
+    show(".ul(135)", ANSIString("Hello, World!").ul(135))
+    show(".ul((0, 200, 100))", ANSIString("Hello, World!").ul((0, 200, 100)))
+
     modes = [
         ("SINGLE", UnderlineMode.SINGLE),
         ("DOUBLE", UnderlineMode.DOUBLE),
@@ -170,115 +134,134 @@ def main() -> None:
     ]
     for name, mode in modes:
         show(
-            f".ul_24b(255,100,0).style({name})",
-            ANSIString("Hello, World!").ul_24b(255, 100, 0).style(mode),
+            f".ul((255,100,0)).style({name})",
+            ANSIString("Hello, World!").ul((255, 100, 0)).style(mode),
         )
 
     # ── Removing styles ───────────────────────────────────────────────
-    section("Removing styles (unstyle / unstyle_words)")
+    section("Removing styles")
     show(
         ".style(BOLD).unstyle()",
         ANSIString("Hello, World!").style(SGR.BOLD).unstyle(),
     )
     show(
-        ".style(BOLD).unstyle((0,5))",
-        ANSIString("Hello, World!").style(SGR.BOLD).unstyle((0, 5)),
-    )
-    show(
-        ".style_words(BOLD,'Hello').unstyle_words('Hello')",
-        ANSIString("Hello, World!")
-        .style_words(SGR.BOLD, "Hello")
-        .unstyle_words("Hello"),
+        ".style(BOLD).unstyle(Words(('Hello',)))",
+        ANSIString("Hello, World!").style(SGR.BOLD).unstyle(Words(("Hello",))),
     )
 
-    # ── Rainbow ───────────────────────────────────────────────────────
+    # ── Rainbow Effect ────────────────────────────────────────────────
     section("Rainbow effect")
     show(
         ".rainbow()",
         ANSIString("abcdefghijklmnopqrstuvwxyz").rainbow(),
     )
     show(
-        ".rainbow(bg=True)",
-        ANSIString("abcdefghijklmnopqrstuvwxyz").rainbow(bg=True),
+        ".rainbow(channel=Channel.BG)",
+        ANSIString("abcdefghijklmnopqrstuvwxyz").rainbow(channel=Channel.BG),
     )
     show(
-        ".rainbow(skip_whitespace=True)",
-        ANSIString("Hello, World! Rainbow text!").rainbow(skip_whitespace=True),
+        ".rainbow(Chars(skip_whitespace=True))",
+        ANSIString("Hello, World! Rainbow text!").rainbow(Chars(skip_whitespace=True)),
     )
 
-    # ── Gradient API ──────────────────────────────────────────────────
-    section("Gradients (gradient, gradient_words, gradient_coordinates)")
+    # ── Gradients ─────────────────────────────────────────────────────
+    section("Gradients")
     show(
-        ".gradient([(84,161,255),(255,255,255)])",
+        ".gradient([(84,161,255), (255,255,255)])",
         ANSIString("abcdefghijklmnopqrstuvwxyz").gradient(
             [(84, 161, 255), (255, 255, 255)]
         ),
     )
     show(
-        ".gradient(..., bg=True)",
+        ".gradient(..., channel=Channel.BG)",
         ANSIString("abcdefghijklmnopqrstuvwxyz").gradient(
             [(34, 34, 34), (84, 161, 255), (255, 255, 255)],
-            bg=True,
+            channel=Channel.BG,
         ),
     )
     show(
-        ".gradient_words(..., 'Hello', 'World')",
-        ANSIString("Hello, colorful gradient world!").gradient_words(
+        ".gradient(..., Words(('Hello', 'world')))",
+        ANSIString("Hello, colorful gradient world!").gradient(
             [(255, 99, 71), (255, 215, 0)],
-            "Hello",
-            "world",
-            case_sensitive=False,
+            Words(("Hello", "world"), ignore_case=True),
         ),
     )
     show(
-        ".gradient_coordinates(..., (1,1)..(5,1), index_base=1)",
-        ANSIString("HELLO\nworld").gradient_coordinates(
+        ".gradient(..., Coords(...))",
+        ANSIString("HELLO\nworld").gradient(
             [(255, 0, 120), (0, 200, 255)],
-            (1, 1),
-            (2, 1),
-            (3, 1),
-            (4, 1),
-            (5, 1),
-            index_base=1,
-            fg=True,
+            Coords(((1, 1), (2, 1), (3, 1), (4, 1), (5, 1)), index_base=1),
         ),
+    )
+
+    # ── Data-Driven Colormaps ─────────────────────────────────────────
+    section("Data-Driven Colormaps (Segmented vs Continuous)")
+
+    ramp_text = "".join(f"{n:<5}" for n in range(0, 101, 10))
+    block_pattern = Pattern(r"\d+\s*")
+    cmap_seg = SegmentedColorMap(
+        {0: NamedColors.LIME, 60: NamedColors.YELLOW, 90: NamedColors.RED}
+    )
+
+    show(
+        "Segmented (Snaps at 60 and 90)",
+        ANSIString(ramp_text)
+        .colormap(cmap_seg, block_pattern, channel=Channel.BG)
+        .fg(0),
+    )
+
+    scale = ColorScale([(0, 255, 255), (255, 255, 0), (255, 0, 0)], space="hsl")
+    cmap_cont = ColorMap(scale, vmin=0, vmax=100)
+
+    show(
+        "Continuous (Smooth interpolation)",
+        ANSIString(ramp_text)
+        .colormap(cmap_cont, block_pattern, channel=Channel.BG)
+        .fg(0),
+    )
+
+    # ── SVG Vector Export ─────────────────────────────────────────────
+    section("SVG Vector Export")
+
+    show(
+        ".to_svg('font.ttf', 16, output_file='out.svg')",
+        ANSIString("Styled vector graphic!").fg((100, 255, 100)),
     )
 
     # ── String operations preserve styles ─────────────────────────────
     section("String operations that preserve styles")
 
-    styled = ANSIString("Hello, World!").fg_24b(0, 128, 255)
+    styled = ANSIString("Hello, World!").fg((0, 128, 255))
     show(".upper()", styled.upper())
     show(".lower()", styled.lower())
-    show(".capitalize()", ANSIString("hello, world!").fg_24b(0, 128, 255).capitalize())
     show(".swapcase()", styled.swapcase())
-    show(".title()", ANSIString("hello, world!").fg_24b(0, 128, 255).title())
+    show(".title()", ANSIString("hello, world!").fg((0, 128, 255)).title())
 
     section("Slicing preserves styles")
     show("[2:-2]", styled[2:-2])
     show("[::2]", styled[::2])
 
     section("Concatenation preserves styles")
-    a = ANSIString("Hello").fg_24b(255, 0, 0)
-    b = ANSIString(", World!").fg_24b(0, 255, 0)
+    a = ANSIString("Hello").fg((255, 0, 0))
+    b = ANSIString(", World!").fg((0, 255, 0))
     show("ANSIString + ANSIString", a + b)
     show("str + ANSIString", ">>> " + b)
 
     section("Alignment preserves styles")
-    short = ANSIString("Hi").fg_24b(255, 100, 0).style(SGR.BOLD)
+    short = ANSIString("Hi").fg((255, 100, 0)).style(SGR.BOLD)
     show(".ljust(10, '.')", short.ljust(10, "."))
     show(".rjust(10, '.')", short.rjust(10, "."))
     show(".center(10, '.')", short.center(10, "."))
 
     section("Split / join preserve styles")
-    parts = ANSIString("Hello, World!").fg_24b(0, 128, 255).split(", ")
+    parts = ANSIString("Hello, World!").fg((0, 128, 255)).split(", ")
     show(".split(', ')", " | ".join(str(p) for p in parts))
     joined = ANSIString(" + ").style(SGR.BOLD).join(parts)
     show(".join(parts)", joined)
 
     # ── f-string support ──────────────────────────────────────────────
     section("f-string support")
-    s = ANSIString("Hi").fg_4b(Foreground.RED)
+    s = ANSIString("Hi").fg(Foreground.RED)
     show("f'{s}'", f"{s}")
     show("f'{s:>5}'", f"{s:>5}")
     show("f'{s:^10}'", f"{s:^10}")
