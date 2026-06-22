@@ -10,7 +10,7 @@ from collections.abc import Callable as _Callable, Iterable as _Iterable
 from dataclasses import dataclass as _dataclass
 from typing import Any as _Any, Literal as _Literal
 
-from ._types import CoordinateGroup
+from ._types import CoordinateGroup as _CoordinateGroup
 
 
 @_dataclass(slots=True, frozen=True)
@@ -64,7 +64,7 @@ class Coords:
         Behavior when a coordinate falls outside the string's dimensions.
     """
 
-    points: tuple[CoordinateGroup, ...]
+    points: tuple[_CoordinateGroup, ...]
     index_base: int = 0
     origin: tuple[int, int] = (0, 0)
     system: _Literal["cartesian", "terminal"] = "terminal"
