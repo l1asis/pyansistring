@@ -33,7 +33,6 @@ __all__ = [
 import os as _os
 import sys as _sys
 from enum import (
-    Enum as _Enum,
     EnumMeta as _EnumMeta,
     Flag as _Flag,
     IntEnum as _IntEnum,
@@ -454,7 +453,7 @@ class SGR(_IntEnum, metaclass=MetaEnum):
     RESET_SCRIPT = 75
 
 
-class NamedColors(_Enum, metaclass=MetaEnum):
+class NamedColors:
     """A collection of named colors with their RGB values.
 
     Source: https://convertingcolors.com/named-colors.html
