@@ -34,7 +34,7 @@ FONT_REG = os.path.join(FONT_DIR, "consola.ttf")
 FONT_BOLD = os.path.join(FONT_DIR, "consolab.ttf")
 FONT_ITAL = os.path.join(FONT_DIR, "consolai.ttf")
 FONT_BI = os.path.join(FONT_DIR, "consolaz.ttf")
-FONT_PX = 16
+FONT_PX = 24
 
 for fpath in (FONT_REG, FONT_BOLD, FONT_ITAL, FONT_BI):
     if not os.path.exists(fpath):
