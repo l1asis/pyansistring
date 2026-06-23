@@ -45,7 +45,7 @@ class Style(metaclass=_FrozenMeta):
         The foreground color.
     background : Color | tuple[Literal["4bit", "8bit", "24bit"], Any]
         The background color.
-    underline : tuple[Color | tuple[Literal["4bit", "8bit", "24bit"], \
+    underline : tuple[Color | tuple[Literal["4bit", "8bit", "24bit"], Any], \
             UnderlineMode | int | None]
         The underline color and mode. Defaults to single underline with no color.
     attributes : frozenset[SGR | int]
