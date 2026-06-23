@@ -129,7 +129,7 @@ class TestPathModeCombined:
             ANSIString("Hi")
             .style(SGR.BOLD)
             .style(SGR.ITALIC)
-            .ul_24b(255, 128, 0)
+            .ul((255, 128, 0))
             .style(UnderlineMode.CURLY)
         )
         svg = s.to_svg(fake_font, font_size_px=16, convert_text_to_path=True)
@@ -150,7 +150,7 @@ class TestPathModeUnderline:
         assert svg.count("<rect x=") >= 2
 
     def test_sgr_underline_fg_colour(self, fake_font: FakeTTFont):
-        s = ANSIString("A").fg_24b(255, 0, 0).style(SGR.UNDERLINE)
+        s = ANSIString("A").fg((255, 0, 0)).style(SGR.UNDERLINE)
         svg = s.to_svg(fake_font, font_size_px=16, convert_text_to_path=True)
         rects = [line for line in svg.splitlines() if "<rect x=" in line]
         coloured = [r for r in rects if 'fill="rgb(255, 0, 0)"' in r]
@@ -169,19 +169,19 @@ class TestPathModeUnderline:
         assert len(rects) >= 2
 
     def test_coloured_single(self, fake_font: FakeTTFont):
-        s = ANSIString("AB").ul_24b(0, 128, 255)
+        s = ANSIString("AB").ul((0, 128, 255))
         svg = s.to_svg(fake_font, font_size_px=16, convert_text_to_path=True)
         rects = [line for line in svg.splitlines() if "<rect x=" in line]
         assert sum(1 for r in rects if 'fill="rgb(0, 128, 255)"' in r) >= 2
 
     def test_coloured_double(self, fake_font: FakeTTFont):
-        s = ANSIString("A").ul_24b(255, 0, 0).style(UnderlineMode.DOUBLE)
+        s = ANSIString("A").ul((255, 0, 0)).style(UnderlineMode.DOUBLE)
         svg = s.to_svg(fake_font, font_size_px=16, convert_text_to_path=True)
         rects = [line for line in svg.splitlines() if "<rect x=" in line]
         assert sum(1 for r in rects if 'fill="rgb(255, 0, 0)"' in r) >= 2
 
     def test_curly(self, fake_font: FakeTTFont):
-        s = ANSIString("AB").ul_24b(0, 200, 0).style(UnderlineMode.CURLY)
+        s = ANSIString("AB").ul((0, 200, 0)).style(UnderlineMode.CURLY)
         svg = s.to_svg(fake_font, font_size_px=16, convert_text_to_path=True)
         wavy = [
             line for line in svg.splitlines() if "stroke=" in line and " Q " in line
@@ -189,7 +189,7 @@ class TestPathModeUnderline:
         assert len(wavy) >= 2
 
     def test_dotted(self, fake_font: FakeTTFont):
-        s = ANSIString("AB").ul_24b(128, 0, 255).style(UnderlineMode.DOTTED)
+        s = ANSIString("AB").ul((128, 0, 255)).style(UnderlineMode.DOTTED)
         svg = s.to_svg(fake_font, font_size_px=16, convert_text_to_path=True)
         dots = [
             line
@@ -199,7 +199,7 @@ class TestPathModeUnderline:
         assert len(dots) >= 2
 
     def test_dashed(self, fake_font: FakeTTFont):
-        s = ANSIString("AB").ul_24b(200, 100, 0).style(UnderlineMode.DASHED)
+        s = ANSIString("AB").ul((200, 100, 0)).style(UnderlineMode.DASHED)
         svg = s.to_svg(fake_font, font_size_px=16, convert_text_to_path=True)
         dashed = [line for line in svg.splitlines() if "stroke-dasharray=" in line]
         assert len(dashed) >= 2

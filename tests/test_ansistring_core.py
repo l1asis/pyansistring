@@ -104,7 +104,7 @@ class TestFromAnsi:
         blue = "\x1b[38;2;0;0;255m"
         raw = ansi_wrap("Hello", blue) + ", World!"
         result = ANSIString.from_ansi(raw)
-        expected = ANSIString("Hello, World!").fg_24b(0, 0, 255, (0, 5))
+        expected = ANSIString("Hello, World!").fg((0, 0, 255), (0, 5))
         assert result.style_manager == expected.style_manager, (
             "from_ansi should produce equivalent styles"
         )
@@ -112,8 +112,8 @@ class TestFromAnsi:
     def test_roundtrip(self):
         s = (
             ANSIString("Hello, World!")
-            .fg_24b(0, 0, 255, (0, 5))
-            .fg_24b(255, 255, 0, (7, 12))
+            .fg((0, 0, 255), (0, 5))
+            .fg((255, 255, 0), (7, 12))
         )
         parsed = ANSIString.from_ansi(s.styled_text)
         assert parsed.style_manager == s.style_manager, (
@@ -129,7 +129,7 @@ class TestFromAnsi:
     def test_parses_4bit_foreground_red(self):
         raw = "\x1b[31mError\x1b[0m: file not found"
         parsed = ANSIString.from_ansi(raw)
-        expected = ANSIString("Error: file not found").fg_4b(Foreground.RED, (0, 5))
+        expected = ANSIString("Error: file not found").fg(Foreground.RED, (0, 5))
 
         assert parsed.style_manager == expected.style_manager, (
             "SGR 31 should parse as red foreground, not split into style attrs"
@@ -139,9 +139,7 @@ class TestFromAnsi:
         raw = "\x1b[31mA\x1b[32mB\x1b[0m"
         parsed = ANSIString.from_ansi(raw)
         expected = (
-            ANSIString("AB")
-            .fg_4b(Foreground.RED, (0, 1))
-            .fg_4b(Foreground.GREEN, (1, 2))
+            ANSIString("AB").fg(Foreground.RED, (0, 1)).fg(Foreground.GREEN, (1, 2))
         )
 
         assert parsed.style_manager == expected.style_manager, (
@@ -150,7 +148,7 @@ class TestFromAnsi:
 
     def test_trailing_style_without_reset_is_applied(self):
         parsed = ANSIString.from_ansi("\x1b[31mX")
-        expected = ANSIString("X").fg_4b(Foreground.RED, (0, 1))
+        expected = ANSIString("X").fg(Foreground.RED, (0, 1))
 
         assert parsed.style_manager == expected.style_manager, (
             "Active styles at end-of-input should be applied even without reset"

@@ -86,8 +86,8 @@ class TestColorConstruction:
         )
 
     def test_invalid_mode_ignored(self):
-        c = Color("invalid", 42)
-        assert c.depth is None, "Invalid depth string should be normalized to None"
+        with pytest.raises(ValueError, match="Invalid Color state"):
+            Color("invalid", 42)  # type: ignore
 
     def test_enum_value_unwrapped(self):
         c = Color("4bit", Foreground.GREEN)
@@ -561,7 +561,7 @@ class TestStyleWithStyle:
         assert SGR.BOLD in s.attributes, "BOLD should appear in attributes"
 
     def test_int_sgr(self):
-        s = Style().with_style(1)  # 1 == SGR.BOLD
+        s = Style().with_style(1)
         assert SGR.BOLD in s.attributes, "Int 1 should map to SGR.BOLD"
 
     def test_chaining(self):

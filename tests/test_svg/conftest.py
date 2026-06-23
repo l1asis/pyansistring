@@ -141,10 +141,10 @@ def fake_font() -> FakeTTFont:
 @pytest.fixture
 def styled_hello(fake_font: FakeTTFont) -> tuple[ANSIString, FakeTTFont]:
     """A five-character red string paired with the fake font."""
-    return ANSIString("Hello").fg_24b(255, 0, 0), fake_font
+    return ANSIString("Hello").fg((255, 0, 0)), fake_font
 
 
 @pytest.fixture
 def partially_styled(fake_font: FakeTTFont) -> tuple[ANSIString, FakeTTFont]:
     """`Hello, World!` with only 'Hello' coloured red."""
-    return ANSIString("Hello, World!").fg_24b(255, 0, 0, (0, 5)), fake_font
+    return ANSIString("Hello, World!").fg((255, 0, 0), (0, 5)), fake_font

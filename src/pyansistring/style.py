@@ -9,6 +9,7 @@ from typing import Any as _Any, Callable as _Callable, Literal as _Literal
 
 from ._frozen import FrozenMeta as _FrozenMeta
 from .color import Color as _Color
+from .config import config as _config
 from .constants import (
     SGR as _SGR,
     Background as _Background,
@@ -40,14 +41,15 @@ class Style(metaclass=_FrozenMeta):
 
     Parameters
     ----------
-    foreground : Color | tuple[str, Any]
+    foreground : Color | tuple[Literal["4bit", "8bit", "24bit"], Any]
         The foreground color.
-    background : Color | tuple[str, Any]
+    background : Color | tuple[Literal["4bit", "8bit", "24bit"], Any]
         The background color.
-    underline : tuple[Color | tuple[str, Any], UnderlineMode | int]
-        The underline color and mode.
+    underline : tuple[Color | tuple[Literal["4bit", "8bit", "24bit"], Any], \
+            UnderlineMode | int | None]
+        The underline color and mode. Defaults to single underline with no color.
     attributes : frozenset[SGR | int]
-        The set of SGR attributes.
+        The set of SGR attributes (e.g., bold, italic).
 
     Attributes
     ----------
@@ -72,9 +74,12 @@ class Style(metaclass=_FrozenMeta):
 
     def __init__(
         self,
-        foreground: _Color | tuple[str, _Any] = _Color(),
-        background: _Color | tuple[str, _Any] = _Color(),
-        underline: tuple[_Color | tuple[str, _Any], _UnderlineMode | int | None] = (
+        foreground: _Color | tuple[_Literal["4bit", "8bit", "24bit"], _Any] = _Color(),
+        background: _Color | tuple[_Literal["4bit", "8bit", "24bit"], _Any] = _Color(),
+        underline: tuple[
+            _Color | tuple[_Literal["4bit", "8bit", "24bit"], _Any],
+            _UnderlineMode | int | None,
+        ] = (
             _Color(),
             _UnderlineMode.SINGLE,
         ),
@@ -99,7 +104,7 @@ class Style(metaclass=_FrozenMeta):
         else:
             self.underline = (underline[0], underline_mode)
         self.attributes = attributes
-        self._ansi = self.to_ansi()
+        self._ansi = self.to_ansi(format_mode=_config.format_mode)
 
     @property
     def ansi(self) -> str:
@@ -158,13 +163,12 @@ class Style(metaclass=_FrozenMeta):
 
         Parameters
         ----------
-        style : Foreground | Background | Underline | UnderlineMode | SGR | str \
-            | int | None
-            Style code or SGR constant to apply. When ``None``, no changes
-            are made.
+        style : Foreground | Background | Underline | UnderlineMode \
+                | SGR | str | int | None, default None
+            Style code or SGR constant to apply. When ``None``, no changes are made.
         *args : int
-            Additional color parameters (e.g., palette index or RGB
-            components for 24-bit color).
+            Additional color parameters 
+            (e.g., palette index or RGB components for 24-bit color).
 
         Returns
         -------
@@ -217,41 +221,35 @@ class Style(metaclass=_FrozenMeta):
     def to_ansi(
         self,
         separate_codes: bool = True,
-        format_mode: _Literal["standard", "compatible"] = "standard",
+        format_mode: _Literal["standard", "compatible"] | None = None,
     ) -> str:
         """Generate an ANSI escape sequence from this Style.
 
         Parameters
         ----------
-        separate_codes : bool
+        separate_codes : bool, default True
             When ``True``, emit each ANSI code as a separate escape sequence.
             When ``False``, combine all codes into a single sequence.
-        format_mode : Literal["standard", "compatible"]
-            Separator style for multi-parameter color codes. ``"standard"`` uses colons
-            (with double colons for 24-bit colors, e.g., ``38:2::r:g:b``), while
-            ``"compatible"`` uses semicolons (e.g., ``38;2;r;g;b``) for broader
-            terminal support.
+        format_mode : Literal["standard", "compatible"] | None, default None
+            Separator style for multi-parameter color codes. ``"standard"`` uses colons,
+            while ``"compatible"`` uses semicolons. Defaults to global config.
 
         Returns
         -------
         str
             An ANSI escape sequence string.
         """
+        mode = format_mode or _config.format_mode
+
         parameters: list[str] = []
 
         if self.foreground:
-            parameters.append(
-                self.foreground.to_sgr_param(_Foreground.SET, format_mode)
-            )
+            parameters.append(self.foreground.to_sgr_param(_Foreground.SET, mode))
         if self.background:
-            parameters.append(
-                self.background.to_sgr_param(_Background.SET, format_mode)
-            )
+            parameters.append(self.background.to_sgr_param(_Background.SET, mode))
         if self.underline[0]:
             underline_mode = f"{_SGR.UNDERLINE}:{self.underline[1]}"
-            underline_style = (
-                f"{self.underline[0].to_sgr_param(_Underline.SET, format_mode)}"
-            )
+            underline_style = f"{self.underline[0].to_sgr_param(_Underline.SET, mode)}"
             parameters.extend((underline_mode, underline_style))
 
         for attr in self.attributes:
@@ -474,20 +472,6 @@ class StyleManager(dict[int, Style]):
     ----------
     has_changes : bool
         Modification state of the StyleManager.
-
-    Methods
-    -------
-    pop_modified() -> bool
-        Consume the ``has_changes`` flag and reset it.
-
-    Examples
-    --------
-    >>> style_manager = StyleManager()
-    >>> style_manager[key] = value
-    >>> style_manager.pop_modified()
-    True
-    >>> style_manager.pop_modified()
-    False
     """
 
     _style_cache: dict[int, Style] = {}
@@ -498,6 +482,7 @@ class StyleManager(dict[int, Style]):
 
     @property
     def has_changes(self) -> bool:
+        """Indicate if the manager has unrendered style modifications."""
         return self._has_changes
 
     def pop_modified(self) -> bool:
@@ -514,7 +499,6 @@ class StyleManager(dict[int, Style]):
 
     def __repr__(self) -> str:
         """Return a string representation of the StyleManager."""
-        # TODO: it is too verbose, but it is useful for debugging
         return f"StyleManager({super().__repr__()})"
 
     def __setitem__(self, key: _Any, value: _Any) -> None:

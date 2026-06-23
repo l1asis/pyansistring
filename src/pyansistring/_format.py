@@ -31,7 +31,27 @@ def _resolve_format_spec(
     kwargs: _Any,
     auto_idx: int,
 ) -> tuple[str, int]:
-    """Resolve nested replacement fields inside a format spec."""
+    """Resolve nested replacement fields inside a format specification.
+
+    Parameters
+    ----------
+    spec : str
+        The format specification string to resolve.
+    fmt : Formatter
+        The string formatter instance.
+    args : tuple[Any, ...]
+        Positional arguments provided for formatting.
+    kwargs : Any
+        Keyword arguments provided for formatting.
+    auto_idx : int
+        The current auto-numbering index for implicit positional fields.
+
+    Returns
+    -------
+    tuple[str, int]
+        A tuple containing the fully resolved format specification string and
+        the updated auto-numbering index.
+    """
     if "{" not in spec:
         return spec, auto_idx
     parts: list[str] = []
@@ -58,7 +78,26 @@ def remap_format(
     args: tuple[_Any, ...],
     kwargs: _Any,
 ) -> dict[int, _Style]:
-    """Map styles from a format template onto the formatted output positions."""
+    """Map styles from a format template onto the formatted output positions.
+
+    Parameters
+    ----------
+    template : str
+        The string template containing formatting fields.
+    sm : StyleManager
+        The StyleManager associated with the template string.
+    fmt : Formatter
+        The string formatter instance.
+    args : tuple[Any, ...]
+        Positional arguments passed to the format method.
+    kwargs : Any
+        Keyword arguments passed to the format method.
+
+    Returns
+    -------
+    dict[int, Style]
+        A new dictionary of styles mapped to their post-formatted indices.
+    """
     styles: dict[int, _Style] = {}
     src = 0
     dest = 0

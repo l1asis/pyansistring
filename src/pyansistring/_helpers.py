@@ -55,14 +55,44 @@ def clamp(
     min_: int | float = float("-inf"),
     max_: int | float = float("inf"),
 ) -> int | float:
-    """Restrict a number between two other numbers."""
+    """Restrict a number between two bounds.
+
+    Parameters
+    ----------
+    value : int | float
+        The number to clamp.
+    min_ : int | float, default -inf
+        The minimum allowable value.
+    max_ : int | float, default inf
+        The maximum allowable value.
+
+    Returns
+    -------
+    int | float
+        The clamped value.
+    """
     return min_ if value < min_ else max_ if value > max_ else value
 
 
 def hsl_to_rgb(
     hue: int | float, saturation: int | float = 100, lightness: int | float = 50
 ) -> tuple[int, int, int]:
-    """Convert HSL color values to RGB."""
+    """Convert HSL color values to RGB.
+
+    Parameters
+    ----------
+    hue : int | float
+        The hue angle in degrees (0-360).
+    saturation : int | float, default 100
+        The saturation percentage (0-100).
+    lightness : int | float, default 50
+        The lightness percentage (0-100).
+
+    Returns
+    -------
+    tuple[int, int, int]
+        The resolved RGB values (0-255).
+    """
     r, g, b = _hls_to_rgb(hue / 360, lightness / 100, saturation / 100)
     return round(r * 255), round(g * 255), round(b * 255)
 
@@ -70,7 +100,22 @@ def hsl_to_rgb(
 def get_grapheme_spans(
     text: str, skip_emojis: bool, skip_whitespace: bool
 ) -> tuple[tuple[int, int], ...]:
-    """Build slices that respect Unicode grapheme clusters (emojis)."""
+    """Build slices that respect Unicode grapheme clusters (emojis).
+
+    Parameters
+    ----------
+    text : str
+        The text to analyze.
+    skip_emojis : bool
+        When True, emoji clusters are ignored and excluded from the returned spans.
+    skip_whitespace : bool
+        When True, whitespace characters are ignored and excluded.
+
+    Returns
+    -------
+    tuple[tuple[int, int], ...]
+        A tuple of (start, end) index bounds representing safe grapheme spans.
+    """
     spans: list[tuple[int, int]] = []
     current_idx = 0
 

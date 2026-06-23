@@ -1,4 +1,4 @@
-__all__ = ["Color"]
+__all__ = ["Color", "ColorScale", "ColorMap", "SegmentedColorMap"]
 
 from bisect import bisect_left as _bisect_left
 from collections.abc import Sequence as _Sequence
@@ -8,9 +8,10 @@ from typing import Any as _Any, Literal as _Literal, Mapping as _Mapping
 
 from ._frozen import FrozenMeta as _FrozenMeta
 from ._helpers import clamp as _clamp
+from .config import config as _config
 from .constants import (
     COLOR_THEMES,
-    COLORS_8BIT,
+    COLORS_256,
     DEFAULT_THEME,
     Background,
     Foreground,
@@ -24,9 +25,10 @@ class Color(metaclass=_FrozenMeta):
 
     Parameters
     ----------
-    depth : Literal["4bit", "8bit", "24bit"] | None
+    depth : Literal["4bit", "8bit", "24bit"] | None, default None
         The color bit depth or ``None`` for unset.
-    value : Foreground | Background | Underline | int | tuple[int, int, int] | None
+    value : Foreground | Background | Underline | int \
+            | tuple[int, int, int] | None, default None
         The color value.
 
     Attributes
@@ -41,7 +43,7 @@ class Color(metaclass=_FrozenMeta):
 
     def __init__(
         self,
-        depth: str | None = None,
+        depth: _Literal["4bit", "8bit", "24bit"] | None = None,
         value: Foreground
         | Background
         | Underline
@@ -49,16 +51,29 @@ class Color(metaclass=_FrozenMeta):
         | int
         | None = None,
     ) -> None:
-        if depth in {"4bit", "8bit", "24bit"}:
-            self.depth = depth
-        else:
+        if depth is None and value is None:
             self.depth = None
+            self.value = None
+            return
+
         if isinstance(value, (Foreground, Background, Underline)):
-            self.value = value.value
-        elif isinstance(value, (int, tuple)):
+            value = value.value
+
+        if depth == "24bit" and isinstance(value, tuple) and len(value) == 3:
+            self.depth = depth
+            self.value = value
+        elif depth == "8bit" and isinstance(value, int):
+            self.depth = depth
+            self.value = value
+        elif depth == "4bit" and isinstance(value, int):
+            self.depth = depth
             self.value = value
         else:
-            self.value = None
+            raise ValueError(
+                f"Invalid Color state: depth '{depth}' "
+                f"cannot be paired with value {value!r}. "
+                "Please use Color.from_24bit(), Color.from_8bit(), etc."
+            )
 
     def __iter__(self):
         for channel in self.to_rgb():
@@ -83,49 +98,71 @@ class Color(metaclass=_FrozenMeta):
 
     @classmethod
     def unset(cls) -> "Color":
-        # TODO: Make it a constant?
+        """Create an unset Color instance."""
         return cls(None, None)
 
     @classmethod
     def from_4bit(cls, color: Foreground | Background | Underline) -> "Color":
+        """Create a 4-bit Color."""
         return cls("4bit", color.value)
 
     @classmethod
     def from_8bit(cls, n: int) -> "Color":
+        """Create an 8-bit Color from a 256-color palette index."""
         return cls("8bit", n)
 
     @classmethod
     def from_24bit(cls, r: int, g: int, b: int) -> "Color":
+        """Create a 24-bit TrueColor."""
         return cls("24bit", (r, g, b))
+
+    @classmethod
+    def from_hex(cls, hex_str: str) -> "Color":
+        """Create a 24-bit Color from a hex string (e.g., '#FF0000' or 'F00')."""
+        hex_str = hex_str.lstrip("#").strip()
+
+        # Elegant 3-character expansion
+        if len(hex_str) == 3:
+            hex_str = "".join(char * 2 for char in hex_str)
+
+        if len(hex_str) != 6:
+            raise ValueError(f"Invalid hex color format: '{hex_str}'")
+
+        return cls(
+            "24bit",
+            (int(hex_str[0:2], 16), int(hex_str[2:4], 16), int(hex_str[4:6], 16)),
+        )
 
     def to_sgr_param(
         self,
         prefix: _Literal[Foreground.SET, Background.SET, Underline.SET] | str = "",
-        format_mode: _Literal["standard", "compatible"] = "standard",
+        format_mode: _Literal["standard", "compatible"] | None = None,
     ) -> str:
         """Generate an SGR parameter string for this color.
 
         Parameters
         ----------
-        prefix : Foreground.SET | Background.SET | Underline.SET | str
+        prefix : Foreground.SET | Background.SET | Underline.SET | str, default ""
             SGR prefix code that qualifies this color (e.g., 38 for foreground).
-        format_mode : Literal["standard", "compatible"]
+        format_mode : Literal["standard", "compatible"] | None, default None
             Separator style: ``"standard"`` uses colons, ``"compatible"``
-            uses semicolons. For 24-bit colors in standard mode,
-            uses double colons (e.g., ``38:2::r:g:b``).
+            uses semicolons. Defaults to global config.
 
         Returns
         -------
         str
-            SGR parameter string (e.g., ``"38:2::255:0:0"`` for standard 24-bit,
-            or ``"38;2;255;0;0"`` for compatible 24-bit).
+            SGR parameter string.
         """
-        if format_mode == "standard" or prefix == Underline.SET:
+        mode = format_mode or _config.format_mode
+
+        if mode == "standard" or prefix == Underline.SET:
             separator = ":"
         else:
             separator = ";"
+
         if prefix:
             prefix = str(prefix) + separator
+
         if self.depth == "24bit" and isinstance(self.value, tuple):
             r, g, b = self.value
             sep = separator * 2 if separator == ":" else ";"
@@ -134,6 +171,7 @@ class Color(metaclass=_FrozenMeta):
             return f"{prefix}5{separator}{self.value}"
         elif self.depth == "4bit" and isinstance(self.value, int):
             return f"{self.value}"
+
         return ""
 
     def to_rgb(
@@ -146,15 +184,16 @@ class Color(metaclass=_FrozenMeta):
             return self.value
         elif self.depth == "8bit":
             assert isinstance(self.value, int)
-            return COLORS_8BIT[self.value]
+            return COLORS_256[self.value]
         elif self.depth == "4bit":
             assert isinstance(self.value, int)
             return COLOR_THEMES[theme][self.value]
-        else:
-            return (0, 0, 0)
+
+        return (0, 0, 0)
 
     @staticmethod
     def rgb_to_hsl(r: int, g: int, b: int) -> tuple[float, float, float]:
+        """Convert an RGB value to HSL."""
         h, l, s = _rgb_to_hls(r / 255, g / 255, b / 255)  # noqa: E741
         return h, s, l
 
@@ -169,7 +208,15 @@ class Color(metaclass=_FrozenMeta):
 
 
 class ColorScale:
-    """Color interpolation scale for gradients."""
+    """Color interpolation scale for gradients.
+
+    Parameters
+    ----------
+    colors : Sequence[Color | tuple[int, int, int]]
+        The colors to interpolate between.
+    space : Literal["rgb", "hsl"]
+        The color space to use for interpolation.
+    """
 
     __slots__ = ("colors", "space", "_rgb_stops", "_hsl_stops")
 
@@ -201,7 +248,7 @@ class ColorScale:
         return self._hsl_stops
 
     def interpolate_rgb(self, t: float) -> tuple[int, int, int]:
-        """Interpolate an RGB tuple at position t in [0, 1]."""
+        """Interpolate an RGB tuple at position t in [0.0, 1.0]."""
 
         if not self._rgb_stops:
             return (0, 0, 0)
@@ -247,14 +294,28 @@ class ColorScale:
         return (round(r * 255), round(g * 255), round(b * 255))
 
     def interpolate(self, t: float) -> Color:
-        """Interpolate a color at position t in [0, 1]."""
+        """Interpolate a color at position t in [0.0, 1.0]."""
         if not self._rgb_stops:
             return Color.unset()
         return Color.from_24bit(*self.interpolate_rgb(t))
 
 
 class ColorMap:
-    """Color mapping for data values."""
+    """Color mapping for continuous data values.
+
+    Parameters
+    ----------
+    scale : ColorScale
+        The color scale used for interpolation.
+    vmin : int | float
+        The minimum data value (maps to the start of the scale).
+    vmax : int | float
+        The maximum data value (maps to the end of the scale).
+    under_color : Color | tuple[int, int, int] | None, default None
+        Color to use for values strictly less than vmin.
+    over_color : Color | tuple[int, int, int] | None, default None
+        Color to use for values strictly greater than vmax.
+    """
 
     __slots__ = ("scale", "vmin", "vmax", "under_color", "over_color")
 
@@ -306,7 +367,15 @@ class ColorMap:
 
 
 class SegmentedColorMap:
-    """Discrete color mapping for data values based on thresholds."""
+    """Discrete color mapping for data values based on thresholds.
+
+    Parameters
+    ----------
+    segments : Mapping[int | float, Color | tuple[int, int, int]]
+        A mapping of threshold boundary values to their assigned colors.
+    over_color : Color | tuple[int, int, int] | None, default None
+        Color to use for values greater than the maximum threshold boundary.
+    """
 
     __slots__ = ("_boundaries", "_colors", "over_color")
 

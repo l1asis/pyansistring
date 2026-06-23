@@ -78,17 +78,17 @@ class TestConcatenation:
 class TestFString:
     def test_basic(self):
         blue = style_ansi(Foreground.BLUE)
-        s = ANSIString("Hello, World!").fg_4b(Foreground.BLUE)
+        s = ANSIString("Hello, World!").fg(Foreground.BLUE)
         assert f"{s}" == ansi_wrap("Hello, World!", blue)
 
     def test_with_literal_prefix(self):
         blue = style_ansi(Foreground.BLUE)
-        s = ANSIString("Hello, World!").fg_4b(Foreground.BLUE)
+        s = ANSIString("Hello, World!").fg(Foreground.BLUE)
         assert f"s{s}" == "s" + ansi_wrap("Hello, World!", blue)
 
     def test_with_format_spec(self):
         red = style_ansi(Foreground.RED)
-        s = ANSIString("Hi").fg_4b(Foreground.RED)
+        s = ANSIString("Hi").fg(Foreground.RED)
         result = f"{s:>3}"
         expected = " " + ansi_wrap("Hi", red)
         assert result == expected, "Format spec should pad then render ANSI"
@@ -240,8 +240,8 @@ class TestSplit:
     def test_default_split(self):
         s = (
             ANSIString(" Hello,   World!    ")
-            .fg_24b(0, 0, 255, (1, 2), (5, 6))
-            .fg_24b(255, 255, 0, (10, 11), (14, 15))
+            .fg((0, 0, 255), (1, 2), (5, 6))
+            .fg((255, 255, 0), (10, 11), (14, 15))
         )
         parts = s.split()
         assert len(parts) == 2, "Default split should produce 2 words"
@@ -271,8 +271,8 @@ class TestRsplit:
     def test_default_rsplit(self):
         s = (
             ANSIString(" Hello,   World!    ")
-            .fg_24b(0, 0, 255, (1, 2), (5, 6))
-            .fg_24b(255, 255, 0, (10, 11), (14, 15))
+            .fg((0, 0, 255), (1, 2), (5, 6))
+            .fg((255, 255, 0), (10, 11), (14, 15))
         )
         parts = s.rsplit()
         assert len(parts) == 2
@@ -304,8 +304,8 @@ class TestSplitlines:
         yellow_code = "\x1b[38:2::255:255:0m"
         s = (
             ANSIString("\n\nHello, \nWorld!\n\n\n")
-            .fg_24b(0, 0, 255, (2, 3), (6, 7))
-            .fg_24b(255, 255, 0, (10, 11), (15, 16))
+            .fg((0, 0, 255), (2, 3), (6, 7))
+            .fg((255, 255, 0), (10, 11), (15, 16))
         )
         parts = s.splitlines()
         hello = f"{blue_code}H{RESET}ell{blue_code}o{RESET}"
@@ -322,8 +322,8 @@ class TestJoin:
         result = sep.join(
             (
                 "Anyway",
-                ANSIString("Hello").fg_24b(0, 0, 255),
-                ANSIString("World!").fg_24b(255, 255, 0),
+                ANSIString("Hello").fg((0, 0, 255)),
+                ANSIString("World!").fg((255, 255, 0)),
             )
         )
         expected = (
@@ -506,7 +506,6 @@ class TestReplace:
         s = ANSIString("Hello, World!").style(SGR.BOLD, (0, 5))
         result = s.replace("World", "Python")
         assert result.plain_text == "Hello, Python!"
-        # Bold on "Hello" (indices 0-4) should be preserved
         assert str(result) == ansi_wrap("Hello", bold_code) + ", Python!"
 
     def test_replace_with_count(self):
@@ -526,7 +525,6 @@ class TestReplace:
         assert str(result) == ansi_wrap("Hello", bold_code)
 
     def test_replace_empty_old(self):
-        # str("ab").replace("", "-") == "-a-b-"
         s = ANSIString("ab").style(SGR.BOLD)
         result = s.replace("", "-")
         assert result.plain_text == "-a-b-"

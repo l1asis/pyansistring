@@ -1,0 +1,16 @@
+import os as _os
+from dataclasses import dataclass as _dataclass
+from typing import Literal as _Literal
+
+
+@_dataclass
+class Config:
+    format_mode: _Literal["standard", "compatible"] = "standard"
+
+    def __post_init__(self):
+        env_mode = _os.getenv("PYANSISTRING_FORMAT_MODE", self.format_mode)
+        if env_mode in ("standard", "compatible"):
+            self.format_mode = env_mode
+
+
+config = Config()
