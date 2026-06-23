@@ -374,7 +374,7 @@ class TestFontBoldParam:
         self, regular_font: FakeTTFont, bold_font: FakeTTFont
     ):
         """Text mode still emits font-weight='bold' CSS attribute."""
-        s = ANSIString("AB").style(SGR.BOLD).fg_24b(0, 0, 0)
+        s = ANSIString("AB").style(SGR.BOLD).fg((0, 0, 0))
         svg = s.to_svg(regular_font, font_size_px=16, font_bold=bold_font)
         assert 'font-weight="bold"' in svg
 
@@ -448,7 +448,7 @@ class TestFontBoldItalicParam:
 class TestFontThinParam:
     def test_dim_text_mode_emits_lighter(self, regular_font: FakeTTFont):
         """SGR.DIM chars get font-weight='lighter' in text mode."""
-        s = ANSIString("AB").style(SGR.DIM).fg_24b(0, 0, 0)
+        s = ANSIString("AB").style(SGR.DIM).fg((0, 0, 0))
         svg = s.to_svg(regular_font, font_size_px=16)
         assert 'font-weight="lighter"' in svg
 

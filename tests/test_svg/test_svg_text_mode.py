@@ -57,20 +57,20 @@ class TestSvgTextModeForeground:
 
 class TestSvgTextModeBackground:
     def test_bg_rect_present(self, fake_font: FakeTTFont):
-        s = ANSIString("Hi").bg_24b(0, 255, 0)
+        s = ANSIString("Hi").bg((0, 255, 0))
         svg = s.to_svg(fake_font, font_size_px=16)
         assert "<rect " in svg
         assert 'fill="rgb(0, 255, 0)"' in svg
 
     def test_transparent_background(self, fake_font: FakeTTFont):
-        s = ANSIString("Hi").fg_24b(255, 0, 0)
+        s = ANSIString("Hi").fg((255, 0, 0))
         svg = s.to_svg(fake_font, font_size_px=16, transparent_background=True)
         # Should not have a full-width background rect
         # But may have per-char bg rects if per-char bg is set
         assert "<svg " in svg
 
     def test_opaque_background_color(self, fake_font: FakeTTFont):
-        s = ANSIString("Hi").fg_24b(255, 0, 0)
+        s = ANSIString("Hi").fg((255, 0, 0))
         svg = s.to_svg(
             fake_font,
             font_size_px=16,
@@ -82,19 +82,19 @@ class TestSvgTextModeBackground:
 
 class TestSvgTextModeAttributes:
     def test_bold_font_weight(self, fake_font: FakeTTFont):
-        s = ANSIString("Hi").style(SGR.BOLD).fg_24b(0, 0, 0)
+        s = ANSIString("Hi").style(SGR.BOLD).fg((0, 0, 0))
         svg = s.to_svg(fake_font, font_size_px=16)
         assert "font-weight" in svg
 
     def test_italic_font_style(self, fake_font: FakeTTFont):
-        s = ANSIString("Hi").style(SGR.ITALIC).fg_24b(0, 0, 0)
+        s = ANSIString("Hi").style(SGR.ITALIC).fg((0, 0, 0))
         svg = s.to_svg(fake_font, font_size_px=16)
         assert "font-style" in svg
 
 
 class TestSvgTextModeOutputFile:
     def test_output_file_written(self, fake_font: FakeTTFont, tmp_path: pathlib.Path):
-        s = ANSIString("Hi").fg_24b(255, 0, 0)
+        s = ANSIString("Hi").fg((255, 0, 0))
         out = tmp_path / "test.svg"
         svg = s.to_svg(fake_font, font_size_px=16, output_file=str(out))
         assert out.exists()

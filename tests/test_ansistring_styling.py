@@ -1,10 +1,10 @@
-"""Tests for ANSIString styling methods (style, unstyle, fg_*, bg_*, ul_*, rainbow)."""
+"""Tests for ANSIString styling methods (style, unstyle, fg, bg, ul, rainbow)."""
 
 from typing import Any
 
 import pytest
 
-from pyansistring import ANSIString
+from pyansistring import ANSIString, Channel, Chars, Coords, Pattern, Words
 from pyansistring.color import ColorMap, ColorScale, SegmentedColorMap
 from pyansistring.constants import SGR, Background, Foreground, Underline, UnderlineMode
 from pyansistring.style import Style
@@ -39,15 +39,15 @@ class TestStyle:
         )
 
 
-class TestStyleWords:
-    """ANSIString.style_words() — word-targeted formatting."""
+class TestStyleTargets:
+    """ANSIString.style() with Target Selectors."""
 
     def test_by_word(self, hello_world: ANSIString, bold_code: str):
-        s = hello_world.style_words(SGR.BOLD, "Hello")
+        s = hello_world.style(SGR.BOLD, Words(("Hello",)))
         assert str(s) == ansi_wrap("Hello", bold_code) + ", World!"
 
     def test_case_insensitive(self, hello_world: ANSIString, italic_code: str):
-        s = hello_world.style_words(SGR.ITALIC, "world", case_sensitive=False)
+        s = hello_world.style(SGR.ITALIC, Words(("world",), ignore_case=True))
         assert str(s) == "Hello, " + ansi_wrap("World", italic_code) + "!"
 
 
@@ -69,180 +69,55 @@ class TestUnstyle:
         s = hello_world.style(SGR.BOLD, *ranges).unstyle(*ranges)
         assert str(s) == "Hello, World!", f"unstyle{ranges} should clear those ranges"
 
-
-class TestUnstyleWords:
-    """ANSIString.unstyle_words() — remove formatting by word."""
-
     def test_unstyle_words(self, hello_world: ANSIString):
-        s = hello_world.style_words(SGR.BOLD, "Hello").unstyle_words("Hello")
-        assert str(s) == "Hello, World!"
-
-    def test_unstyle_words_case_insensitive(self, hello_world: ANSIString):
-        s = hello_world.style_words(
-            SGR.ITALIC, "world", case_sensitive=False
-        ).unstyle_words("world", case_sensitive=False)
+        s = hello_world.style(SGR.BOLD, Words(("Hello",))).unstyle(Words(("Hello",)))
         assert str(s) == "Hello, World!"
 
 
-# Each tuple: (method_range, method_word, style_args, label)
-_COLOR_METHOD_CASES = [
-    pytest.param(
-        "fg_4b",
-        "fg_4b_words",
-        (Foreground.BRIGHT_BLUE,),
-        (Foreground.BRIGHT_BLUE,),
-        id="fg-4b",
-    ),
-    pytest.param(
-        "fg_8b",
-        "fg_8b_words",
-        (135,),
-        (Foreground.SET, 135),
-        id="fg-8b",
-    ),
-    pytest.param(
-        "bg_4b",
-        "bg_4b_words",
-        (Background.BRIGHT_BLUE,),
-        (Background.BRIGHT_BLUE,),
-        id="bg-4b",
-    ),
-    pytest.param(
-        "bg_8b",
-        "bg_8b_words",
-        (135,),
-        (Background.SET, 135),
-        id="bg-8b",
-    ),
-    pytest.param(
-        "ul_8b",
-        "ul_8b_words",
-        (135,),
-        (Underline.SET, 135),
-        id="ul-8b",
-    ),
-]
-
-
-class TestColorMethodsByRange:
-    """Range-based color methods: fg_4b, fg_8b, bg_4b, bg_8b, ul_8b."""
+class TestUnifiedColorMethods:
+    """Range, word, and whole-string based color methods via fg, bg, ul."""
 
     @pytest.mark.parametrize(
-        "method_range, method_word, method_args, style_args",
-        _COLOR_METHOD_CASES,
-    )
-    def test_range(
-        self,
-        method_range: str,
-        method_word: str,
-        method_args: tuple[Any, ...],
-        style_args: tuple[Any, ...],
-    ):
-        code = style_ansi(*style_args)
-        s = getattr(ANSIString("Hello, World!"), method_range)(*method_args, (0, 5))
-        expected = ansi_wrap("Hello", code) + ", World!"
-        assert str(s) == expected, f"{method_range} range mismatch"
-
-    @pytest.mark.parametrize(
-        "method_range, method_word, method_args, style_args",
-        _COLOR_METHOD_CASES,
-    )
-    def test_by_word(
-        self,
-        method_range: str,
-        method_word: str,
-        method_args: tuple[Any, ...],
-        style_args: tuple[Any, ...],
-    ):
-        code = style_ansi(*style_args)
-        s = getattr(ANSIString("Hello, World!"), method_word)(*method_args, "Hello")
-        expected = ansi_wrap("Hello", code) + ", World!"
-        assert str(s) == expected, f"{method_word} word mismatch"
-
-
-class TestColorMethods24bit:
-    """24-bit color methods that take r,g,b — separate because of arg shape."""
-
-    @pytest.mark.parametrize(
-        "range_method, word_method, style_enum",
+        "method_name, color_val, expected_code",
         [
-            pytest.param("fg_24b", "fg_24b_words", Foreground.SET, id="fg-24b"),
-            pytest.param("bg_24b", "bg_24b_words", Background.SET, id="bg-24b"),
-            pytest.param("ul_24b", "ul_24b_words", Underline.SET, id="ul-24b"),
+            ("fg", Foreground.BRIGHT_BLUE, style_ansi(Foreground.BRIGHT_BLUE)),
+            ("fg", 135, style_ansi(Foreground.SET, 135)),
+            ("fg", (0, 0, 255), style_ansi(Foreground.SET, 0, 0, 255)),
+            ("bg", Background.BRIGHT_BLUE, style_ansi(Background.BRIGHT_BLUE)),
+            ("bg", 135, style_ansi(Background.SET, 135)),
+            ("bg", (0, 0, 255), style_ansi(Background.SET, 0, 0, 255)),
+            ("ul", 135, style_ansi(Underline.SET, 135)),
+            ("ul", (0, 0, 255), style_ansi(Underline.SET, 0, 0, 255)),
         ],
     )
-    def test_range_two_colors(
-        self, range_method: str, word_method: str, style_enum: Any
-    ):
-        blue = style_ansi(style_enum, 0, 0, 255)
-        yellow = style_ansi(style_enum, 255, 255, 0)
-        s = getattr(ANSIString("Hello, World!"), range_method)(0, 0, 255, (0, 5))
-        s = getattr(s, range_method)(255, 255, 0, (7, 12))
-        expected = ansi_wrap("Hello", blue) + ", " + ansi_wrap("World", yellow) + "!"
-        assert str(s) == expected, f"{range_method} two-color range mismatch"
-
-    @pytest.mark.parametrize(
-        "range_method, word_method, style_enum",
-        [
-            pytest.param("fg_24b", "fg_24b_words", Foreground.SET, id="fg-24b"),
-            pytest.param("bg_24b", "bg_24b_words", Background.SET, id="bg-24b"),
-            pytest.param("ul_24b", "ul_24b_words", Underline.SET, id="ul-24b"),
-        ],
-    )
-    def test_by_word_two_colors(
-        self, range_method: str, word_method: str, style_enum: Any
-    ):
-        blue = style_ansi(style_enum, 0, 0, 255)
-        yellow = style_ansi(style_enum, 255, 255, 0)
-        s = getattr(ANSIString("Hello, World!"), word_method)(0, 0, 255, "Hello")
-        s = getattr(s, word_method)(255, 255, 0, "World")
-        expected = ansi_wrap("Hello", blue) + ", " + ansi_wrap("World", yellow) + "!"
-        assert str(s) == expected, f"{word_method} two-color word mismatch"
-
-
-class TestWholeStringColor:
-    @pytest.mark.parametrize(
-        "method, method_args, style_args",
-        [
-            pytest.param("fg_8b", (135,), (Foreground.SET, 135), id="fg-8b-whole"),
-            pytest.param("bg_8b", (135,), (Background.SET, 135), id="bg-8b-whole"),
-            pytest.param("ul_8b", (135,), (Underline.SET, 135), id="ul-8b-whole"),
-        ],
-    )
-    def test_whole(
-        self, method: str, method_args: tuple[Any, ...], style_args: tuple[Any, ...]
-    ):
-        code = style_ansi(*style_args)
-        s = getattr(ANSIString("Hello, World!"), method)(*method_args)
-        assert str(s) == ansi_wrap("Hello, World!", code), (
-            f"{method} whole string mismatch"
+    def test_unified_colors(self, method_name: str, color_val: Any, expected_code: str):
+        s_range = getattr(ANSIString("Hello, World!"), method_name)(color_val, (0, 5))
+        assert str(s_range) == ansi_wrap("Hello", expected_code) + ", World!", (
+            f"{method_name} range mismatch"
         )
 
-    @pytest.mark.parametrize(
-        "method, method_args, style_args",
-        [
-            pytest.param(
-                "fg_8b_words",
-                (135, "Hello, ", "World!"),
-                (Foreground.SET, 135),
-                id="fg-8b-w-all",
-            ),
-            pytest.param(
-                "bg_8b_words",
-                (135, "Hello, ", "World!"),
-                (Background.SET, 135),
-                id="bg-8b-w-all",
-            ),
-        ],
-    )
-    def test_by_word_whole(
-        self, method: str, method_args: tuple[Any, ...], style_args: tuple[Any, ...]
-    ):
-        code = style_ansi(*style_args)
-        s = getattr(ANSIString("Hello, World!"), method)(*method_args)
-        assert str(s) == ansi_wrap("Hello, World!", code), (
-            f"{method} whole-word mismatch"
+        s_word = getattr(ANSIString("Hello, World!"), method_name)(
+            color_val, Words(("Hello",))
         )
+        assert str(s_word) == ansi_wrap("Hello", expected_code) + ", World!", (
+            f"{method_name} word mismatch"
+        )
+
+        s_whole = getattr(ANSIString("Hello, World!"), method_name)(color_val)
+        assert str(s_whole) == ansi_wrap("Hello, World!", expected_code), (
+            f"{method_name} whole mismatch"
+        )
+
+    def test_multiple_color_targets(self):
+        s = (
+            ANSIString("Hello, World!")
+            .fg((0, 0, 255), (0, 5))
+            .fg(Foreground.YELLOW, Words(("World",)))
+        )
+        blue = style_ansi(Foreground.SET, 0, 0, 255)
+        yellow = style_ansi(Foreground.YELLOW)
+        expected = ansi_wrap("Hello", blue) + ", " + ansi_wrap("World", yellow) + "!"
+        assert str(s) == expected
 
 
 class TestUlAttr:
@@ -282,7 +157,7 @@ class TestUnderlineModes:
         ul_ansi = (
             Style().with_style(Underline.SET, 0, 128, 255).with_style(mode).to_ansi()
         )
-        s = ANSIString("Hello, World!").ul_24b(0, 128, 255).style(mode)
+        s = ANSIString("Hello, World!").ul((0, 128, 255)).style(mode)
         expected = f"{ul_ansi}Hello, World!{RESET}"
         assert str(s) == expected, f"Mode {mode.name} with color mismatch"
 
@@ -291,8 +166,8 @@ class TestUnderlineModes:
         ul_ansi = Style().with_style(Underline.SET, 135).with_style(mode).to_ansi()
         s = (
             ANSIString("Hello, World!")
-            .ul_8b_words(135, "World")
-            .style_words(mode, "World")
+            .ul(135, Words(("World",)))
+            .style(mode, Words(("World",)))
         )
         expected = "Hello, " + f"{ul_ansi}World{RESET}" + "!"
         assert str(s) == expected, "Word-targeted underline mode mismatch"
@@ -318,7 +193,7 @@ class TestGradient:
     def test_skips_whitespace_when_no_slices(self):
         s = ANSIString("a b").gradient(
             [(255, 0, 0), (0, 0, 255)],
-            skip_whitespace=True,
+            Chars(skip_whitespace=True),
             space="rgb",
         )
 
@@ -364,9 +239,9 @@ class TestGradient:
         assert s.style_manager[4].foreground.to_rgb() == (0, 0, 255)
 
     def test_skip_emojis_flag(self):
-        """Verify skip_emojis=True drops the emoji indices entirely."""
+        """Verify skip_emojis drops the emoji indices entirely."""
         s = ANSIString("a👩‍🚀b").gradient(
-            [(255, 0, 0), (0, 0, 255)], skip_emojis=True, space="rgb"
+            [(255, 0, 0), (0, 0, 255)], Chars(skip_emojis=True), space="rgb"
         )
 
         assert 0 in s.style_manager
@@ -380,16 +255,16 @@ class TestGradient:
         assert s.style_manager[4].foreground.to_rgb() == (0, 0, 255)
 
     @pytest.mark.parametrize(
-        "plain_text, words, colors, options, "
-        "expected_fg, expected_bg, expected_ul, absent",
+        "plain_text, words, colors, word_options, "
+        "grad_options, expected_fg, expected_bg, absent",
         [
             pytest.param(
                 "Red blue RED",
                 ("red", "blue"),
                 [(255, 0, 0), (0, 0, 255)],
-                {"case_sensitive": False, "space": "rgb"},
+                {"ignore_case": True},
+                {"space": "rgb"},
                 {0: (255, 0, 0), 4: (128, 0, 128), 9: (0, 0, 255)},
-                {},
                 {},
                 {3, 8},
                 id="rgb-case-insensitive",
@@ -398,12 +273,12 @@ class TestGradient:
                 "aa bb cc",
                 ("aa", "bb", "cc"),
                 [(255, 0, 0), (0, 255, 0)],
-                {"fg": False, "bg": True, "ul": True, "space": "hsl"},
+                {},
+                {"channel": Channel.BG, "space": "hsl"},
                 {},
                 {0: (255, 0, 0), 3: (255, 255, 0), 6: (0, 255, 0)},
-                {0: (255, 0, 0), 3: (255, 255, 0), 6: (0, 255, 0)},
                 set[int](),
-                id="hsl-targets",
+                id="hsl-targets-bg",
             ),
         ],
     )
@@ -412,32 +287,31 @@ class TestGradient:
         plain_text: str,
         words: tuple[str, ...],
         colors: tuple[tuple[int, int, int], ...],
-        options: dict[str, Any],
+        word_options: dict[str, Any],
+        grad_options: dict[str, Any],
         expected_fg: dict[int, tuple[int, int, int]],
         expected_bg: dict[int, tuple[int, int, int]],
-        expected_ul: dict[int, tuple[int, int, int]],
         absent: set[int],
     ):
-        s = ANSIString(plain_text).gradient_words(list(colors), *words, **options)
+        s = ANSIString(plain_text).gradient(
+            list(colors), Words(words, **word_options), **grad_options
+        )
 
         for index, rgb in expected_fg.items():
             assert s.style_manager[index].foreground.to_rgb() == rgb
         for index, rgb in expected_bg.items():
             assert s.style_manager[index].background.to_rgb() == rgb
-        for index, rgb in expected_ul.items():
-            assert s.style_manager[index].underline[0].to_rgb() == rgb
         for index in absent:
             assert index not in s.style_manager
 
     @pytest.mark.parametrize(
-        "plain_text, coordinates, options, expected_fg, expected_bg, expected_ul",
+        "plain_text, coordinates, options, expected_fg, expected_bg",
         [
             pytest.param(
                 "ab\ncd",
                 ((0, 0), (1, 1)),
                 {"space": "rgb", "system": "terminal"},
                 {0: (255, 0, 0), 4: (0, 0, 255)},
-                {},
                 {},
                 id="terminal",
             ),
@@ -446,7 +320,6 @@ class TestGradient:
                 (((0, 0), (1, 0)),),
                 {"space": "rgb", "system": "cartesian"},
                 {3: (255, 0, 0), 4: (255, 0, 0)},
-                {},
                 {},
                 id="cartesian",
             ),
@@ -461,31 +334,15 @@ class TestGradient:
                 },
                 {5: (255, 0, 0)},
                 {},
-                {},
                 id="origin-terminal",
-            ),
-            pytest.param(
-                "abc\ndef",
-                ((1, 1),),
-                {
-                    "space": "rgb",
-                    "system": "cartesian",
-                    "index_base": 1,
-                    "origin": (1, 0),
-                },
-                {5: (255, 0, 0)},
-                {},
-                {},
-                id="origin-cartesian",
             ),
             pytest.param(
                 "abc",
                 ((0, 0), (1, 0), (2, 0)),
-                {"fg": False, "bg": True, "ul": True, "space": "hsl"},
+                {"channel": Channel.BG, "space": "hsl"},
                 {},
                 {0: (255, 0, 0), 1: (255, 255, 0), 2: (0, 255, 0)},
-                {0: (255, 0, 0), 1: (255, 255, 0), 2: (0, 255, 0)},
-                id="hsl-targets",
+                id="hsl-targets-bg",
             ),
         ],
     )
@@ -496,74 +353,88 @@ class TestGradient:
         options: dict[str, Any],
         expected_fg: dict[int, tuple[int, int, int]],
         expected_bg: dict[int, tuple[int, int, int]],
-        expected_ul: dict[int, tuple[int, int, int]],
     ):
-        s = ANSIString(plain_text).gradient_coordinates(
+        grad_colors = (
             [(255, 0, 0), (0, 0, 255)]
             if options.get("space") == "rgb"
-            else [(255, 0, 0), (0, 255, 0)],
-            *coordinates,
-            **options,
+            else [(255, 0, 0), (0, 255, 0)]
+        )
+        coord_kwargs = {
+            k: v
+            for k, v in options.items()
+            if k in ("system", "index_base", "origin", "on_out_of_bounds")
+        }
+        grad_kwargs = {k: v for k, v in options.items() if k in ("space", "channel")}
+
+        s = ANSIString(plain_text).gradient(
+            grad_colors, Coords(coordinates, **coord_kwargs), **grad_kwargs
         )
 
         for index, rgb in expected_fg.items():
             assert s.style_manager[index].foreground.to_rgb() == rgb
         for index, rgb in expected_bg.items():
             assert s.style_manager[index].background.to_rgb() == rgb
-        for index, rgb in expected_ul.items():
-            assert s.style_manager[index].underline[0].to_rgb() == rgb
 
     def test_coordinates_out_of_bounds_modes(self):
-        ignored = ANSIString("ab").gradient_coordinates(
+        ignored = ANSIString("ab").gradient(
             [(255, 0, 0), (0, 0, 255)],
-            (5, 0),
-            (0, 0),
-            on_out_of_bounds="ignore",
+            Coords(
+                ((5, 0), (0, 0)),
+                on_out_of_bounds="ignore",
+            ),
             space="rgb",
         )
         assert len(ignored.style_manager) == 1
         assert ignored.style_manager[0].foreground.to_rgb() == (255, 0, 0)
 
-        clamped = ANSIString("ab").gradient_coordinates(
+        clamped = ANSIString("ab").gradient(
             [(255, 0, 0), (0, 0, 255)],
-            (5, 0),
-            on_out_of_bounds="clamp",
+            Coords(
+                ((5, 0),),
+                on_out_of_bounds="clamp",
+            ),
             space="rgb",
         )
         assert len(clamped.style_manager) == 1
         assert clamped.style_manager[1].foreground.to_rgb() == (255, 0, 0)
 
         with pytest.raises(IndexError, match="out of bounds"):
-            ANSIString("ab").gradient_coordinates(
+            ANSIString("ab").gradient(
                 [(255, 0, 0), (0, 0, 255)],
-                (5, 0),
-                on_out_of_bounds="raise",
+                Coords(
+                    ((5, 0),),
+                    on_out_of_bounds="raise",
+                ),
                 space="rgb",
             )
 
     def test_coordinates_group_with_single_valid_coordinate_flattens(self):
-        s = ANSIString("ab").gradient_coordinates(
+        s = ANSIString("ab").gradient(
             [(255, 0, 0), (0, 0, 255)],
-            ((0, 0), (99, 0)),
-            on_out_of_bounds="ignore",
+            Coords(
+                (((0, 0), (99, 0)),),
+                on_out_of_bounds="ignore",
+            ),
             space="rgb",
         )
         assert len(s.style_manager) == 1
         assert s.style_manager[0].foreground.to_rgb() == (255, 0, 0)
 
     def test_coordinates_clamp_skips_empty_line(self):
-        s = ANSIString("a\n\nb").gradient_coordinates(
+        s = ANSIString("a\n\nb").gradient(
             [(255, 0, 0), (0, 0, 255)],
-            (5, 1),
-            on_out_of_bounds="clamp",
+            Coords(
+                ((5, 1),),
+                on_out_of_bounds="clamp",
+            ),
             space="rgb",
         )
         assert not s.style_manager
 
     def test_coordinates_emojis_colored_as_single_block(self):
-        """Verify gradient_coordinates does not slice emojis in half."""
-        s = ANSIString("a👩‍🚀b").gradient_coordinates(
-            [(255, 0, 0), (0, 0, 255)], (1, 0), space="rgb"
+        """Verify gradient does not slice emojis in half when targeting coordinates."""
+        s = ANSIString("a👩‍🚀b").gradient(
+            [(255, 0, 0), (0, 0, 255)], Coords(((1, 0),)), space="rgb"
         )
 
         msg = "'a' (index 0) was not targeted, should be unstyled"
@@ -586,22 +457,22 @@ class TestRainbow:
         assert len(s.style_manager) == 10, "Rainbow should style every character"
 
     def test_bg_rainbow(self):
-        s = ANSIString("abcdefghij").rainbow(bg=True)
+        s = ANSIString("abcdefghij").rainbow(channel=Channel.BG)
         assert len(s.style_manager) == 10
-        assert s.style_manager[0].background, "bg=True should set background colors"
+        assert s.style_manager[0].background, "Channel.BG should set background colors"
 
     @pytest.mark.parametrize(
         "ws_index",
         [pytest.param(1, id="space-at-1"), pytest.param(3, id="space-at-3")],
     )
     def test_skip_whitespace(self, ws_index: int):
-        s = ANSIString("a b c").rainbow(skip_whitespace=True)
+        s = ANSIString("a b c").rainbow(Chars(skip_whitespace=True))
         assert ws_index not in s.style_manager, (
             f"Index {ws_index} (whitespace) should be skipped"
         )
 
     def test_skip_emojis(self):
-        s = ANSIString("a👍🏽b").rainbow(skip_emojis=True)
+        s = ANSIString("a👍🏽b").rainbow(Chars(skip_emojis=True))
         assert 0 in s.style_manager
         assert 1 not in s.style_manager  # 👍
         assert 2 not in s.style_manager  # 🏽
@@ -609,7 +480,9 @@ class TestRainbow:
 
     def test_rainbow_matches_expected_palette(self):
         """Verify a known output for the builtin rainbow on the alphabet."""
-        s = ANSIString("abcdefghijklmnopqrstuvwxyz").rainbow(skip_whitespace=True)
+        s = ANSIString("abcdefghijklmnopqrstuvwxyz").rainbow(
+            Chars(skip_whitespace=True)
+        )
         expected = ANSIString(
             "abcdefghijklmnopqrstuvwxyz",
             {
@@ -656,7 +529,7 @@ class TestColorMap:
         )
 
     def test_int_numbers_colored(self):
-        s = ANSIString("0, 3, 9").colormap_pattern(self._cmap())
+        s = ANSIString("0, 3, 9").colormap(self._cmap(), Pattern.numeric())
         expected = (
             ansi_wrap("0", "\x1b[38:2::255:0:0m")
             + ", "
@@ -667,7 +540,7 @@ class TestColorMap:
         assert str(s) == expected
 
     def test_float_numbers_colored(self):
-        s = ANSIString("0.0, 3.14, 9.123").colormap_pattern(self._cmap())
+        s = ANSIString("0.0, 3.14, 9.123").colormap(self._cmap(), Pattern.numeric())
         expected = (
             ansi_wrap("0.0", "\x1b[38:2::255:0:0m")
             + ", "
@@ -678,7 +551,7 @@ class TestColorMap:
         assert str(s) == expected
 
     def test_float_trailing_decimal_point(self):
-        s = ANSIString("0., 3., 9.").colormap_pattern(self._cmap())
+        s = ANSIString("0., 3., 9.").colormap(self._cmap(), Pattern.numeric())
         expected = (
             ansi_wrap("0", "\x1b[38:2::255:0:0m")
             + "., "
@@ -690,7 +563,7 @@ class TestColorMap:
         assert str(s) == expected
 
     def test_values_overflow(self):
-        s = ANSIString("0, -3.14, 10.123").colormap_pattern(self._cmap())
+        s = ANSIString("0, -3.14, 10.123").colormap(self._cmap(), Pattern.numeric())
         expected = (
             ansi_wrap("0", "\x1b[38:2::255:0:0m")
             + ", "
@@ -704,12 +577,12 @@ class TestColorMap:
     def test_slices_colored(self):
         s = ANSIString("Ready | Go! | Steady? | Go! | Oh, wait...").colormap(
             self._cmap(),
-            (0, 10, 5, 10, -999),
             (0, 5),
             (8, 11),
             (14, 21),
             (24, 27),
             (30, 41),
+            values=(0, 10, 5, 10, -999),
         )
         expected = (
             ansi_wrap("Ready", "\x1b[38:2::255:0:0m")
@@ -724,27 +597,28 @@ class TestColorMap:
         )
         assert str(s) == expected
 
-    def test_custom_parser_and_pattern(self):
-        s = ANSIString("CPU: 4%, RAM: 8%").colormap_pattern(
-            self._cmap(), pattern=r"(\d+)%", parser=lambda m: float(m.group(1))
-        )
+    def test_custom_pattern(self):
+        s = ANSIString("CPU: 4%, RAM: 8%").colormap(self._cmap(), Pattern(r"\d+(?=%)"))
         expected = (
             "CPU: "
-            + ansi_wrap("4%", "\x1b[38:2::153:102:0m")
-            + ", "
+            + ansi_wrap("4", "\x1b[38:2::153:102:0m")
+            + "%, "
             + "RAM: "
-            + ansi_wrap("8%", "\x1b[38:2::51:204:0m")
+            + ansi_wrap("8", "\x1b[38:2::51:204:0m")
+            + "%"
         )
         assert str(s) == expected
 
-    def test_bg_and_ul_flags(self):
-        s = ANSIString("5").colormap_pattern(self._cmap(), fg=False, bg=True, ul=True)
-        expected = ansi_wrap("5", "\x1b[48:2::128:128:0m\x1b[4:1m\x1b[58:2::128:128:0m")
+    def test_bg_channel(self):
+        s = ANSIString("5").colormap(
+            self._cmap(), Pattern.numeric(), channel=Channel.BG
+        )
+        expected = ansi_wrap("5", "\x1b[48:2::128:128:0m")
         assert str(s) == expected
 
     def test_colormap_slices_with_emojis(self):
         """Verify automatic slice generation respects emojis."""
-        s = ANSIString("1️⃣2️⃣").colormap(self._cmap(), (0, 10))
+        s = ANSIString("1️⃣2️⃣").colormap(self._cmap(), Chars(), values=(0, 10))
 
         assert s.style_manager[0].foreground.to_rgb() == (255, 0, 0)
         assert s.style_manager[1].foreground.to_rgb() == (255, 0, 0)
@@ -768,7 +642,7 @@ class TestSegmentedColorMap:
         )
 
     def test_segmented_exact_boundaries(self):
-        s = ANSIString("0, 50, 90").colormap_pattern(self._cmap())
+        s = ANSIString("0, 50, 90").colormap(self._cmap(), Pattern.numeric())
         expected = (
             ansi_wrap("0", "\x1b[38:2::0:255:0m")
             + ", "
@@ -779,7 +653,7 @@ class TestSegmentedColorMap:
         assert str(s) == expected
 
     def test_segmented_between_boundaries(self):
-        s = ANSIString("-10, 25, 75").colormap_pattern(self._cmap())
+        s = ANSIString("-10, 25, 75").colormap(self._cmap(), Pattern.numeric())
         expected = (
             ansi_wrap("-10", "\x1b[38:2::0:255:0m")
             + ", "
@@ -790,7 +664,7 @@ class TestSegmentedColorMap:
         assert str(s) == expected
 
     def test_segmented_over_color(self):
-        s = ANSIString("91, 999").colormap_pattern(self._cmap())
+        s = ANSIString("91, 999").colormap(self._cmap(), Pattern.numeric())
         expected = (
             ansi_wrap("91", "\x1b[38:2::255:0:255m")
             + ", "
@@ -801,7 +675,7 @@ class TestSegmentedColorMap:
     def test_segmented_slices_colored(self):
         """Verify colormap_slices integration with SegmentedColorMap."""
         s = ANSIString("OK | WARN | CRIT").colormap(
-            self._cmap(), (0, 45, 85), (0, 2), (5, 9), (12, 16)
+            self._cmap(), (0, 2), (5, 9), (12, 16), values=(0, 45, 85)
         )
         expected = (
             ansi_wrap("OK", "\x1b[38:2::0:255:0m")
