@@ -18,6 +18,7 @@ from pyansistring import (
     ANSIString,
     Background,
     Channel,
+    Chars,
     Coords,
     Foreground,
     NamedColors,
@@ -63,7 +64,8 @@ def add(name: str, s: ANSIString, to_path: bool = True) -> None:
 # ── Unstyled text ─────────────────────────────────────────────────────────
 add("unstyled.svg", ANSIString("Hello, World!"))
 
-# ── Styling the whole string ──────────────────────────────────────────────
+
+# ── Whole string styling ──────────────────────────────────────────────────
 add(
     "whole.svg",
     ANSIString("Hello, World!")
@@ -72,7 +74,8 @@ add(
     .style(SGR.BOLD),
 )
 
-# ── Styling by index slice ────────────────────────────────────────────────
+
+# ── Target Selectors: Slices ──────────────────────────────────────────────
 add(
     "slice.svg",
     ANSIString("Hello, World!")
@@ -81,7 +84,8 @@ add(
     .style(SGR.BOLD, (7, 12)),  # "World"
 )
 
-# ── Styling by word ───────────────────────────────────────────────────────
+
+# ── Target Selectors: Words ───────────────────────────────────────────────
 add(
     "words.svg",
     ANSIString("Hello, World!")
@@ -90,19 +94,48 @@ add(
     .style(SGR.BOLD, Words(("Hello", "World"))),
 )
 
-# ── SGR formatting (bold + underline) ─────────────────────────────────────
+
+# ── Target Selectors: Chars ───────────────────────────────────────────────
+add(
+    "chars.svg",
+    ANSIString("Hello, World!")
+    .bg((200, 50, 50), Chars(skip_whitespace=True))
+    .fg(0),  # Black text for contrast
+)
+
+
+# ── Target Selectors: Regex Patterns ──────────────────────────────────────
+add(
+    "pattern.svg",
+    ANSIString("Error 404: Not Found!")
+    .fg(NamedColors.RED, Pattern(r"\d+"))
+    .style(SGR.BOLD, Pattern(r"\d+")),
+)
+
+
+# ── Advanced Regex (Log Parsing) ──────────────────────────────────────────
+add(
+    "pattern_advanced.svg",
+    ANSIString("Login: [WARN] User 'admin' failed from 192.168.1.50")
+    .fg(Foreground.YELLOW, Pattern(r"\[WARN\]"))
+    .fg(Foreground.CYAN, Pattern(r"'.*?'"))
+    .style(SGR.UNDERLINE, Pattern(r"\b\d{1,3}(?:\.\d{1,3}){3}\b")),  # IP Address
+)
+
+
+# ── SGR attributes ────────────────────────────────────────────────────────
 add(
     "sgr.svg",
     ANSIString("Hello, World!").style(SGR.BOLD).style(SGR.UNDERLINE),
 )
 
-# ── 4-bit colour ──────────────────────────────────────────────────────────
+
+# ── 4-bit, 8-bit, and 24-bit colors ───────────────────────────────────────
 add(
     "4bit.svg",
     ANSIString("Hello, World!").fg(Foreground.YELLOW).bg(Background.BLUE),
 )
 
-# ── 8-bit colour ──────────────────────────────────────────────────────────
 add(
     "8bit.svg",
     ANSIString("Hello, World!")
@@ -111,7 +144,6 @@ add(
     .ul(74),  # Muted Sky Blue
 )
 
-# ── 24-bit (true colour) ──────────────────────────────────────────────────
 add(
     "rgb.svg",
     ANSIString("Hello, World!")
@@ -120,7 +152,6 @@ add(
     .ul((135, 175, 215)),  # Light Steel Blue
 )
 
-# ── Named Colors (500+ Web Colors) ────────────────────────────────────────
 add(
     "named_colors.svg",
     ANSIString("Hello, World!")
@@ -129,6 +160,7 @@ add(
     .ul(NamedColors.CRIMSON)
     .style(UnderlineMode.CURLY),
 )
+
 
 # ── Underline modes ───────────────────────────────────────────────────────
 add(
@@ -139,30 +171,15 @@ add(
     .style(UnderlineMode.DOUBLE),
 )
 
-# ── Target Selectors: Regex Patterns ──────────────────────────────────────
-add(
-    "pattern.svg",
-    ANSIString("Error 404: Not Found!")
-    .fg(NamedColors.RED, Pattern(r"\d+"))
-    .style(SGR.BOLD, Pattern(r"\d+")),
-)
 
-# ── Emoji & Grapheme Safety ───────────────────────────────────────────────
-# add(
-#     "emoji_safety.svg",
-#     ANSIString("Hello, 👾 World! 🕹️\nHello, 🧑‍💻 Programmers! ❤️‍🔥").rainbow(
-#         Chars(skip_emojis=True), channel=Channel.BG
-#     ),
-#     to_path=False
-# )
-
-# ── Rainbow ───────────────────────────────────────────────────────────────
+# ── Rainbow Effect ────────────────────────────────────────────────────────
 add(
     "rainbow.svg",
     ANSIString("Hello, World! This is rainbow text!").rainbow(),
 )
 
-# ── Gradient (string-wide) ───────────────────────────────────────────────
+
+# ── Gradient APIs ─────────────────────────────────────────────────────────
 add(
     "gradient.svg",
     ANSIString("Hello, World! This is gradient text!").gradient(
@@ -170,7 +187,6 @@ add(
     ),
 )
 
-# ── Gradient by words ─────────────────────────────────────────────────────
 add(
     "gradient_words.svg",
     ANSIString("Hello, colorful gradient world!").gradient(
@@ -185,7 +201,6 @@ add(
     ),
 )
 
-# ── Gradient by coordinates ───────────────────────────────────────────────
 add(
     "gradient_coordinates.svg",
     ANSIString("HELLO\nworld").gradient(
@@ -197,8 +212,8 @@ add(
     ),
 )
 
-# ── Data-Driven Colormaps (Segmented vs Continuous) ───────────────────────
 
+# ── Data-Driven Colormaps ─────────────────────────────────────────────────
 ramp_text = "".join(f"{n:<5}" for n in range(0, 101, 10))
 block_pattern = Pattern(r"\d+\s*")
 cmap_seg = SegmentedColorMap(
@@ -218,14 +233,6 @@ add(
     ANSIString(ramp_text).colormap(cmap_cont, block_pattern, channel=Channel.BG).fg(0),
 )
 
-# ── Target Selectors: Advanced Regex (Log Parsing) ────────────────────────
-add(
-    "pattern_advanced.svg",
-    ANSIString("Login: [WARN] User 'admin' failed from 192.168.1.50")
-    .fg(Foreground.YELLOW, Pattern(r"\[WARN\]"))
-    .fg(Foreground.CYAN, Pattern(r"'.*?'"))
-    .style(SGR.UNDERLINE, Pattern(r"\b\d{1,3}(?:\.\d{1,3}){3}\b")),  # IP Address
-)
 
 # ── Generate all SVGs ─────────────────────────────────────────────────────
 print(f"Generating {len(examples)} SVG examples in {OUT}:")
