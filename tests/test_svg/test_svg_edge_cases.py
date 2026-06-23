@@ -9,7 +9,8 @@ from tests.test_svg.conftest import FakeTTFont
 
 
 @pytest.fixture
-def fake_font():
+def fake_font(monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.setattr(pas, "_IS_FONTTOOLS_AVAILABLE", True)
     return FakeTTFont()
 
 
