@@ -20,7 +20,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 from fontTools.ttLib import TTFont  # type: ignore
 
 from pyansistring import ANSIString
-from pyansistring.constants import SGR, UnderlineMode
+from pyansistring.constants import SGR, Channel, UnderlineMode
 
 # ---------------------------------------------------------------------------
 # Font paths (Consolas family, standard Windows location)
@@ -108,28 +108,26 @@ add(
 
 
 # ── 4. Foreground colours ─────────────────────────────────────────────────
-add("12_fg_red.svg", ANSIString("Hello, World!").fg_24b(255, 50, 50))
+add("12_fg_red.svg", ANSIString("Hello, World!").fg((255, 50, 50)))
 
 add(
     "13_fg_partial.svg",
-    ANSIString("Hello, World!")
-    .fg_24b(255, 50, 50, (0, 5))
-    .fg_24b(50, 50, 255, (7, 12)),
+    ANSIString("Hello, World!").fg((255, 50, 50), (0, 5)).fg((50, 50, 255), (7, 12)),
 )
 
 add(
     "14_fg_bold_coloured.svg",
-    ANSIString("Hello, World!").style(SGR.BOLD).fg_24b(0, 180, 0),
+    ANSIString("Hello, World!").style(SGR.BOLD).fg((0, 180, 0)),
     font_bold=bold,
 )
 
 
 # ── 5. Background colours ─────────────────────────────────────────────────
-add("15_bg_yellow.svg", ANSIString("Hello, World!").bg_24b(255, 255, 100))
+add("15_bg_yellow.svg", ANSIString("Hello, World!").bg((255, 255, 100)))
 
 add(
     "16_fg_bg_combined.svg",
-    ANSIString("Hello, World!").fg_24b(255, 255, 255).bg_24b(40, 40, 40),
+    ANSIString("Hello, World!").fg((255, 255, 255)).bg((40, 40, 40)),
 )
 
 
@@ -138,22 +136,22 @@ add("17_underline_single.svg", ANSIString("Underlined text").style(SGR.UNDERLINE
 
 add(
     "18_underline_double.svg",
-    ANSIString("Double underline").style(SGR.DOUBLE_UNDERLINE).fg_24b(0, 0, 0),
+    ANSIString("Double underline").style(SGR.DOUBLE_UNDERLINE).fg((0, 0, 0)),
 )
 
 add(
     "19_underline_coloured_curly.svg",
-    ANSIString("Curly underline").ul_24b(255, 0, 0).style(UnderlineMode.CURLY),
+    ANSIString("Curly underline").ul((255, 0, 0)).style(UnderlineMode.CURLY),
 )
 
 add(
     "20_underline_coloured_dotted.svg",
-    ANSIString("Dotted underline").ul_24b(0, 128, 255).style(UnderlineMode.DOTTED),
+    ANSIString("Dotted underline").ul((0, 128, 255)).style(UnderlineMode.DOTTED),
 )
 
 add(
     "21_underline_coloured_dashed.svg",
-    ANSIString("Dashed underline").ul_24b(200, 100, 0).style(UnderlineMode.DASHED),
+    ANSIString("Dashed underline").ul((200, 100, 0)).style(UnderlineMode.DASHED),
 )
 
 
@@ -163,7 +161,7 @@ add(
     ANSIString("Bold + Underline")
     .style(SGR.BOLD)
     .style(SGR.UNDERLINE)
-    .fg_24b(0, 100, 200),
+    .fg((0, 100, 200)),
     font_bold=bold,
 )
 
@@ -171,7 +169,7 @@ add(
     "23_italic_curly_underline.svg",
     ANSIString("Italic + Curly")
     .style(SGR.ITALIC)
-    .ul_24b(255, 80, 80)
+    .ul((255, 80, 80))
     .style(UnderlineMode.CURLY),
     font_italic=ital,
 )
@@ -181,9 +179,9 @@ add(
     ANSIString("Full combo!")
     .style(SGR.BOLD)
     .style(SGR.ITALIC)
-    .fg_24b(255, 200, 0)
-    .bg_24b(30, 30, 60)
-    .ul_24b(255, 100, 100)
+    .fg((255, 200, 0))
+    .bg((30, 30, 60))
+    .ul((255, 100, 100))
     .style(UnderlineMode.DOUBLE),
     font_bold_italic=bi,
 )
@@ -192,7 +190,7 @@ add(
 # ── 8. Background options ─────────────────────────────────────────────────
 add(
     "25_opaque_bg.svg",
-    ANSIString("Opaque background").fg_24b(255, 255, 255),
+    ANSIString("Opaque background").fg((255, 255, 255)),
     transparent_background=False,
     background_color=(30, 30, 30),
 )
@@ -216,19 +214,13 @@ add(
 )
 
 
-# ── 10. Rainbow & Multicolor ──────────────────────────────────────────────
-add("29_rainbow.svg", ANSIString("Rainbow text example!").rainbow(fg=True))
+# ── 10. Rainbow & Gradient ────────────────────────────────────────────────
+add("29_rainbow.svg", ANSIString("Rainbow text example!").rainbow(channel=Channel.FG))
 
 add(
-    "30_multicolor.svg",
-    ANSIString("Multicolor gradient!").multicolor(
-        (
-            "r=0:|g=0:|b=255:   $ "
-            "b>0:repeat(auto)   # "
-            "r>255:repeat(auto) | "
-            "g>255:repeat(auto)   "
-            "                   &*"
-        )
+    "30_gradient.svg",
+    ANSIString("Gradient text example!").gradient(
+        [(255, 0, 0), (0, 255, 0), (0, 0, 255)]
     ),
 )
 
@@ -239,8 +231,8 @@ add(
     ANSIString("Line 1: Bold\nLine 2: Italic\nLine 3: Normal")
     .style(SGR.BOLD, (0, 12))
     .style(SGR.ITALIC, (13, 27))
-    .fg_24b(0, 150, 0, (0, 12))
-    .fg_24b(150, 0, 0, (13, 27)),
+    .fg((0, 150, 0), (0, 12))
+    .fg((150, 0, 0), (13, 27)),
     font_bold=bold,
     font_italic=ital,
 )
@@ -249,25 +241,25 @@ add(
 # ── 12. Text mode equivalents ─────────────────────────────────────────────
 add(
     "32_text_mode_bold.svg",
-    ANSIString("Text-mode bold").style(SGR.BOLD).fg_24b(0, 0, 0),
+    ANSIString("Text-mode bold").style(SGR.BOLD).fg((0, 0, 0)),
     convert_text_to_path=False,
 )
 
 add(
     "33_text_mode_italic.svg",
-    ANSIString("Text-mode italic").style(SGR.ITALIC).fg_24b(0, 0, 0),
+    ANSIString("Text-mode italic").style(SGR.ITALIC).fg((0, 0, 0)),
     convert_text_to_path=False,
 )
 
 add(
     "34_text_mode_dim.svg",
-    ANSIString("Text-mode dim").style(SGR.DIM).fg_24b(0, 0, 0),
+    ANSIString("Text-mode dim").style(SGR.DIM).fg((0, 0, 0)),
     convert_text_to_path=False,
 )
 
 add(
     "35_text_mode_underline.svg",
-    ANSIString("Text-mode underline").style(SGR.UNDERLINE).fg_24b(0, 0, 0),
+    ANSIString("Text-mode underline").style(SGR.UNDERLINE).fg((0, 0, 0)),
     convert_text_to_path=False,
 )
 
