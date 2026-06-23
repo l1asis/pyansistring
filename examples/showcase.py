@@ -109,7 +109,7 @@ def main() -> None:
         "Pattern: .style(BOLD, Pattern(r'\\d+'))",
         ANSIString("Error 404: Not Found!")
         .fg((255, 50, 50), Pattern(r"\d+"))
-        .style(SGR.BOLD),
+        .style(SGR.BOLD, Pattern(r'\d+')),
     )
 
     show(
