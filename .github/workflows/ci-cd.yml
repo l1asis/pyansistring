@@ -60,7 +60,7 @@ jobs:
 
   build:
     name: Build test distribution 📦
-    needs: lint
+    needs: [lint, commitlint]
     runs-on: ubuntu-latest
     permissions:
       contents: read
