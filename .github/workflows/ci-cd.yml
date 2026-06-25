@@ -61,6 +61,7 @@ jobs:
   build:
     name: Build test distribution 📦
     needs: [lint, commitlint]
+    if: always() && needs.lint.result == 'success' && (needs.commitlint.result == 'success' || needs.commitlint.result == 'skipped')
     runs-on: ubuntu-latest
     permissions:
       contents: read
