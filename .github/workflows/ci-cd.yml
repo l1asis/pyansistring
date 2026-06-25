@@ -38,30 +38,33 @@ jobs:
   commitlint:
     name: Lint Commit Messages 💬
     runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request'
     permissions:
       contents: read
 
     steps:
-      - uses: actions/checkout@v7
+      - name: Checkout repository 📥
+        if: github.event_name == 'pull_request'
+        uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
       - name: Setup Node.js 💛
+        if: github.event_name == 'pull_request'
         uses: actions/setup-node@v6
         with:
           node-version: "lts/*"
 
       - name: Install commitlint 📦
+        if: github.event_name == 'pull_request'
         run: npm install -D @commitlint/cli @commitlint/config-conventional
 
       - name: Validate PR commits with commitlint 🔍
+        if: github.event_name == 'pull_request'
         run: npx commitlint --from ${{ github.event.pull_request.base.sha }} --to ${{ github.event.pull_request.head.sha }} --verbose
 
   build:
     name: Build test distribution 📦
     needs: [lint, commitlint]
-    if: always() && needs.lint.result == 'success' && (needs.commitlint.result == 'success' || needs.commitlint.result == 'skipped')
     runs-on: ubuntu-latest
     permissions:
       contents: read
