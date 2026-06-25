@@ -35,6 +35,29 @@ jobs:
         ruff check . --output-format=github
         ruff format --check .
 
+  commitlint:
+    name: Lint Commit Messages 💬
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js 💛
+        uses: actions/setup-node@v6
+        with:
+          node-version: "lts/*"
+
+      - name: Install commitlint 📦
+        run: npm install -D @commitlint/cli @commitlint/config-conventional
+
+      - name: Validate PR commits with commitlint 🔍
+        if: github.event_name == 'pull_request'
+        run: npx commitlint --from ${{ github.event.pull_request.base.sha }} --to ${{ github.event.pull_request.head.sha }} --verbose
+
   build:
     name: Build test distribution 📦
     needs: lint
