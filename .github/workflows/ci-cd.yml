@@ -198,6 +198,9 @@ jobs:
         python -m pip install --upgrade pip
         python -m pip install build
 
+    - name: Install Semantic Release plugins 📦
+      run: npm install -D semantic-release @semantic-release/changelog @semantic-release/exec @semantic-release/git
+
     - name: Semantic Release 🌸
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
