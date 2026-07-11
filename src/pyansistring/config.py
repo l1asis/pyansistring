@@ -1,4 +1,7 @@
 import os as _os
+import platform as _platform
+import re as _re
+import sys as _sys
 from dataclasses import dataclass as _dataclass
 from typing import Literal as _Literal
 
