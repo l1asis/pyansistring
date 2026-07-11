@@ -286,12 +286,46 @@ def _detect_theme() -> ThemeName:
 
 @_dataclass
 class Config:
-    format_mode: _Literal["standard", "compatible"] = "standard"
+    """
+    Global configuration state for the `pyansistring` library.
 
-    def __post_init__(self):
-        env_mode = _os.getenv("PYANSISTRING_FORMAT_MODE", self.format_mode)
-        if env_mode in ("standard", "compatible"):
-            self.format_mode = env_mode
+    Attributes
+    ----------
+    separator : Literal[":", ";", "colon", "semicolon"], default ";"
+        The SGR sequence delimiter mode. "standard" uses colons (e.g., \\x1b[38:2::r:g:bm),
+        while "compatible" uses semicolons (e.g., \\x1b[38;2;r;g;bm).
+    color_support : ColorSupportLevel, default auto
+        The maximum allowed color level.
+    downsample : bool, default True
+        Whether sequences should be mathematically downsampled
+        to 8-bit or 4-bit colors when printed in restricted environments.
+    theme : ThemeName, default auto
+        The color theme used for mapping 4-bit ANSI color codes to RGB
+        values. Auto-detected based on the host terminal environment.
+    """
+
+    separator: _Literal[":", ";", "colon", "semicolon"] = _detect_separator()
+    color_support: _ColorSupportLevel = _detect_color_support()
+    downsample: bool = _detect_downsample()
+    theme: ThemeName = _detect_theme()
+
+    def refresh(
+        self,
+        *,
+        separator: bool = True,
+        color_support: bool = True,
+        downsample: bool = True,
+        theme: bool = True,
+    ) -> None:
+        """Re-evaluate the environment and update the configuration state."""
+        if separator:
+            self.separator = _detect_separator()
+        if color_support:
+            self.color_support = _detect_color_support()
+        if downsample:
+            self.downsample = _detect_downsample()
+        if theme:
+            self.theme = _detect_theme()
 
 
 config = Config()
