@@ -215,6 +215,26 @@ def _detect_separator() -> _Literal[":", ";", "colon", "semicolon"]:
     """
     separator = _os.getenv("PYANSISTRING_SEPARATOR")
     return ";" if separator not in (":", "colon") else ":"
+
+
+def _detect_downsample() -> bool:
+    """
+    Determine whether color downsampling should be enabled.
+
+    Reads the `PYANSISTRING_DOWNSAMPLE` environment variable. If set to
+    "0" or "false", color reduction (e.g., converting 24-bit to 8-bit)
+    is disabled.
+
+    Returns
+    -------
+    bool
+        `False` if downsampling is explicitly disabled via the environment
+        variable, otherwise `True`.
+    """
+    downsample = _os.getenv("PYANSISTRING_DOWNSAMPLE")
+    return False if downsample in ("0", "false") else True
+
+
 @_dataclass
 class Config:
     format_mode: _Literal["standard", "compatible"] = "standard"
