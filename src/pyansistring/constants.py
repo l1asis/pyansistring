@@ -2669,6 +2669,9 @@ class Regex:
     )
 
 
+CASEFOLD_EXPANSIONS: dict[str, str]
+
+
 def __getattr__(name: str) -> dict[str, str]:
     if name == "CASEFOLD_EXPANSIONS":
         expansions = _get_casefold_expansions()
