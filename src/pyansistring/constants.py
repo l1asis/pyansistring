@@ -126,7 +126,7 @@ class Background(_IntEnum, metaclass=MetaEnum):
     BRIGHT_WHITE = 107
 
 
-class Palette256(_IntEnum, metaclass=MetaEnum):
+class Bit8Index(_IntEnum, metaclass=MetaEnum):
     BLACK = 0
     RED = 1
     GREEN = 2
