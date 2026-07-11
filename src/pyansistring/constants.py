@@ -4,7 +4,7 @@ __all__ = [
     "PUNCTUATION",
     "PUNCTUATION_AND_WHITESPACE",
     "Channel",
-    "ColorDepth",
+    "ColorSupportLevel",
     "Foreground",
     "Background",
     "Underline",
@@ -97,10 +97,11 @@ class Channel(_Flag):
     ALL = FG | BG | UL
 
 
-class ColorDepth(_IntEnum, metaclass=MetaEnum):
-    PALETTE = 5  # 8-bit
-    TRUE_COLOR = 2  # 24-bit
-    TRUECOLOR = 2  # alias
+class ColorSupportLevel(_IntEnum, metaclass=MetaEnum):
+    NONE = 0
+    BIT4 = 1  # 16 colors (Standard ANSI)
+    BIT8 = 2  # 256 colors (Extended ANSI/Xterm)
+    BIT24 = 3  # 16.7 million colors (True Color)
 
 
 class Foreground(_IntEnum, metaclass=MetaEnum):
