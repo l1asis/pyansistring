@@ -6,6 +6,7 @@ __all__ = [
     "CoordinateGroup",
     "SliceGroup",
     "SliceSpec",
+    "ThemeName",
 ]
 
 from typing import Literal as _Literal, TypeAlias as _TypeAlias
