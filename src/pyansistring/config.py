@@ -197,6 +197,24 @@ def _detect_color_support(
         return _ColorSupportLevel.BIT4
 
     return _ColorSupportLevel.NONE
+
+
+def _detect_separator() -> _Literal[":", ";", "colon", "semicolon"]:
+    """
+    Detect the preferred SGR (Select Graphic Rendition) separator.
+
+    Reads the `PYANSISTRING_SEPARATOR` environment variable to determine
+    whether to use a colon (`:`) or semicolon (`;`) as the separator
+    for ANSI escape sequences. Defaults to semicolon for compatibility.
+
+    Returns
+    -------
+    Literal[":", ";", "colon", "semicolon"]
+        `":"` if the environment variable is set to ":" or "colon",
+        otherwise `";"`.
+    """
+    separator = _os.getenv("PYANSISTRING_SEPARATOR")
+    return ";" if separator not in (":", "colon") else ":"
 @_dataclass
 class Config:
     format_mode: _Literal["standard", "compatible"] = "standard"
