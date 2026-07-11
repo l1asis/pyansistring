@@ -66,6 +66,137 @@ def _env_force_color() -> _ColorSupportLevel | None:
         pass
 
     return None
+
+
+def _detect_color_support(
+    is_tty: bool | None = None, sniff_flags: bool = True
+) -> _ColorSupportLevel:
+    """
+    Detect the level of color support in the current terminal environment.
+
+    Respects standard environment variables (NO_COLOR, CLICOLOR, FORCE_COLOR)
+    and inspects the terminal emulator and OS capabilities to determine
+    the maximum safe color depth.
+
+    Parameters
+    ----------
+    is_tty : bool | None, default None
+        Whether the output stream is a TTY. If None, it is auto-detected
+        from `sys.stdout.isatty()`.
+    sniff_flags : bool, default True
+        Whether to check `sys.argv` for color-forcing CLI flags (e.g., --color).
+
+    Returns
+    -------
+    ColorSupportLevel
+        The detected color support level ranging from NONE (0) to TRUECOLOR (3).
+    """
+    env = _os.environ
+    flags = _get_flags()
+
+    flag_force_color = None
+    if sniff_flags:
+        if (
+            "no-color" in flags
+            or "no-colors" in flags
+            or "color=false" in flags
+            or "color=never" in flags
+        ):
+            flag_force_color = _ColorSupportLevel.NONE
+        elif (
+            "color" in flags
+            or "colors" in flags
+            or "color=true" in flags
+            or "color=always" in flags
+        ):
+            flag_force_color = _ColorSupportLevel.BIT4
+            if (
+                "color=16m" in flags
+                or "color=full" in flags
+                or "color=truecolor" in flags
+            ):
+                flag_force_color = _ColorSupportLevel.BIT24
+            elif "color=256" in flags:
+                flag_force_color = _ColorSupportLevel.BIT8
+
+    if flag_force_color is None and env.get("NO_COLOR", "") != "":
+        return _ColorSupportLevel.NONE
+
+    force_color = (
+        flag_force_color if flag_force_color is not None else _env_force_color()
+    )
+    if force_color is None and env.get("CLICOLOR_FORCE", "0") != "0":
+        force_color = _ColorSupportLevel.BIT4
+
+    if force_color is not None:
+        return force_color
+
+    if env.get("TERM") == "dumb":
+        return _ColorSupportLevel.NONE
+
+    if "CI" in env:
+        if any(k in env for k in ["GITHUB_ACTIONS", "GITEA_ACTIONS", "CIRCLECI"]):
+            return _ColorSupportLevel.BIT24
+        if (
+            any(
+                k in env
+                for k in ["TRAVIS", "APPVEYOR", "GITLAB_CI", "BUILDKITE", "DRONE"]
+            )
+            or env.get("CI_NAME") == "codeship"
+        ):
+            return _ColorSupportLevel.BIT4
+
+    if "TEAMCITY_VERSION" in env:
+        if _re.match(r"^(9\.(0*[1-9]\d*)\.|\d{2,}\.)", env["TEAMCITY_VERSION"]):
+            return _ColorSupportLevel.BIT4
+        return _ColorSupportLevel.NONE
+
+    if is_tty is None:
+        is_tty = hasattr(_sys.stdout, "isatty") and _sys.stdout.isatty()
+
+    if not is_tty or env.get("CLICOLOR") == "0":
+        return _ColorSupportLevel.NONE
+
+    if _platform.system() == "Windows":
+        if hasattr(_sys, "getwindowsversion"):
+            build = _sys.getwindowsversion().build
+            if build >= 14931:
+                return _ColorSupportLevel.BIT24
+            if build >= 10586:
+                return _ColorSupportLevel.BIT8
+        return _ColorSupportLevel.BIT4
+
+    if env.get("COLORTERM") == "truecolor":
+        return _ColorSupportLevel.BIT24
+
+    term = env.get("TERM", "")
+    if term in ["xterm-kitty", "xterm-ghostty", "wezterm"]:
+        return _ColorSupportLevel.BIT24
+
+    if "TERM_PROGRAM" in env:
+        prog = env["TERM_PROGRAM"]
+        ver_str = env.get("TERM_PROGRAM_VERSION", "").split(".")[0]
+        ver = int(ver_str) if ver_str.isdigit() else 0
+
+        if prog == "iTerm.app":
+            return _ColorSupportLevel.BIT24 if ver >= 3 else _ColorSupportLevel.BIT8
+        if prog == "Apple_Terminal":
+            return _ColorSupportLevel.BIT8
+
+    if _re.search(r"-256(color)?$", term, _re.IGNORECASE):
+        return _ColorSupportLevel.BIT8
+
+    if _re.search(
+        r"^screen|^xterm|^vt100|^vt220|^rxvt|color|ansi|cygwin|linux",
+        term,
+        _re.IGNORECASE,
+    ):
+        return _ColorSupportLevel.BIT4
+
+    if "COLORTERM" in env:
+        return _ColorSupportLevel.BIT4
+
+    return _ColorSupportLevel.NONE
 @_dataclass
 class Config:
     format_mode: _Literal["standard", "compatible"] = "standard"
