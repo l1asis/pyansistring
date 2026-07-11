@@ -4,11 +4,14 @@ from bisect import bisect_left as _bisect_left
 from collections.abc import Sequence as _Sequence
 from colorsys import hls_to_rgb as _hls_to_rgb, rgb_to_hls as _rgb_to_hls
 from math import trunc as _trunc
-from typing import Any as _Any, Literal as _Literal, Mapping as _Mapping
+from typing import TYPE_CHECKING, Any as _Any, Literal as _Literal, Mapping as _Mapping
 
 from ._frozen import FrozenMeta as _FrozenMeta
 from ._helpers import clamp as _clamp
-from ._types import ThemeName as _ThemeName
+
+if TYPE_CHECKING:
+    from ._types import ThemeName as _ThemeName
+
 from .config import config as _config
 from .constants import (
     BIT8_TO_RGB,

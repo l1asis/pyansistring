@@ -3,9 +3,11 @@ import platform as _platform
 import re as _re
 import sys as _sys
 from dataclasses import dataclass as _dataclass
-from typing import Literal as _Literal
+from typing import TYPE_CHECKING, Literal as _Literal
 
-from ._types import ThemeName
+if TYPE_CHECKING:
+    from ._types import ThemeName as _ThemeName
+
 from .constants import ColorSupportLevel as _ColorSupportLevel
 
 
@@ -236,7 +238,7 @@ def _detect_downsample() -> bool:
     return False if downsample in ("0", "false") else True
 
 
-def _detect_theme() -> ThemeName:
+def _detect_theme() -> _ThemeName:
     """
     Detect the default terminal color theme based on the environment.
 
@@ -308,7 +310,7 @@ class Config:
     separator: _Literal[":", ";"] = _detect_separator()
     color_support: _ColorSupportLevel = _detect_color_support()
     downsample: bool = _detect_downsample()
-    theme: ThemeName = _detect_theme()
+    theme: _ThemeName = _detect_theme()
 
     def refresh(
         self,
