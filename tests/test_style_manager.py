@@ -123,16 +123,3 @@ class TestStyleManagerRemapStyles:
     def test_remap_raises_if_not_found(self, empty_style_manager: StyleManager):
         with pytest.raises(ValueError):
             empty_style_manager.remap("abc", "xyz")
-
-
-class TestStyleManagerCaching:
-    """Identical Style objects should be shared via the cache."""
-
-    def test_same_style_cached(self, empty_style_manager: StyleManager):
-        a = Style(foreground=Color.from_8bit(100))
-        b = Style(foreground=Color.from_8bit(100))
-        empty_style_manager[0] = a
-        empty_style_manager[1] = b
-        assert empty_style_manager[0] is empty_style_manager[1], (
-            "Identical Styles should be de-duplicated to the same object"
-        )

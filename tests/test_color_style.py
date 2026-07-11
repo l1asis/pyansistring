@@ -145,7 +145,7 @@ class TestColorSGRParam:
 
     def test_24bit_compatible(self):
         c = Color.from_24bit(10, 20, 30)
-        out = c.to_sgr_param(str(Foreground.SET), format_mode="compatible")
+        out = c.to_sgr_param(str(Foreground.SET), separator=";")
         assert ";" in out, "Compatible format must use semicolons"
 
     def test_unset_returns_empty(self):

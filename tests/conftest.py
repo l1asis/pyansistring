@@ -6,8 +6,14 @@ import pytest
 
 from pyansistring import ANSIString, StyleManager
 from pyansistring.color import Color
-from pyansistring.constants import SGR, Foreground
+from pyansistring.config import config
+from pyansistring.constants import SGR, ColorSupportLevel, Foreground
 from pyansistring.style import Style
+
+# ── Configurations ────────────────────────────────────────────────────────
+
+config.color_support = ColorSupportLevel.BIT24
+config.separator = ":"
 
 # ── Constants ─────────────────────────────────────────────────────────────
 
