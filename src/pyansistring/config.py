@@ -237,7 +237,19 @@ def _detect_downsample() -> bool:
 
 
 def _detect_theme() -> ThemeName:
-    """Detect the default terminal theme based on environment variables and platform."""
+    """
+    Detect the default terminal color theme based on the environment.
+
+    Inspects environment variables (such as `TERM`, `TERM_PROGRAM`, and 
+    `WT_SESSION`) alongside the host operating system to determine the 
+    most appropriate 4-bit color palette for the current terminal.
+
+    Returns
+    -------
+    ThemeName
+        The identifier string of the detected terminal theme (e.g., 
+        "vscode", "windows_10", "xterm").
+    """
     if _sys.platform == "win32":
         if (
             "pwsh" in _os.environ.get("SHELL", "").lower()
