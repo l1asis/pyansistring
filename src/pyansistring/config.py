@@ -292,8 +292,9 @@ class Config:
     Attributes
     ----------
     separator : Literal[":", ";"], default ";"
-        The SGR sequence delimiter mode. "standard" uses colons (e.g., \\x1b[38:2::r:g:bm),
-        while "compatible" uses semicolons (e.g., \\x1b[38;2;r;g;bm).
+        The SGR sequence delimiter.
+        - `":"` (Standard mode): Uses colons, e.g., `\\x1b[38:2::r:g:bm`.
+        - `";"` (Compatible mode): Uses semicolons, e.g., `\\x1b[38;2;r;g;bm`.
     color_support : ColorSupportLevel, default auto
         The maximum allowed color level.
     downsample : bool, default True

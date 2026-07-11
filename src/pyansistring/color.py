@@ -145,7 +145,8 @@ class Color(metaclass=_FrozenMeta):
 
         Parameters
         ----------
-        prefix : Literal[Foreground.SET, Background.SET, Underline.SET] | str, default ""
+        prefix : Literal[Foreground.SET, Background.SET, Underline.SET] | str,\
+                default ""
             The target channel enum or string prefix for the ANSI sequence.
         separator : Literal[":", ";"] | None, default None
             The delimiter used to separate SGR parameters. If None, it defaults
@@ -236,7 +237,7 @@ class Color(metaclass=_FrozenMeta):
         to: _Literal["4bit", "8bit"],
         prefix: _Literal[Foreground.SET, Background.SET, Underline.SET] | str = "",
         theme: _ThemeName | None = None,
-    ) -> Color:
+    ) -> "Color":
         """
         Reduce the color depth of a 24-bit or 8-bit color to a lower bit approximation.
 
@@ -248,7 +249,8 @@ class Color(metaclass=_FrozenMeta):
         ----------
         to : Literal["4bit", "8bit"]
             The target bit depth for the downsampling operation.
-        prefix : Literal[Foreground.SET, Background.SET, Underline.SET] | str, default ""
+        prefix : Literal[Foreground.SET, Background.SET, Underline.SET] | str,\
+                default ""
             The terminal channel this color will be applied to, used to accurately
             determine the corresponding 4-bit escape codes.
         theme : ThemeName | None, default None
