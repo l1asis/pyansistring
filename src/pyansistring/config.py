@@ -200,7 +200,7 @@ def _detect_color_support(
     return _ColorSupportLevel.NONE
 
 
-def _detect_separator() -> _Literal[":", ";", "colon", "semicolon"]:
+def _detect_separator() -> _Literal[":", ";"]:
     """
     Detect the preferred SGR (Select Graphic Rendition) separator.
 
@@ -210,7 +210,7 @@ def _detect_separator() -> _Literal[":", ";", "colon", "semicolon"]:
 
     Returns
     -------
-    Literal[":", ";", "colon", "semicolon"]
+    Literal[":", ";"]
         `":"` if the environment variable is set to ":" or "colon",
         otherwise `";"`.
     """
@@ -291,7 +291,7 @@ class Config:
 
     Attributes
     ----------
-    separator : Literal[":", ";", "colon", "semicolon"], default ";"
+    separator : Literal[":", ";"], default ";"
         The SGR sequence delimiter mode. "standard" uses colons (e.g., \\x1b[38:2::r:g:bm),
         while "compatible" uses semicolons (e.g., \\x1b[38;2;r;g;bm).
     color_support : ColorSupportLevel, default auto
@@ -304,7 +304,7 @@ class Config:
         values. Auto-detected based on the host terminal environment.
     """
 
-    separator: _Literal[":", ";", "colon", "semicolon"] = _detect_separator()
+    separator: _Literal[":", ";"] = _detect_separator()
     color_support: _ColorSupportLevel = _detect_color_support()
     downsample: bool = _detect_downsample()
     theme: ThemeName = _detect_theme()
