@@ -24,13 +24,10 @@ __all__ = [
     "UBUNTU_COLORS",
     "ECLIPSE_TERMINAL_COLORS",
     "COLOR_THEMES",
-    "DEFAULT_THEME",
-    "ThemeName",
     "Regex",
     "get_casefold_expansions",
 ]
 
-import os as _os
 import sys as _sys
 from enum import (
     EnumMeta as _EnumMeta,
@@ -39,21 +36,6 @@ from enum import (
     auto as _auto,
 )
 from re import compile as _re_compile
-from typing import Literal as _Literal
-
-ThemeName = _Literal[
-    "vga",
-    "windows_xp",
-    "powershell",
-    "vscode",
-    "windows_10",
-    "terminal_app",
-    "putty",
-    "mirc",
-    "xterm",
-    "ubuntu",
-    "eclipse",
-]
 
 """
 Sources used:
@@ -2659,49 +2641,6 @@ COLOR_THEMES = {
     "ubuntu": UBUNTU_COLORS,
     "eclipse": ECLIPSE_TERMINAL_COLORS,
 }
-
-
-def _detect_default_theme() -> ThemeName:
-    """Detect the default terminal theme based on environment variables and platform."""
-    if _sys.platform == "win32":
-        # Windows
-        if (
-            "pwsh" in _os.environ.get("SHELL", "").lower()
-            or "powershell" in _os.environ.get("TERM", "").lower()
-        ):
-            return "powershell"
-        elif "vscode" in _os.environ.get("TERM_PROGRAM", "").lower():
-            return "vscode"
-        elif _os.environ.get("WT_SESSION"):
-            return "windows_10"
-        else:
-            return "windows_xp"
-    elif _sys.platform == "darwin":
-        # macOS
-        if "vscode" in _os.environ.get("TERM_PROGRAM", "").lower():
-            return "vscode"
-        else:
-            return "terminal_app"
-    else:
-        # Linux/Unix systems
-        term_program = _os.environ.get("TERM_PROGRAM", "").lower()
-        term = _os.environ.get("TERM", "").lower()
-
-        if "vscode" in term_program:
-            return "vscode"
-        elif "putty" in term:
-            return "putty"
-        elif "mirc" in term:
-            return "mirc"
-        elif "ubuntu" in term:
-            return "ubuntu"
-        elif "eclipse" in term_program:
-            return "eclipse"
-        else:
-            return "xterm"
-
-
-DEFAULT_THEME: ThemeName = _detect_default_theme()
 
 
 class Regex:

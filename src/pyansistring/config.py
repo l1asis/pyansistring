@@ -5,6 +5,7 @@ import sys as _sys
 from dataclasses import dataclass as _dataclass
 from typing import Literal as _Literal
 
+from ._types import ThemeName
 from .constants import ColorSupportLevel as _ColorSupportLevel
 
 
@@ -233,6 +234,42 @@ def _detect_downsample() -> bool:
     """
     downsample = _os.getenv("PYANSISTRING_DOWNSAMPLE")
     return False if downsample in ("0", "false") else True
+
+
+def _detect_theme() -> ThemeName:
+    """Detect the default terminal theme based on environment variables and platform."""
+    if _sys.platform == "win32":
+        if (
+            "pwsh" in _os.environ.get("SHELL", "").lower()
+            or "powershell" in _os.environ.get("TERM", "").lower()
+        ):
+            return "powershell"
+        elif "vscode" in _os.environ.get("TERM_PROGRAM", "").lower():
+            return "vscode"
+        elif _os.environ.get("WT_SESSION"):
+            return "windows_10"
+        return "windows_xp"
+
+    if _sys.platform == "darwin":
+        if "vscode" in _os.environ.get("TERM_PROGRAM", "").lower():
+            return "vscode"
+        return "terminal_app"
+
+    term_program = _os.environ.get("TERM_PROGRAM", "").lower()
+    term = _os.environ.get("TERM", "").lower()
+
+    if "vscode" in term_program:
+        return "vscode"
+    if "putty" in term:
+        return "putty"
+    if "mirc" in term:
+        return "mirc"
+    if "ubuntu" in term:
+        return "ubuntu"
+    if "eclipse" in term_program:
+        return "eclipse"
+
+    return "xterm"
 
 
 @_dataclass
