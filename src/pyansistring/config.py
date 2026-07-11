@@ -5,6 +5,7 @@ import sys as _sys
 from dataclasses import dataclass as _dataclass
 from typing import Literal as _Literal
 
+from .constants import ColorSupportLevel as _ColorSupportLevel
 
 @_dataclass
 class Config:
