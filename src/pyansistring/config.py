@@ -31,6 +31,41 @@ def _get_flags() -> set[str]:
 
     return {arg.lower() for arg in args if arg.startswith("-")}
 
+
+def _env_force_color() -> _ColorSupportLevel | None:
+    """
+    Determine the color support level from the FORCE_COLOR environment variable.
+
+    Evaluates `FORCE_COLOR` according to community standards. "true" or an
+    empty string defaults to 4-bit support. Numeric values 1, 2, and 3 map
+    to 4-bit, 8-bit, and 24-bit TrueColor respectively. "false" or "0"
+    disables color entirely.
+
+    Returns
+    -------
+    ColorSupportLevel | None
+        The corresponding color support level if `FORCE_COLOR` is present
+        and valid, otherwise `None`.
+    """
+    if "FORCE_COLOR" not in _os.environ:
+        return None
+
+    val = _os.environ["FORCE_COLOR"]
+    if val.lower() == "true":
+        return _ColorSupportLevel.BIT4
+    if val.lower() == "false":
+        return _ColorSupportLevel.NONE
+    if not val:
+        return _ColorSupportLevel.BIT4
+
+    try:
+        level = min(int(val), 3)
+        if level in [0, 1, 2, 3]:
+            return _ColorSupportLevel(level)
+    except ValueError:
+        pass
+
+    return None
 @_dataclass
 class Config:
     format_mode: _Literal["standard", "compatible"] = "standard"
