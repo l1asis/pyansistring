@@ -35,8 +35,7 @@ from enum import (
     auto as _auto,
 )
 from re import compile as _re_compile
-
-from ._helpers import get_casefold_expansions as _get_casefold_expansions
+from sys import maxunicode as _maxunicode
 
 """
 Sources used:
@@ -2670,6 +2669,15 @@ class Regex:
 
 
 CASEFOLD_EXPANSIONS: dict[str, str]
+
+
+def _get_casefold_expansions() -> dict[str, str]:
+    """Return a mapping of characters that expand when casefolded (expensive)."""
+    return {
+        chr(cp): chr(cp).casefold()
+        for cp in range(_maxunicode + 1)
+        if len(chr(cp).casefold()) > 1
+    }
 
 
 def __getattr__(name: str) -> dict[str, str]:
