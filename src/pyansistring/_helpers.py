@@ -4,10 +4,12 @@ __all__ = [
     "rsearch_separators",
     "clamp",
     "hsl_to_rgb",
+    "get_casefold_expansions",
 ]
 
 from collections.abc import Generator as _Generator
 from colorsys import hls_to_rgb as _hls_to_rgb
+from sys import maxunicode as _maxunicode
 
 from emoji import analyze as _emoji_analyze
 
@@ -136,3 +138,12 @@ def get_grapheme_spans(
         spans.append((start, end))
 
     return tuple(spans)
+
+
+def get_casefold_expansions() -> dict[str, str]:
+    """Return a mapping of characters that expand when casefolded (expensive)."""
+    return {
+        chr(cp): chr(cp).casefold()
+        for cp in range(_maxunicode + 1)
+        if len(chr(cp).casefold()) > 1
+    }

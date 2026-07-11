@@ -25,10 +25,9 @@ __all__ = [
     "ECLIPSE_TERMINAL_COLORS",
     "COLOR_THEMES",
     "Regex",
-    "get_casefold_expansions",
+    "CASEFOLD_EXPANSIONS",  # type: ignore
 ]
 
-import sys as _sys
 from enum import (
     EnumMeta as _EnumMeta,
     Flag as _Flag,
@@ -36,6 +35,8 @@ from enum import (
     auto as _auto,
 )
 from re import compile as _re_compile
+
+from ._helpers import get_casefold_expansions as _get_casefold_expansions
 
 """
 Sources used:
@@ -2668,16 +2669,11 @@ class Regex:
     )
 
 
-_CASEFOLD_EXPANSIONS: dict[str, str] | None = None
+def __getattr__(name: str) -> dict[str, str]:
+    if name == "CASEFOLD_EXPANSIONS":
+        expansions = _get_casefold_expansions()
+        globals()[name] = expansions
 
+        return expansions
 
-def get_casefold_expansions() -> dict[str, str]:
-    """Return a mapping of characters that expand when casefolded (lazy)."""
-    global _CASEFOLD_EXPANSIONS
-    if _CASEFOLD_EXPANSIONS is None:
-        _CASEFOLD_EXPANSIONS = {  # type: ignore
-            chr(cp): chr(cp).casefold()
-            for cp in range(_sys.maxunicode + 1)
-            if len(chr(cp).casefold()) > 1
-        }
-    return _CASEFOLD_EXPANSIONS
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
