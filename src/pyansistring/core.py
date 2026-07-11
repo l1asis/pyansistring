@@ -57,7 +57,9 @@ from ._types import (
     CoordinateGroup,
     SliceGroup,
     SliceSpec,
+    ThemeName,
 )
+from .config import config
 from .targets import Chars, Coords, Pattern, Words
 
 if _IS_FONTTOOLS_AVAILABLE or TYPE_CHECKING:
@@ -77,16 +79,17 @@ if _IS_FONTTOOLS_AVAILABLE or TYPE_CHECKING:
 
 from .color import Color, ColorMap, ColorScale, SegmentedColorMap
 from .constants import (
+    CASEFOLD_EXPANSIONS,
     SGR,
     WHITESPACE,
     Background,
+    Bit8Index,
     Channel,
+    ColorSupportLevel,
     Foreground,
-    Palette256,
     Regex,
     Underline,
     UnderlineMode,
-    get_casefold_expansions,
 )
 from .style import Style, StyleManager
 
@@ -112,12 +115,16 @@ class ANSIString(str):
 
     __slots__ = (
         "_style_manager",
-        "_styled_text",
+        "_rendered_cache",
+        "_last_config_state",
         "_line_starts",
     )
 
     _style_manager: StyleManager
-    _styled_text: str
+    _rendered_cache: dict[tuple[_Literal[":", ";"], ColorSupportLevel, bool], str]
+    _last_config_state: (
+        tuple[_Literal[":", ";"], ColorSupportLevel, bool, ThemeName] | None
+    )
     _line_starts: tuple[int, ...] | None
 
     # str method names that have explicit overrides and must NOT be
@@ -183,7 +190,8 @@ class ANSIString(str):
             )
         else:
             instance._style_manager = StyleManager()
-        instance._styled_text = cls._render(instance)
+        instance._rendered_cache = {}
+        instance._last_config_state = None
         instance._line_starts = None
         return instance
 
@@ -194,10 +202,8 @@ class ANSIString(str):
 
     @property
     def styled_text(self) -> str:
-        """The styled text, recomputed if styles have been modified."""
-        if self._style_manager.pop_modified():
-            self._styled_text = self._render()
-        return self._styled_text
+        """The fully rendered TrueColor string that respects format mode."""
+        return self._get_rendered(config.separator, ColorSupportLevel.BIT24, False)
 
     @property
     def plain_text(self) -> str:
@@ -211,7 +217,11 @@ class ANSIString(str):
 
     def __str__(self) -> str:
         """Return the styled text."""
-        return self.styled_text
+        if config.color_support == ColorSupportLevel.NONE:
+            return self.plain_text
+        return self._get_rendered(
+            config.separator, config.color_support, config.downsample
+        )
 
     def __repr__(self) -> str:
         """Return a string representation of the ANSIString."""
@@ -397,7 +407,42 @@ class ANSIString(str):
         """Return arguments for creating a new ANSIString during unpickling."""
         return (self.plain_text, dict(self.style_manager))
 
-    def _render(self) -> str:
+    def _get_rendered(
+        self,
+        separator: _Literal[":", ";"] | None = None,
+        color_support: ColorSupportLevel | None = None,
+        downsample: bool | None = None,
+    ) -> str:
+        """Retrieve or calculate the rendered string for a specific render profile."""
+        separator = separator or config.separator
+        color_support = (
+            color_support if color_support is not None else config.color_support
+        )
+        downsample = downsample if downsample is not None else config.downsample
+
+        current_state = (separator, color_support, downsample, config.theme)
+
+        if (
+            self._style_manager.pop_modified()
+            or getattr(self, "_last_config_state", None) != current_state
+        ):
+            self._rendered_cache.clear()
+            self._last_config_state = current_state
+
+        cache_key = (separator, color_support, downsample)
+        if cache_key not in self._rendered_cache:
+            self._rendered_cache[cache_key] = self._render(
+                separator, color_support, downsample
+            )
+
+        return self._rendered_cache[cache_key]
+
+    def _render(
+        self,
+        separator: _Literal[":", ";"],
+        level: ColorSupportLevel,
+        downsample: bool,
+    ) -> str:
         """Render the ANSIString to its final output form."""
         sm = self._style_manager
         if not sm:
@@ -412,13 +457,34 @@ class ANSIString(str):
         run_start = sorted_keys[0]
         if run_start > 0:
             parts.append(plain[:run_start])
-        run_ansi = sm[run_start].ansi
+
+        current_style = sm[run_start]
+        run_ansi = current_style.to_ansi(
+            separator=separator, color_support=level, downsample=downsample
+        )
 
         for k in range(1, len(sorted_keys)):
             idx = sorted_keys[k]
             prev_idx = sorted_keys[k - 1]
-            if idx == prev_idx + 1 and sm[idx].ansi == run_ansi:
-                continue
+            style = sm[idx]
+
+            if idx == prev_idx + 1:
+                # Object logical equality avoids rebuilding strings
+                if style == current_style:
+                    continue
+
+                # Compute new string.
+                # If they match after downsampling, keep the run going
+                new_ansi = style.to_ansi(
+                    separator=separator, color_support=level, downsample=downsample
+                )
+                if new_ansi == run_ansi:
+                    current_style = style
+                    continue
+            else:
+                new_ansi = style.to_ansi(
+                    separator=separator, color_support=level, downsample=downsample
+                )
 
             # Flush current styled run
             run_end = prev_idx + 1
@@ -429,7 +495,8 @@ class ANSIString(str):
                 parts.append(plain[run_end:idx])
 
             run_start = idx
-            run_ansi = sm[idx].ansi
+            run_ansi = new_ansi
+            current_style = style
 
         # Flush last styled run
         last_end = sorted_keys[-1] + 1
@@ -757,7 +824,7 @@ class ANSIString(str):
 
     def fg(
         self,
-        color: Foreground | Palette256 | Color | tuple[int, int, int] | str | int,
+        color: Foreground | Bit8Index | Color | tuple[int, int, int] | str | int,
         *targets: SliceGroup | Pattern | Words | Coords | Chars,
     ) -> _Self:
         """Apply a foreground color.
@@ -779,7 +846,7 @@ class ANSIString(str):
 
     def bg(
         self,
-        color: Background | Palette256 | Color | tuple[int, int, int] | str | int,
+        color: Background | Bit8Index | Color | tuple[int, int, int] | str | int,
         *targets: SliceGroup | Pattern | Words | Coords | Chars,
     ) -> _Self:
         """Apply a background color.
@@ -802,7 +869,7 @@ class ANSIString(str):
     def ul(
         self,
         color: Underline
-        | Palette256
+        | Bit8Index
         | Color
         | tuple[int, int, int]
         | str
@@ -1571,7 +1638,7 @@ class ANSIString(str):
         actual = super().casefold()
         if actual == self.plain_text:
             return type(self)(actual, self.style_manager.copy())
-        expansions = get_casefold_expansions()
+        expansions = CASEFOLD_EXPANSIONS
         styles: dict[int, Style] = {}
         dest = 0
         for src, char in enumerate(self.plain_text):
