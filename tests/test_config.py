@@ -8,7 +8,7 @@ from pyansistring.config import (
     _env_force_color,  # type: ignore
     config,
 )
-from pyansistring.constants import ColorSupportLevel
+from pyansistring.constants import THEME_NAMES, ColorSupportLevel
 
 
 @pytest.fixture
@@ -53,6 +53,23 @@ def test_detect_downsample(isolated_env: dict[str, str]):
 
     isolated_env["PYANSISTRING_DOWNSAMPLE"] = "false"
     assert _detect_downsample() is False
+
+
+@pytest.mark.parametrize(
+    "env_val, expected",
+    [
+        ("none", ColorSupportLevel.NONE),
+        ("4bit", ColorSupportLevel.BIT4),
+        ("8bit", ColorSupportLevel.BIT8),
+        ("24bit", ColorSupportLevel.BIT24),
+    ],
+)
+def test_detect_color_support_override(
+    isolated_env: dict[str, str], env_val: str, expected: ColorSupportLevel
+):
+    """Verify PYANSISTRING_COLOR_SUPPORT overrides auto-detection."""
+    isolated_env["PYANSISTRING_COLOR_SUPPORT"] = env_val
+    assert _detect_color_support() == expected
 
 
 @pytest.mark.parametrize(
@@ -125,6 +142,21 @@ def test_detect_theme_platform_matching(
     isolated_env.clear()
     isolated_env["TERM"] = "putty-256color"
     assert _detect_theme() == "putty"
+
+
+def test_detect_theme_override(isolated_env: dict[str, str]):
+    """Verify PYANSISTRING_THEME correctly overrides auto-detection."""
+    isolated_env["PYANSISTRING_THEME"] = "vscode"
+    assert _detect_theme() == "vscode"
+
+    isolated_env["PYANSISTRING_THEME"] = "putty"
+    assert _detect_theme() == "putty"
+
+    isolated_env["PYANSISTRING_THEME"] = "invalid-theme"
+    detected_theme = _detect_theme()
+
+    assert detected_theme != "invalid-theme"
+    assert detected_theme in THEME_NAMES
 
 
 def test_config_refresh_updates_state(
