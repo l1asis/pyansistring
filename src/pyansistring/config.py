@@ -8,7 +8,10 @@ from typing import TYPE_CHECKING, Literal as _Literal
 if TYPE_CHECKING:
     from ._types import ThemeName as _ThemeName
 
-from .constants import ColorSupportLevel as _ColorSupportLevel
+from .constants import (
+    THEME_NAMES as _THEME_NAMES,
+    ColorSupportLevel as _ColorSupportLevel,
+)
 
 
 def _get_flags() -> set[str]:
@@ -78,8 +81,8 @@ def _detect_color_support(
     Detect the level of color support in the current terminal environment.
 
     Respects standard environment variables (NO_COLOR, CLICOLOR, FORCE_COLOR)
-    and inspects the terminal emulator and OS capabilities to determine
-    the maximum safe color depth.
+    and the library-specific `PYANSISTRING_COLOR_SUPPORT` (highest precedence),
+    inspecting terminal and OS capabilities to determine maximum safe depth.
 
     Parameters
     ----------
@@ -96,6 +99,16 @@ def _detect_color_support(
     """
     env = _os.environ
     flags = _get_flags()
+
+    if env_override := env.get("PYANSISTRING_COLOR_SUPPORT"):
+        mapping = {
+            "none": _ColorSupportLevel.NONE,
+            "4bit": _ColorSupportLevel.BIT4,
+            "8bit": _ColorSupportLevel.BIT8,
+            "24bit": _ColorSupportLevel.BIT24,
+        }
+        if (value := mapping.get(env_override.lower())) is not None:
+            return value
 
     flag_force_color = None
     if sniff_flags:
@@ -240,16 +253,20 @@ def _detect_theme() -> _ThemeName:
     """
     Detect the default terminal color theme based on the environment.
 
-    Inspects environment variables (such as `TERM`, `TERM_PROGRAM`, and
-    `WT_SESSION`) alongside the host operating system to determine the
-    most appropriate 4-bit color palette for the current terminal.
+    Inspects `PYANSISTRING_THEME` (highest precedence), followed by environment
+    variables (such as `TERM`, `TERM_PROGRAM`, and `WT_SESSION`) and the host
+    operating system to determine the most appropriate 4-bit color palette.
 
     Returns
     -------
     ThemeName
-        The identifier string of the detected terminal theme (e.g.,
-        "vscode", "windows_10", "xterm").
+        The identifier string of the detected terminal theme.
     """
+
+    if env_override := _os.environ.get("PYANSISTRING_THEME"):
+        if (env_override := env_override.lower()) in _THEME_NAMES:
+            return env_override
+
     if _sys.platform == "win32":
         if (
             "pwsh" in _os.environ.get("SHELL", "").lower()

@@ -24,6 +24,7 @@ __all__ = [
     "UBUNTU_COLORS",
     "ECLIPSE_TERMINAL_COLORS",
     "COLOR_THEMES",
+    "THEME_NAMES",
     "Regex",
     "CASEFOLD_EXPANSIONS",  # type: ignore
 ]
@@ -36,6 +37,10 @@ from enum import (
 )
 from re import compile as _re_compile
 from sys import maxunicode as _maxunicode
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from ._types import ThemeName as _ThemeName
 
 """
 Sources used:
@@ -2628,7 +2633,7 @@ ECLIPSE_TERMINAL_COLORS = {
 }
 
 # Dictionary mapping theme names to their color dictionaries
-COLOR_THEMES = {
+COLOR_THEMES: dict[_ThemeName, dict[int, tuple[int, int, int]]] = {
     "vga": VGA_COLORS,
     "windows_xp": WINDOWS_XP_CONSOLE_COLORS,
     "powershell": WINDOWS_POWERSHELL_COLORS,
@@ -2641,6 +2646,8 @@ COLOR_THEMES = {
     "ubuntu": UBUNTU_COLORS,
     "eclipse": ECLIPSE_TERMINAL_COLORS,
 }
+
+THEME_NAMES = frozenset(COLOR_THEMES.keys())
 
 
 class Regex:
