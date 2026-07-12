@@ -4,6 +4,7 @@ __all__ = [
 ]
 
 import re as _re
+from enum import IntEnum as _IntEnum
 from functools import wraps as _wraps
 from typing import Any as _Any, Callable as _Callable, Literal as _Literal
 
@@ -13,12 +14,17 @@ from .config import config as _config
 from .constants import (
     SGR as _SGR,
     Background as _Background,
-    ColorDepth as _ColorDepth,
+    ColorSupportLevel as _ColorSupportLevel,
     Foreground as _Foreground,
     Regex as _Regex,
     Underline as _Underline,
     UnderlineMode as _UnderlineMode,
 )
+
+
+class _ColorFormat(_IntEnum):
+    BIT8 = 5
+    BIT24 = 2
 
 
 def _detect_style_change(
@@ -68,7 +74,6 @@ class Style(metaclass=_FrozenMeta):
         "background",
         "underline",
         "attributes",
-        "_ansi",
         "_is_frozen",
     )
 
@@ -104,12 +109,6 @@ class Style(metaclass=_FrozenMeta):
         else:
             self.underline = (underline[0], underline_mode)
         self.attributes = attributes
-        self._ansi = self.to_ansi(format_mode=_config.format_mode)
-
-    @property
-    def ansi(self) -> str:
-        """Return the cached ANSI escape sequence representation."""
-        return self._ansi
 
     def __bool__(self) -> bool:
         return (
@@ -221,7 +220,9 @@ class Style(metaclass=_FrozenMeta):
     def to_ansi(
         self,
         separate_codes: bool = True,
-        format_mode: _Literal["standard", "compatible"] | None = None,
+        separator: _Literal[":", ";"] | None = None,
+        color_support: _ColorSupportLevel | None = None,
+        downsample: bool | None = None,
     ) -> str:
         """Generate an ANSI escape sequence from this Style.
 
@@ -230,35 +231,47 @@ class Style(metaclass=_FrozenMeta):
         separate_codes : bool, default True
             When ``True``, emit each ANSI code as a separate escape sequence.
             When ``False``, combine all codes into a single sequence.
-        format_mode : Literal["standard", "compatible"] | None, default None
-            Separator style for multi-parameter color codes. ``"standard"`` uses colons,
-            while ``"compatible"`` uses semicolons. Defaults to global config.
+        TODO
 
         Returns
         -------
         str
             An ANSI escape sequence string.
         """
-        mode = format_mode or _config.format_mode
+        separator = separator if separator is not None else _config.separator
+        color_support = (
+            color_support if color_support is not None else _config.color_support
+        )
+        downsample = downsample if downsample is not None else _config.downsample
 
         parameters: list[str] = []
 
         if self.foreground:
-            parameters.append(self.foreground.to_sgr_param(_Foreground.SET, mode))
+            fg_param = self.foreground.to_sgr_param(
+                _Foreground.SET, separator, color_support, downsample
+            )
+            if fg_param:
+                parameters.append(fg_param)
+
         if self.background:
-            parameters.append(self.background.to_sgr_param(_Background.SET, mode))
+            bg_param = self.background.to_sgr_param(
+                _Background.SET, separator, color_support, downsample
+            )
+            if bg_param:
+                parameters.append(bg_param)
+
         if self.underline[0]:
-            underline_mode = f"{_SGR.UNDERLINE}:{self.underline[1]}"
-            underline_style = f"{self.underline[0].to_sgr_param(_Underline.SET, mode)}"
-            parameters.extend((underline_mode, underline_style))
+            ul_param = self.underline[0].to_sgr_param(
+                _Underline.SET, separator, color_support, downsample
+            )
+            if ul_param:
+                parameters.extend((f"{_SGR.UNDERLINE}:{self.underline[1]}", ul_param))
 
         for attr in self.attributes:
-            # TODO: Should all the SGRs be at the end of the array?
-            # if (attr == SGR.UNDERLINE and not self.underline[0]) \
-            #     or attr in {SGR.BOLD, SGR.ITALIC}:
-            #     parameters.insert(0, f"{attr}")
-            # else:
             parameters.append(f"{attr}")
+
+        if not parameters:
+            return ""
 
         if separate_codes:
             return "".join(f"\x1b[{parameter}m" for parameter in parameters)
@@ -301,7 +314,7 @@ class Style(metaclass=_FrozenMeta):
                 ]
                 | None
             ) = None
-            depth: _Literal[_ColorDepth.PALETTE, _ColorDepth.TRUE_COLOR] | None = None
+            color_format: _Literal[_ColorFormat.BIT8, _ColorFormat.BIT24] | None = None
             rgb: list[int] = []
 
             for char in sequence:
@@ -335,8 +348,8 @@ class Style(metaclass=_FrozenMeta):
                         elif sgr_param in _SGR:
                             attributes.add(_SGR(sgr_param))
 
-                    # Check for underline mode or color bit depth
-                    elif not depth:
+                    # Check for underline mode or color format
+                    elif not color_format:
                         if active_style == _SGR.UNDERLINE:
                             # This special case handles codes like "4:1"
                             if 1 <= sgr_param <= 5:
@@ -344,29 +357,29 @@ class Style(metaclass=_FrozenMeta):
                             else:  # Fallback for simple underline
                                 attributes.add(_SGR.UNDERLINE)
                             style = None
-                        elif sgr_param == _ColorDepth.PALETTE:
-                            depth = _ColorDepth.PALETTE
-                        elif sgr_param == _ColorDepth.TRUE_COLOR:
-                            depth = _ColorDepth.TRUE_COLOR
+                        elif sgr_param == _ColorFormat.BIT8:
+                            color_format = _ColorFormat.BIT8
+                        elif sgr_param == _ColorFormat.BIT24:
+                            color_format = _ColorFormat.BIT24
 
-                    # Process color data now that style and bit depth are set
+                    # Process color data now that style and color format are set
                     else:
-                        if depth == _ColorDepth.PALETTE:
+                        if color_format == _ColorFormat.BIT8:
                             if active_style == _Foreground.SET:
                                 foreground = _Color.from_8bit(sgr_param)
                             elif active_style == _Background.SET:
                                 background = _Color.from_8bit(sgr_param)
                             elif active_style == _Underline.SET:
                                 underline = (_Color.from_8bit(sgr_param), underline[1])
-                            style = depth = None
+                            style = color_format = None
 
-                        elif depth == _ColorDepth.TRUE_COLOR:
+                        elif color_format == _ColorFormat.BIT24:
                             if 0 <= sgr_param <= 255:
                                 rgb.append(sgr_param)
                             else:
                                 # TODO: Do replace, e.g. clamp(value, 0, 255)?
                                 # NOTE: Invalid RGB value, reset
-                                style = depth = None
+                                style = color_format = None
                                 rgb.clear()
                                 continue
 
@@ -377,7 +390,7 @@ class Style(metaclass=_FrozenMeta):
                                     background = _Color.from_24bit(*rgb)
                                 elif active_style == _Underline.SET:
                                     underline = (_Color.from_24bit(*rgb), underline[1])
-                                style = depth = None
+                                style = color_format = None
                                 rgb.clear()
 
                     parameter = ""  # Reset for the next parameter
@@ -474,8 +487,6 @@ class StyleManager(dict[int, Style]):
         Modification state of the StyleManager.
     """
 
-    _style_cache: dict[int, Style] = {}
-
     def __init__(self, *args: _Any, **kwargs: _Any) -> None:
         super().__init__(*args, **kwargs)
         self._has_changes = False
@@ -505,13 +516,6 @@ class StyleManager(dict[int, Style]):
         """Set a Style instance in the dictionary, with caching and change tracking."""
         if not isinstance(value, Style):
             raise TypeError("StyleManager values must be Style instances")
-        # NOTE: Cache identical Style objects by their hash
-        style_hash = hash(value)
-        cached = self._style_cache.get(style_hash)
-        if cached is not None and cached == value:
-            value = cached
-        else:
-            self._style_cache[style_hash] = value
         self._has_changes = True
         return super().__setitem__(key, value)
 

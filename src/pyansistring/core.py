@@ -57,7 +57,9 @@ from ._types import (
     CoordinateGroup,
     SliceGroup,
     SliceSpec,
+    ThemeName,
 )
+from .config import config
 from .targets import Chars, Coords, Pattern, Words
 
 if _IS_FONTTOOLS_AVAILABLE or TYPE_CHECKING:
@@ -77,16 +79,17 @@ if _IS_FONTTOOLS_AVAILABLE or TYPE_CHECKING:
 
 from .color import Color, ColorMap, ColorScale, SegmentedColorMap
 from .constants import (
+    CASEFOLD_EXPANSIONS,
     SGR,
     WHITESPACE,
     Background,
+    Bit8Index,
     Channel,
+    ColorSupportLevel,
     Foreground,
-    Palette256,
     Regex,
     Underline,
     UnderlineMode,
-    get_casefold_expansions,
 )
 from .style import Style, StyleManager
 
@@ -112,12 +115,16 @@ class ANSIString(str):
 
     __slots__ = (
         "_style_manager",
-        "_styled_text",
+        "_rendered_cache",
+        "_last_config_state",
         "_line_starts",
     )
 
     _style_manager: StyleManager
-    _styled_text: str
+    _rendered_cache: dict[tuple[_Literal[":", ";"], ColorSupportLevel, bool], str]
+    _last_config_state: (
+        tuple[_Literal[":", ";"], ColorSupportLevel, bool, ThemeName] | None
+    )
     _line_starts: tuple[int, ...] | None
 
     # str method names that have explicit overrides and must NOT be
@@ -183,7 +190,8 @@ class ANSIString(str):
             )
         else:
             instance._style_manager = StyleManager()
-        instance._styled_text = cls._render(instance)
+        instance._rendered_cache = {}
+        instance._last_config_state = None
         instance._line_starts = None
         return instance
 
@@ -194,10 +202,8 @@ class ANSIString(str):
 
     @property
     def styled_text(self) -> str:
-        """The styled text, recomputed if styles have been modified."""
-        if self._style_manager.pop_modified():
-            self._styled_text = self._render()
-        return self._styled_text
+        """The fully rendered TrueColor string that respects format mode."""
+        return self._get_rendered(config.separator, ColorSupportLevel.BIT24, False)
 
     @property
     def plain_text(self) -> str:
@@ -211,7 +217,11 @@ class ANSIString(str):
 
     def __str__(self) -> str:
         """Return the styled text."""
-        return self.styled_text
+        if config.color_support == ColorSupportLevel.NONE:
+            return self.plain_text
+        return self._get_rendered(
+            config.separator, config.color_support, config.downsample
+        )
 
     def __repr__(self) -> str:
         """Return a string representation of the ANSIString."""
@@ -397,7 +407,42 @@ class ANSIString(str):
         """Return arguments for creating a new ANSIString during unpickling."""
         return (self.plain_text, dict(self.style_manager))
 
-    def _render(self) -> str:
+    def _get_rendered(
+        self,
+        separator: _Literal[":", ";"] | None = None,
+        color_support: ColorSupportLevel | None = None,
+        downsample: bool | None = None,
+    ) -> str:
+        """Retrieve or calculate the rendered string for a specific render profile."""
+        separator = separator if separator is not None else config.separator
+        color_support = (
+            color_support if color_support is not None else config.color_support
+        )
+        downsample = downsample if downsample is not None else config.downsample
+
+        current_state = (separator, color_support, downsample, config.theme)
+
+        if (
+            self._style_manager.pop_modified()
+            or getattr(self, "_last_config_state", None) != current_state
+        ):
+            self._rendered_cache.clear()
+            self._last_config_state = current_state
+
+        cache_key = (separator, color_support, downsample)
+        if cache_key not in self._rendered_cache:
+            self._rendered_cache[cache_key] = self._render(
+                separator, color_support, downsample
+            )
+
+        return self._rendered_cache[cache_key]
+
+    def _render(
+        self,
+        separator: _Literal[":", ";"],
+        level: ColorSupportLevel,
+        downsample: bool,
+    ) -> str:
         """Render the ANSIString to its final output form."""
         sm = self._style_manager
         if not sm:
@@ -412,28 +457,56 @@ class ANSIString(str):
         run_start = sorted_keys[0]
         if run_start > 0:
             parts.append(plain[:run_start])
-        run_ansi = sm[run_start].ansi
+
+        current_style = sm[run_start]
+        run_ansi = current_style.to_ansi(
+            separator=separator, color_support=level, downsample=downsample
+        )
 
         for k in range(1, len(sorted_keys)):
             idx = sorted_keys[k]
             prev_idx = sorted_keys[k - 1]
-            if idx == prev_idx + 1 and sm[idx].ansi == run_ansi:
-                continue
+            style = sm[idx]
+
+            if idx == prev_idx + 1:
+                # Object logical equality avoids rebuilding strings
+                if style == current_style:
+                    continue
+
+                # Compute new string.
+                # If they match after downsampling, keep the run going
+                new_ansi = style.to_ansi(
+                    separator=separator, color_support=level, downsample=downsample
+                )
+                if new_ansi == run_ansi:
+                    current_style = style
+                    continue
+            else:
+                new_ansi = style.to_ansi(
+                    separator=separator, color_support=level, downsample=downsample
+                )
 
             # Flush current styled run
             run_end = prev_idx + 1
-            parts.append(f"{run_ansi}{plain[run_start:run_end]}\x1b[0m")
+            if run_ansi:
+                parts.append(f"{run_ansi}{plain[run_start:run_end]}\x1b[0m")
+            else:
+                parts.append(plain[run_start:run_end])
 
             # Unstyled gap
             if idx > run_end:
                 parts.append(plain[run_end:idx])
 
             run_start = idx
-            run_ansi = sm[idx].ansi
+            run_ansi = new_ansi
+            current_style = style
 
         # Flush last styled run
         last_end = sorted_keys[-1] + 1
-        parts.append(f"{run_ansi}{plain[run_start:last_end]}\x1b[0m")
+        if run_ansi:
+            parts.append(f"{run_ansi}{plain[run_start:last_end]}\x1b[0m")
+        else:
+            parts.append(plain[run_start:last_end])
 
         # Unstyled suffix
         if last_end < n:
@@ -567,6 +640,23 @@ class ANSIString(str):
             yield match
 
     def _resolve_targets(self, targets: tuple[_Any, ...]) -> tuple[SliceGroup, ...]:
+        """
+        Convert diverse target selectors into concrete character slices.
+
+        Evaluates abstract targeting objects (`Pattern`, `Words`, `Coords`, `Chars`)
+        against the current plain text to determine the exact indices they span.
+
+        Parameters
+        ----------
+        targets : tuple[Any, ...]
+            A tuple of target selector objects or explicit slices/indices.
+
+        Returns
+        -------
+        tuple[SliceGroup, ...]
+            A flattened tuple of resolved slice boundaries indicating exactly
+            where styles should be applied or removed.
+        """
         resolved: list[SliceGroup] = []
         for target in targets:
             if isinstance(target, Pattern):
@@ -621,7 +711,24 @@ class ANSIString(str):
 
     @staticmethod
     def from_ansi(plain: str) -> "ANSIString":
-        """Create an ANSIString from a plain string containing ANSI escape sequences."""
+        """
+        Create an ANSIString from a plain string containing ANSI escape sequences.
+
+        Parses standard terminal escape codes (e.g., `\\x1b[31m`) embedded within
+        the input string, strips them out of the plain text, and converts them
+        into a managed `StyleManager` mapping.
+
+        Parameters
+        ----------
+        plain : str
+            The input string containing raw ANSI escape sequences.
+
+        Returns
+        -------
+        ANSIString
+            A new instance where the plain text is stripped of escape codes,
+            and all parsed styles are applied to their corresponding indices.
+        """
         start: int = 0
         decrement: int = 0
         style: str = ""
@@ -757,7 +864,7 @@ class ANSIString(str):
 
     def fg(
         self,
-        color: Foreground | Palette256 | Color | tuple[int, int, int] | str | int,
+        color: Foreground | Bit8Index | Color | tuple[int, int, int] | str | int,
         *targets: SliceGroup | Pattern | Words | Coords | Chars,
     ) -> _Self:
         """Apply a foreground color.
@@ -779,7 +886,7 @@ class ANSIString(str):
 
     def bg(
         self,
-        color: Background | Palette256 | Color | tuple[int, int, int] | str | int,
+        color: Background | Bit8Index | Color | tuple[int, int, int] | str | int,
         *targets: SliceGroup | Pattern | Words | Coords | Chars,
     ) -> _Self:
         """Apply a background color.
@@ -802,7 +909,7 @@ class ANSIString(str):
     def ul(
         self,
         color: Underline
-        | Palette256
+        | Bit8Index
         | Color
         | tuple[int, int, int]
         | str
@@ -1323,6 +1430,10 @@ class ANSIString(str):
         return self
 
     def join(self, iterable: _Iterable[str], /) -> "ANSIString":
+        """
+        Concatenate strings in an iterable,
+        preserving ANSI styles from this string.
+        """
         strings = list(iterable)
         styles: dict[int, Style] = {}
         pos = 0
@@ -1343,12 +1454,15 @@ class ANSIString(str):
         return type(self)(super().join(strings), StyleManager(styles))
 
     def ljust(self, width: _SupportsIndex, fillchar: str = " ") -> "ANSIString":
+        """Left-justify the string within a given width, preserving ANSI styles."""
         return self + fillchar * (int(width) - len(self))
 
     def rjust(self, width: _SupportsIndex, fillchar: str = " ") -> "ANSIString":
+        """Right-justify the string within a given width, preserving ANSI styles."""
         return self.__radd__(fillchar * (int(width) - len(self)))
 
     def center(self, width: _SupportsIndex, fillchar: str = " ") -> "ANSIString":
+        """Center the string within a given width, preserving ANSI styles."""
         margin = int(width) - len(self)
         left = (margin // 2) + (margin & int(width) & 1)
         return self.__radd__(fillchar * left) + fillchar * (margin - left)
@@ -1356,6 +1470,7 @@ class ANSIString(str):
     def rsplit(  # type: ignore[override]
         self, sep: str | None = None, maxsplit: _SupportsIndex = -1
     ) -> list["ANSIString"]:
+        """Split the string by a separator, preserving ANSI styles for each segment."""
         actual: list[_Any] = list(super().rsplit(sep, maxsplit))
         max_index = len(self)
         whitespace = _rsearch_separators(self.plain_text) if not sep else iter(())
@@ -1372,6 +1487,7 @@ class ANSIString(str):
     def split(  # type: ignore[override]
         self, sep: str | None = None, maxsplit: _SupportsIndex = -1
     ) -> list["ANSIString"]:
+        """Split the string by a separator, preserving ANSI styles for each segment."""
         actual: list[_Any] = list(super().split(sep, maxsplit))
         min_index = 0
         whitespace = _search_separators(self.plain_text) if not sep else iter(())
@@ -1386,6 +1502,7 @@ class ANSIString(str):
         return actual
 
     def splitlines(self, keepends: bool = False) -> list["ANSIString"]:  # type: ignore[override]
+        """Split the string at line boundaries, preserving ANSI styles for each line."""
         actual: list[_Any] = list(super().splitlines(keepends))
         min_index = 0
         for no, string in enumerate(actual):
@@ -1396,6 +1513,10 @@ class ANSIString(str):
         return actual
 
     def strip(self, chars: str | None = None) -> "ANSIString":
+        """
+        Remove leading and trailing characters,
+        preserving ANSI styles for the retained portion.
+        """
         actual = super().strip(chars)
         if len(actual) == len(self):
             return type(self)(actual, self.style_manager.copy())
@@ -1404,6 +1525,10 @@ class ANSIString(str):
         return type(self)(actual, StyleManager(styles))
 
     def lstrip(self, chars: str | None = None) -> "ANSIString":
+        """
+        Remove leading characters,
+        preserving ANSI styles for the remaining string.
+        """
         actual = super().lstrip(chars)
         if len(actual) == len(self):
             return type(self)(actual, self.style_manager.copy())
@@ -1412,6 +1537,10 @@ class ANSIString(str):
         return type(self)(actual, StyleManager(styles))
 
     def rstrip(self, chars: str | None = None) -> "ANSIString":
+        """
+        Remove trailing characters,
+        preserving ANSI styles for the remaining string.
+        """
         actual = super().rstrip(chars)
         if len(actual) == len(self):
             return type(self)(actual, self.style_manager.copy())
@@ -1424,6 +1553,10 @@ class ANSIString(str):
         new: str,
         count: _SupportsIndex = -1,
     ) -> "ANSIString":
+        """
+        Replace occurrences of a substring,
+        remapping existing ANSI styles to the new content.
+        """
         max_count = int(count)
         plain = self.plain_text
         old_len = len(old)
@@ -1474,17 +1607,23 @@ class ANSIString(str):
         return type(self)("".join(parts), StyleManager(result_styles))
 
     def removeprefix(self, prefix: str, /) -> "ANSIString":
+        """Remove a prefix, preserving ANSI styles for the remainder of the string."""
         if self.plain_text.startswith(prefix) and prefix:
             offset = len(prefix)
             return self[offset:]
         return type(self)(self.plain_text, self.style_manager.copy())
 
     def removesuffix(self, suffix: str, /) -> "ANSIString":
+        """Remove a suffix, preserving ANSI styles for the remainder of the string."""
         if self.plain_text.endswith(suffix) and suffix:
             return self[: len(self) - len(suffix)]
         return type(self)(self.plain_text, self.style_manager.copy())
 
     def partition(self, sep: str, /) -> tuple["ANSIString", "ANSIString", "ANSIString"]:  # type: ignore[override]
+        """
+        Partition the string into three parts using the given separator,
+        preserving ANSI styles.
+        """
         idx = self.plain_text.find(sep)
         if idx == -1:
             return (
@@ -1499,6 +1638,10 @@ class ANSIString(str):
         sep: str,
         /,
     ) -> tuple["ANSIString", "ANSIString", "ANSIString"]:
+        """
+        Partition the string into three parts using the given separator,
+        starting at the end and preserving ANSI styles.
+        """
         idx = self.plain_text.rfind(sep)
         if idx == -1:
             return (
@@ -1509,6 +1652,10 @@ class ANSIString(str):
         return (self[:idx], self[idx : idx + len(sep)], self[idx + len(sep) :])
 
     def zfill(self, width: _SupportsIndex, /) -> "ANSIString":
+        """
+        Pad a numeric string with zeros on the left preserving ANSI styles,
+        to fill a field of the given width.
+        """
         w = int(width)
         plain = self.plain_text
         if len(plain) >= w:
@@ -1530,6 +1677,10 @@ class ANSIString(str):
         return type(self)("0" * pad + plain, StyleManager(shifted))
 
     def expandtabs(self, tabsize: _SupportsIndex = 8) -> "ANSIString":  # type: ignore[override]
+        """
+        Return a copy where all tab characters are expanded using spaces,
+        preserving ANSI styles for the resulting string.
+        """
         ts = int(tabsize)
         plain = self.plain_text
         parts: list[str] = []
@@ -1565,13 +1716,20 @@ class ANSIString(str):
         return type(self)("".join(parts), StyleManager(result_styles))
 
     def encode(self, encoding: str = "utf-8", errors: str = "strict") -> bytes:
+        """
+        Encode the fully rendered styled string using the codec registered for encoding.
+        """
         return self.styled_text.encode(encoding, errors)
 
     def casefold(self) -> "ANSIString":
+        """
+        Return a version of the string suitable for caseless comparisons,
+        mapping styles to expanded characters.
+        """
         actual = super().casefold()
         if actual == self.plain_text:
             return type(self)(actual, self.style_manager.copy())
-        expansions = get_casefold_expansions()
+        expansions = CASEFOLD_EXPANSIONS
         styles: dict[int, Style] = {}
         dest = 0
         for src, char in enumerate(self.plain_text):
@@ -1590,6 +1748,10 @@ class ANSIString(str):
         return type(self)(actual, StyleManager(styles))
 
     def translate(self, table: _Mapping[int, int | str | None]) -> "ANSIString":  # type: ignore[override]
+        """
+        Replace each character in the string using the given translation table,
+        preserving ANSI styles for the mapped content.
+        """
         actual = super().translate(table)
         if actual == self.plain_text:
             return type(self)(actual, self.style_manager.copy())
@@ -1617,6 +1779,11 @@ class ANSIString(str):
         return type(self)(actual, StyleManager(styles))
 
     def format(self, /, *args: _Any, **kwargs: _Any) -> "ANSIString":
+        """
+        Return a formatted version of the string,
+        using substitutions from args and kwargs
+        and remapping existing ANSI styles to the new content.
+        """
         formatted = str.format(self.plain_text, *args, **kwargs)
         if not self.style_manager:
             return type(self)(formatted)
@@ -1624,6 +1791,10 @@ class ANSIString(str):
         return type(self)(formatted, StyleManager(styles))
 
     def format_map(self, mapping: _Mapping[str, _Any], /) -> "ANSIString":  # type: ignore[override]
+        """
+        Return a formatted version of the string, using substitutions from mapping
+        and remapping existing ANSI styles.
+        """
         formatted = str.format_map(self.plain_text, mapping)
         if not self.style_manager:
             return type(self)(formatted)

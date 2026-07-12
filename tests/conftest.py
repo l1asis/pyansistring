@@ -6,8 +6,26 @@ import pytest
 
 from pyansistring import ANSIString, StyleManager
 from pyansistring.color import Color
-from pyansistring.constants import SGR, Foreground
+from pyansistring.config import config
+from pyansistring.constants import SGR, ColorSupportLevel, Foreground
 from pyansistring.style import Style
+
+# ── Configurations ────────────────────────────────────────────────────────
+
+config.separator = ":"
+config.color_support = ColorSupportLevel.BIT24
+config.downsample = True
+config.theme = "vga"
+
+
+@pytest.fixture(autouse=True)
+def set_up_default_config():
+    """Ensure config state is restored before every test."""
+    config.separator = ":"
+    config.color_support = ColorSupportLevel.BIT24
+    config.downsample = True
+    config.theme = "vga"
+
 
 # ── Constants ─────────────────────────────────────────────────────────────
 

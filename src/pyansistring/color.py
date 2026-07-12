@@ -1,21 +1,26 @@
+from __future__ import annotations
+
 __all__ = ["Color", "ColorScale", "ColorMap", "SegmentedColorMap"]
 
 from bisect import bisect_left as _bisect_left
 from collections.abc import Sequence as _Sequence
 from colorsys import hls_to_rgb as _hls_to_rgb, rgb_to_hls as _rgb_to_hls
 from math import trunc as _trunc
-from typing import Any as _Any, Literal as _Literal, Mapping as _Mapping
+from typing import TYPE_CHECKING, Any as _Any, Literal as _Literal, Mapping as _Mapping
 
 from ._frozen import FrozenMeta as _FrozenMeta
 from ._helpers import clamp as _clamp
+
+if TYPE_CHECKING:
+    from ._types import ThemeName as _ThemeName
+
 from .config import config as _config
 from .constants import (
+    BIT8_TO_RGB,
     COLOR_THEMES,
-    COLORS_256,
-    DEFAULT_THEME,
     Background,
+    ColorSupportLevel,
     Foreground,
-    ThemeName,
     Underline,
 )
 
@@ -136,29 +141,66 @@ class Color(metaclass=_FrozenMeta):
     def to_sgr_param(
         self,
         prefix: _Literal[Foreground.SET, Background.SET, Underline.SET] | str = "",
-        format_mode: _Literal["standard", "compatible"] | None = None,
+        separator: _Literal[":", ";"] | None = None,
+        color_support: ColorSupportLevel | None = None,
+        downsample: bool | None = None,
     ) -> str:
-        """Generate an SGR parameter string for this color.
+        """
+        Format the color as an ANSI Select Graphic Rendition (SGR) parameter sequence.
 
         Parameters
         ----------
-        prefix : Foreground.SET | Background.SET | Underline.SET | str, default ""
-            SGR prefix code that qualifies this color (e.g., 38 for foreground).
-        format_mode : Literal["standard", "compatible"] | None, default None
-            Separator style: ``"standard"`` uses colons, ``"compatible"``
-            uses semicolons. Defaults to global config.
+        prefix : Literal[Foreground.SET, Background.SET, Underline.SET] | str,\
+                default ""
+            The target channel enum or string prefix for the ANSI sequence.
+        separator : Literal[":", ";"] | None, default None
+            The delimiter used to separate SGR parameters. If None, it defaults
+            to the globally configured separator.
+        color_support : ColorSupportLevel | None, default None
+            The maximum permitted color depth. If None, it defaults to the
+            globally configured support level.
+        downsample : bool | None, default None
+            Whether to gracefully downgrade the color depth to match the
+            current `color_support` level. If None, it defaults to the
+            globally configured downsample setting.
 
         Returns
         -------
         str
-            SGR parameter string.
+            The formatted SGR parameter string.
         """
-        mode = format_mode or _config.format_mode
+        separator = separator if separator is not None else _config.separator
+        color_support = (
+            color_support if color_support is not None else _config.color_support
+        )
+        downsample = downsample if downsample is not None else _config.downsample
 
-        if mode == "standard" or prefix == Underline.SET:
+        if color_support == ColorSupportLevel.NONE:
+            return ""
+
+        if self.depth == "24bit" and color_support != ColorSupportLevel.BIT24:
+            if not downsample:
+                return ""
+            to = "8bit" if color_support == ColorSupportLevel.BIT8 else "4bit"
+            return self.downsample(to, prefix).to_sgr_param(
+                prefix=prefix,
+                separator=separator,
+                color_support=color_support,
+                downsample=False,
+            )
+
+        if self.depth == "8bit" and color_support == ColorSupportLevel.BIT4:
+            if not downsample:
+                return ""
+            return self.downsample("4bit", prefix).to_sgr_param(
+                prefix=prefix,
+                separator=separator,
+                color_support=color_support,
+                downsample=False,
+            )
+
+        if prefix == Underline.SET:
             separator = ":"
-        else:
-            separator = ";"
 
         if prefix:
             prefix = str(prefix) + separator
@@ -176,15 +218,17 @@ class Color(metaclass=_FrozenMeta):
 
     def to_rgb(
         self,
-        theme: ThemeName = DEFAULT_THEME,
+        theme: _ThemeName | None = None,
     ) -> tuple[int, int, int]:
         """Return the RGB tuple for this color based on the theme."""
+        theme = theme or _config.theme
+
         if self.depth == "24bit":
             assert isinstance(self.value, tuple)
             return self.value
         elif self.depth == "8bit":
             assert isinstance(self.value, int)
-            return COLORS_256[self.value]
+            return BIT8_TO_RGB[self.value]
         elif self.depth == "4bit":
             assert isinstance(self.value, int)
             return COLOR_THEMES[theme][self.value]
@@ -199,12 +243,83 @@ class Color(metaclass=_FrozenMeta):
 
     def to_hsl(
         self,
-        theme: ThemeName = DEFAULT_THEME,
+        theme: _ThemeName | None = None,
     ) -> tuple[float, float, float]:
         """Return the HSL tuple for this color based on the theme."""
         r, g, b = self.to_rgb(theme)
         h, l, s = _rgb_to_hls(r / 255, g / 255, b / 255)  # noqa: E741
         return h, s, l
+
+    def downsample(
+        self,
+        to: _Literal["4bit", "8bit"],
+        prefix: _Literal[Foreground.SET, Background.SET, Underline.SET] | str = "",
+        theme: _ThemeName | None = None,
+    ) -> "Color":
+        """
+        Reduce the color depth of a 24-bit or 8-bit color to a lower bit approximation.
+
+        Mathematical distance algorithms are utilized to map a TrueColor (24-bit)
+        or Extended (8-bit) RGB equivalent to the closest available color in a
+        restricted terminal palette.
+
+        Parameters
+        ----------
+        to : Literal["4bit", "8bit"]
+            The target bit depth for the downsampling operation.
+        prefix : Literal[Foreground.SET, Background.SET, Underline.SET] | str,\
+                default ""
+            The terminal channel this color will be applied to, used to accurately
+            determine the corresponding 4-bit escape codes.
+        theme : ThemeName | None, default None
+            The specific terminal color theme to match against when calculating
+            the closest 4-bit color. If None, the globally configured theme is used.
+
+        Returns
+        -------
+        Color
+            A new `Color` instance representing the best approximation in the
+            requested lower bit depth. Returns an unset Color if the original
+            color cannot be downsampled to the requested depth.
+        """
+        if to == "8bit" and self.depth == "24bit" and isinstance(self.value, tuple):
+            boundaries = (47, 115, 155, 195, 235)
+            red = _bisect_left(boundaries, self.value[0]) * 36
+            green = _bisect_left(boundaries, self.value[1]) * 6
+            blue = _bisect_left(boundaries, self.value[2])
+            idx = 16 + red + green + blue
+            return Color("8bit", idx)
+
+        elif (
+            to == "4bit"
+            and self.depth in ("8bit", "24bit")
+            and prefix != Underline.SET
+            and self.value is not None
+        ):
+            theme = theme or _config.theme
+
+            r, g, b = self.to_rgb(theme)
+            palette = COLOR_THEMES.get(theme, COLOR_THEMES["vga"])
+
+            if prefix == Foreground.SET:
+                valid_codes = [c.value for c in Foreground if c.value not in (38, 39)]
+                enum_class = Foreground
+            else:
+                valid_codes = [c.value for c in Background if c.value not in (48, 49)]
+                enum_class = Background
+
+            best_code = min(
+                valid_codes,
+                key=lambda code: (
+                    (r - palette[code][0]) ** 2
+                    + (g - palette[code][1]) ** 2
+                    + (b - palette[code][2]) ** 2
+                ),
+            )
+
+            return Color("4bit", enum_class(best_code))
+
+        return Color.unset()
 
 
 class ColorScale:

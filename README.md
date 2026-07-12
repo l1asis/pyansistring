@@ -23,6 +23,9 @@
 - **SVG export:** render text or path modes with per-character coloring and optional custom fonts.
 - **ANSI parsing:** convert raw ANSI-encoded strings back into `ANSIString` instances with styles intact.
 - **Large constants base:** extensive predefined color constants and palettes, plus SGR/regex helpers for easy access.
+- **Smart color detection:** automatic detection of the maximal color support level for the current terminal environment.
+- **Automated downsampling**: intelligent reduction of TrueColor (24-bit) down to 8-bit or 4-bit when unsupported by the host terminal.
+- **Flexible configuration**: easily override default behavior for color support, downsampling, SGR separators, and terminal themes via the config object.
 
 ## Requirements
 
@@ -144,6 +147,32 @@ print(
 ```
 
 ![pattern](https://raw.githubusercontent.com/l1asis/pyansistring/refs/heads/main/images/usage/pattern.svg)
+
+### Target Selectors: Coords
+
+```python
+from pyansistring import ANSIString, Foreground, Background, Coords
+
+print(
+    ANSIString("Hello,\nWorld!")
+    .fg(Foreground.BLUE, Coords(
+            (
+                (0, 0), (1, 0), (2, 0), # Hel
+                (0, 1), (1, 1), (2, 1)  # Wor
+            ),
+        )
+    )
+    .fg(Foreground.YELLOW, Coords(
+            (
+                (3, 0), (4, 0), (5, 0), # lo,
+                (3, 1), (4, 1), (5, 1)  # ld!
+            ),
+        )
+    )
+)
+```
+
+![coords](https://raw.githubusercontent.com/l1asis/pyansistring/refs/heads/main/images/usage/coords.svg)
 
 ### Advanced Regex (Log Parsing)
 
@@ -299,6 +328,84 @@ svg_code = styled.to_svg(
 ```
 
 For a complete terminal tour, run [examples/showcase.py](https://github.com/l1asis/pyansistring/blob/main/examples/showcase.py).  
+
+## Configurations
+
+### General
+
+You can customize `pyansistring` behavior globally via the `config` object or through environment variables. Changes made via the `config` object take effect immediately. If your environment variables change during a session (e.g., in a long-running dashboard), simply call `config.refresh()` to reload the settings.
+
+```python
+from pyansistring.config import config
+
+config.separator = ":"
+config.color_support = ColorSupportLevel.BIT24
+config.downsample = True
+config.theme = "vga" # or 'vscode', or...
+```
+
+### Precedence
+
+When multiple configuration sources are provided, `pyansistring` resolves them in the following order of priority (highest to lowest):
+
+| Priority | Source | Examples |
+| --- | --- | --- |
+| 1 (**Highest**) | Library-Specific Env Vars | `PYANSISTRING_COLOR_SUPPORT`, `PYANSISTRING_THEME` |
+| 2 | Command-Line Flags | `--color=16m`, `--no-color` |
+| 3 | Standard Environment Variables | `FORCE_COLOR`, `NO_COLOR`, `CLICOLOR` |
+| 4 (**Lowest**) | Auto-detection | Host OS, `TERM`, CI environment variables |
+
+### Environment variables
+
+> [!IMPORTANT]
+> **Environment Variable Changes**
+>
+> Have you changed any environment variables that impact color? If so, it is
+> crucial to either call `config.refresh()` to pick up the changes automatically
+> or set the desired settings manually.
+
+The following environment variables impact the color output of `pyansistring`:
+
+#### Custom
+
+- `PYANSISTRING_SEPARATOR`
+- `PYANSISTRING_COLOR_SUPPORT`
+- `PYANSISTRING_DOWNSAMPLE`
+- `PYANSISTRING_THEME`
+
+#### Color and terminal capability
+
+- `FORCE_COLOR`: Used to override auto-detection and force specific color levels.
+- `NO_COLOR`: Standard variable to disable all color output.
+- `CLICOLOR`: Used to disable color when set to "0".
+- `CLICOLOR_FORCE`: Used to force 4-bit color support.
+- `COLORTERM`: Checked for "truecolor" capabilities.
+- `TERM`: Used to check for "dumb" terminals, 256-color support, or specific terminal emulators (e.g., `xterm`, `vt100`).
+- `TERM_PROGRAM`: Used to identify specific terminal applications like `iTerm.app` or `Apple_Terminal`.
+- `TERM_PROGRAM_VERSION`: Used to check versioning for specific terminal capabilities (e.g., iTerm v3+).
+- `WT_SESSION`: Used to detect Windows Terminal sessions.
+- `SHELL`: Used alongside `TERM` to detect PowerShell environments on Windows.
+
+#### Continuous Integration (CI) environment
+
+- `CI`: General flag to indicate the code is running in a CI environment.
+- `GITHUB_ACTIONS`, `GITEA_ACTIONS`, `CIRCLECI`: Used to enable 24-bit color support.
+- `TRAVIS`, `APPVEYOR`, `GITLAB_CI`, `BUILDKITE`, `DRONE`, `CI_NAME`: Used to detect specific CI environments that typically support at least 4-bit color.
+- `TEAMCITY_VERSION`: Used to detect TeamCity build environments.
+
+### Sniffed command-line flags
+
+The library also inspects `sys.argv` for the following flags:
+
+#### Color Disabling
+
+- `no-color`, `no-colors`, `color=false`, `color=never`.
+
+#### Color Enabling
+
+- `color`, `colors`, `color=true`, `color=always`: Defaults to 4-bit color support.
+- `color=16m`, `color=full`, `color=truecolor`: Forces 24-bit (TrueColor) support.
+- `color=256`: Forces 8-bit color support.
 
 ## Contributing
 
