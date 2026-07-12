@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 __all__ = ["Color", "ColorScale", "ColorMap", "SegmentedColorMap"]
 
 from bisect import bisect_left as _bisect_left

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import os as _os
 import platform as _platform
 import re as _re
