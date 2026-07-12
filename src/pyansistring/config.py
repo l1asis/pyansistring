@@ -265,7 +265,7 @@ def _detect_theme() -> _ThemeName:
 
     if env_override := _os.environ.get("PYANSISTRING_THEME"):
         if (env_override := env_override.lower()) in _THEME_NAMES:
-            return env_override
+            return env_override  # type: ignore
 
     if _sys.platform == "win32":
         if (
