@@ -456,6 +456,39 @@ class TestSegmentedColorMap:
             cmap(0)
 
 
+class TestColorDownsampling:
+    """Color.downsample() math and palette snapping."""
+
+    def test_24bit_to_8bit(self):
+        c = Color.from_24bit(10, 20, 30)
+        downsampled = c.downsample("8bit")
+        assert downsampled.depth == "8bit"
+        assert isinstance(downsampled.value, int)
+
+    def test_24bit_to_4bit(self):
+        c = Color.from_24bit(255, 0, 0)  # Red
+        downsampled = c.downsample("4bit", prefix=Foreground.SET)
+        assert downsampled.depth == "4bit"
+        assert downsampled.value == Foreground.RED.value
+
+    def test_8bit_to_4bit(self):
+        c = Color.from_8bit(135)
+        downsampled = c.downsample("4bit", prefix=Foreground.SET)
+        assert downsampled.depth == "4bit"
+        assert downsampled.value == Foreground.BRIGHT_MAGENTA.value
+
+    def test_downsample_invalid_returns_unset(self):
+        c = Color.from_4bit(Foreground.RED)
+        assert not c.downsample("4bit")
+
+        c8 = Color.from_8bit(10)
+        assert not c8.downsample("8bit")
+
+    def test_underline_cannot_be_downsampled_to_4bit(self):
+        c = Color.from_24bit(255, 0, 0)
+        assert not c.downsample("4bit", prefix=Underline.SET)
+
+
 class TestStyleConstruction:
     """Constructing Style objects."""
 

@@ -6,7 +6,15 @@ import pytest
 
 from pyansistring import ANSIString, Channel, Chars, Coords, Pattern, Words
 from pyansistring.color import ColorMap, ColorScale, SegmentedColorMap
-from pyansistring.constants import SGR, Background, Foreground, Underline, UnderlineMode
+from pyansistring.config import config
+from pyansistring.constants import (
+    SGR,
+    Background,
+    ColorSupportLevel,
+    Foreground,
+    Underline,
+    UnderlineMode,
+)
 from pyansistring.style import Style
 from tests.conftest import RESET, ansi_wrap, style_ansi
 
@@ -118,6 +126,62 @@ class TestUnifiedColorMethods:
         yellow = style_ansi(Foreground.YELLOW)
         expected = ansi_wrap("Hello", blue) + ", " + ansi_wrap("World", yellow) + "!"
         assert str(s) == expected
+
+
+class TestConfiguredRendering:
+    """
+    Explicitly verify how global configuration affects Color downsampling and output.
+    """
+
+    def test_downsample_8bit_to_4bit(self, hello_world: ANSIString):
+        """Test downsampling Extended ANSI (8-bit) to standard 16 colors (4-bit)."""
+        config.color_support = ColorSupportLevel.BIT4
+        config.downsample = True
+
+        s = hello_world.fg(135)
+        assert "\x1b[95mHello, World!\x1b[0m" == str(s)
+
+    def test_downsample_24bit_to_8bit(self, hello_world: ANSIString):
+        """Test downsampling TrueColor (24-bit) to Extended ANSI (8-bit)."""
+        config.color_support = ColorSupportLevel.BIT8
+        config.downsample = True
+
+        s = hello_world.fg((0, 0, 255))
+        assert "\x1b[38:5:21mHello, World!\x1b[0m" == str(s)
+
+    def test_downsample_24bit_to_4bit(self, hello_world: ANSIString):
+        """
+        Test downsampling TrueColor (24-bit) directly to standard 16 colors (4-bit).
+        """
+        config.color_support = ColorSupportLevel.BIT4
+        config.downsample = True
+
+        s = hello_world.fg((0, 0, 255))
+        assert "\x1b[34mHello, World!\x1b[0m" == str(s)
+
+    def test_no_downsample_omits_unsupported_colors(self, hello_world: ANSIString):
+        """
+        If downsample is False, colors exceeding support level must be silently omitted.
+        """
+        config.color_support = ColorSupportLevel.BIT4
+        config.downsample = False
+
+        s = hello_world.fg((0, 0, 255))
+        assert str(s) == "Hello, World!"
+
+    def test_separator_mode(self, hello_world: ANSIString):
+        """Verify the global separator configuration changes SGR output logic."""
+        config.color_support = ColorSupportLevel.BIT24
+
+        config.separator = ":"
+        assert "\x1b[38:2::0:0:255mHello, World!\x1b[0m" == str(
+            hello_world.fg((0, 0, 255))
+        )
+
+        config.separator = ";"
+        assert "\x1b[38;2;0;0;255mHello, World!\x1b[0m" == str(
+            hello_world.fg((0, 0, 255))
+        )
 
 
 class TestUlAttr:
