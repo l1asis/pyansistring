@@ -238,9 +238,11 @@ class Style(metaclass=_FrozenMeta):
         str
             An ANSI escape sequence string.
         """
-        separator = separator or _config.separator
-        color_support = color_support or _config.color_support
-        downsample = downsample is not None or _config.downsample
+        separator = separator if separator is not None else _config.separator
+        color_support = (
+            color_support if color_support is not None else _config.color_support
+        )
+        downsample = downsample if downsample is not None else _config.downsample
 
         parameters: list[str] = []
 
@@ -266,11 +268,6 @@ class Style(metaclass=_FrozenMeta):
             parameters.extend((underline_mode, underline_style))
 
         for attr in self.attributes:
-            # TODO: Should all the SGRs be at the end of the array?
-            # if (attr == SGR.UNDERLINE and not self.underline[0]) \
-            #     or attr in {SGR.BOLD, SGR.ITALIC}:
-            #     parameters.insert(0, f"{attr}")
-            # else:
             parameters.append(f"{attr}")
 
         if separate_codes:

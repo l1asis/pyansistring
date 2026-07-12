@@ -414,7 +414,7 @@ class ANSIString(str):
         downsample: bool | None = None,
     ) -> str:
         """Retrieve or calculate the rendered string for a specific render profile."""
-        separator = separator or config.separator
+        separator = separator if separator is not None else config.separator
         color_support = (
             color_support if color_support is not None else config.color_support
         )

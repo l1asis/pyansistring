@@ -167,9 +167,11 @@ class Color(metaclass=_FrozenMeta):
         str
             The formatted SGR parameter string.
         """
-        separator = separator or _config.separator
-        color_support = color_support or _config.color_support
-        downsample = downsample is not None or _config.downsample
+        separator = separator if separator is not None else _config.separator
+        color_support = (
+            color_support if color_support is not None else _config.color_support
+        )
+        downsample = downsample if downsample is not None else _config.downsample
 
         if (
             self.depth == "24bit"
