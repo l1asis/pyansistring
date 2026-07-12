@@ -113,6 +113,39 @@ add(
 )
 
 
+# ── Target Selectors: Coords ──────────────────────────────────────────────
+add(
+    "coords.svg",
+    ANSIString("Hello,\nWorld!")
+    .fg(
+        Foreground.BLUE,
+        Coords(
+            (
+                (0, 0),
+                (1, 0),
+                (2, 0),
+                (0, 1),
+                (1, 1),
+                (2, 1),
+            ),
+        ),
+    )
+    .fg(
+        Foreground.YELLOW,
+        Coords(
+            (
+                (3, 0),
+                (4, 0),
+                (5, 0),
+                (3, 1),
+                (4, 1),
+                (5, 1),
+            ),
+        ),
+    ),
+)
+
+
 # ── Advanced Regex (Log Parsing) ──────────────────────────────────────────
 add(
     "pattern_advanced.svg",
