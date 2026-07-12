@@ -32,7 +32,7 @@ def _get_flags() -> set[str]:
     except ValueError:
         args = _sys.argv[1:]
 
-    return {arg.lower() for arg in args if arg.startswith("-")}
+    return {arg.lower().lstrip("-") for arg in args if arg.startswith("-")}
 
 
 def _env_force_color() -> _ColorSupportLevel | None:
@@ -107,20 +107,18 @@ def _detect_color_support(
         ):
             flag_force_color = _ColorSupportLevel.NONE
         elif (
+            "color=16m" in flags or "color=full" in flags or "color=truecolor" in flags
+        ):
+            flag_force_color = _ColorSupportLevel.BIT24
+        elif "color=256" in flags:
+            flag_force_color = _ColorSupportLevel.BIT8
+        elif (
             "color" in flags
             or "colors" in flags
             or "color=true" in flags
             or "color=always" in flags
         ):
             flag_force_color = _ColorSupportLevel.BIT4
-            if (
-                "color=16m" in flags
-                or "color=full" in flags
-                or "color=truecolor" in flags
-            ):
-                flag_force_color = _ColorSupportLevel.BIT24
-            elif "color=256" in flags:
-                flag_force_color = _ColorSupportLevel.BIT8
 
     if flag_force_color is None and env.get("NO_COLOR", "") != "":
         return _ColorSupportLevel.NONE
