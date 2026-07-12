@@ -247,28 +247,31 @@ class Style(metaclass=_FrozenMeta):
         parameters: list[str] = []
 
         if self.foreground:
-            parameters.append(
-                self.foreground.to_sgr_param(
-                    _Foreground.SET, separator, color_support, downsample
-                )
+            fg_param = self.foreground.to_sgr_param(
+                _Foreground.SET, separator, color_support, downsample
             )
+            if fg_param:
+                parameters.append(fg_param)
+
         if self.background:
-            parameters.append(
-                self.background.to_sgr_param(
-                    _Background.SET, separator, color_support, downsample
-                )
+            bg_param = self.background.to_sgr_param(
+                _Background.SET, separator, color_support, downsample
             )
+            if bg_param:
+                parameters.append(bg_param)
+
         if self.underline[0]:
-            underline_mode = f"{_SGR.UNDERLINE}:{self.underline[1]}"
-            underline_style = f"{
-                self.underline[0].to_sgr_param(
-                    _Underline.SET, separator, color_support, downsample
-                )
-            }"
-            parameters.extend((underline_mode, underline_style))
+            ul_param = self.underline[0].to_sgr_param(
+                _Underline.SET, separator, color_support, downsample
+            )
+            if ul_param:
+                parameters.extend((f"{_SGR.UNDERLINE}:{self.underline[1]}", ul_param))
 
         for attr in self.attributes:
             parameters.append(f"{attr}")
+
+        if not parameters:
+            return ""
 
         if separate_codes:
             return "".join(f"\x1b[{parameter}m" for parameter in parameters)

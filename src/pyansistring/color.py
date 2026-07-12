@@ -173,18 +173,29 @@ class Color(metaclass=_FrozenMeta):
         )
         downsample = downsample if downsample is not None else _config.downsample
 
-        if (
-            self.depth == "24bit"
-            and color_support != ColorSupportLevel.BIT24
-            and downsample
-        ):
-            if color_support == ColorSupportLevel.BIT8:
-                to = "8bit"
-            if color_support == ColorSupportLevel.BIT4:
-                to = "4bit"
-            else:
+        if color_support == ColorSupportLevel.NONE:
+            return ""
+
+        if self.depth == "24bit" and color_support != ColorSupportLevel.BIT24:
+            if not downsample:
                 return ""
-            return self.downsample(to, prefix).to_sgr_param(prefix)
+            to = "8bit" if color_support == ColorSupportLevel.BIT8 else "4bit"
+            return self.downsample(to, prefix).to_sgr_param(
+                prefix=prefix,
+                separator=separator,
+                color_support=color_support,
+                downsample=False,
+            )
+
+        if self.depth == "8bit" and color_support == ColorSupportLevel.BIT4:
+            if not downsample:
+                return ""
+            return self.downsample("4bit", prefix).to_sgr_param(
+                prefix=prefix,
+                separator=separator,
+                color_support=color_support,
+                downsample=False,
+            )
 
         if prefix == Underline.SET:
             separator = ":"

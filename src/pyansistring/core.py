@@ -488,7 +488,10 @@ class ANSIString(str):
 
             # Flush current styled run
             run_end = prev_idx + 1
-            parts.append(f"{run_ansi}{plain[run_start:run_end]}\x1b[0m")
+            if run_ansi:
+                parts.append(f"{run_ansi}{plain[run_start:run_end]}\x1b[0m")
+            else:
+                parts.append(plain[run_start:run_end])
 
             # Unstyled gap
             if idx > run_end:
@@ -500,7 +503,10 @@ class ANSIString(str):
 
         # Flush last styled run
         last_end = sorted_keys[-1] + 1
-        parts.append(f"{run_ansi}{plain[run_start:last_end]}\x1b[0m")
+        if run_ansi:
+            parts.append(f"{run_ansi}{plain[run_start:last_end]}\x1b[0m")
+        else:
+            parts.append(plain[run_start:last_end])
 
         # Unstyled suffix
         if last_end < n:
